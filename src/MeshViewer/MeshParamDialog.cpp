@@ -2,7 +2,7 @@
 #include <QApplication>
 #include <QDesktopWidget>
 
-#include "../Common/CommonDefinitions.h"
+#include "..\src\Dependency\Common\CommonDefinitions.h"
 
 MeshParamDialog::MeshParamDialog(QWidget* parent /* = 0 */)
 	:QDialog(parent)

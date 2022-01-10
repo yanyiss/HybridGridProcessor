@@ -8,7 +8,7 @@
 #include <OpenMesh/Core/IO/MeshIO.hh>
 
 #include "MeshViewerWidget.h"
-#include "../Common/CommonDefinitions.h"
+#include "..\src\Dependency\Common\CommonDefinitions.h"
 
 using namespace Qt;
 
@@ -856,7 +856,7 @@ void MeshViewerWidget::draw_mesh_pointset() const
 
 }
 
-#include "src/Algorithm/CheckBoardGenerator.h"
+#include "../src/Algorithm/CheckBoard/CheckBoardGenerator.h"
 static bool flag = true;
 static CheckBoardGenerator* cbg = nullptr;
 void MeshViewerWidget::draw_checkboard()

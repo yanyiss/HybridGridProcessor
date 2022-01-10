@@ -2,7 +2,7 @@
 #define INTERACTIVE_VIEWER_WIDGET
 
 #include "MeshViewerWidget.h"
-#include "../ANN/ANN.h"
+#include "..\src\Dependency\ANN\ANN.h"
 
 class InteractiveViewerWidget : public MeshViewerWidget
 {
