@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(QuadMeshProcessor)
+project(HybridGridProcessor)
 
 add_subdirectory(src/ANN)
 #add_subdirectory(src/InstantMeshes)
@@ -32,9 +32,9 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
 endif()
 
 #path
-SET(EIGEN_PATH "D:/OpenSource/Include")
-SET(OPENMESH_PATH "D:/OpenSource/Source/OpenMesh-8.1_Source/src")
-SET(OPENMESH_LIB_PATH "D:/OpenSource/Lib/OpenMesh")
+SET(EIGEN_PATH "D:/eigen3")
+SET(OPENMESH_PATH "D:/OpenMesh 8.1 Src/OpenMesh-8.1/src")
+SET(OPENMESH_LIB_PATH "D:/OpenMesh 8.1/lib")
 
 #QT
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
