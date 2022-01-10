@@ -72,6 +72,7 @@ private slots:
 private:
 	// File Actions.
 	QAction* openAction;
+	QAction* openCADAction;
 	QAction* saveAction;
 	QAction* saveAsAction;
 	QAction* exitAction;

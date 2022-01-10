@@ -54,7 +54,7 @@ public slots:
 	{
 		QString fileName = QFileDialog::getOpenFileName(this,
 			tr("Open mesh file"),
-			tr("../model/"),
+			tr("../model/mesh"),
 			tr("OBJ Files (*.obj);;"
 			"OFF Files (*.off);;"
 			"PLY Files (*.ply);;"
@@ -65,6 +65,7 @@ public slots:
 			open_mesh_gui(fileName);
 		}
 	}
+	void open_CAD_query();
 	void save_mesh_query() 
 	{
 		QString fileName = QFileDialog::getSaveFileName(this,
@@ -149,6 +150,7 @@ protected:
 	virtual void createViewerDialog();
 	virtual void save_mesh_gui(QString fname);
 	virtual void open_mesh_gui(QString fname);
+	virtual void open_mesh_gui(Mesh &aMesh);
 	virtual void save_screen_gui(QString fname);
 
 protected:

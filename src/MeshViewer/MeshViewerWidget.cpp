@@ -145,6 +145,18 @@ bool MeshViewerWidget::openMesh(const char* filename)
 	return false;
 }
 
+bool MeshViewerWidget::openMesh(Mesh &aMesh)
+{
+	clearAllMesh();
+	mesh = aMesh;
+
+	printf("%s\n", "CAD models");
+	std::cout << mesh.n_vertices() << std::endl;
+	initMesh();
+	mesh_vector.push_back(mesh); mesh_vector_index = 0;
+	return true;
+}
+
 void MeshViewerWidget::initMesh()
 {
 	mesh.request_vertex_status();

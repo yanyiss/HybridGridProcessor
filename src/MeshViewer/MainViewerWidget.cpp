@@ -1,4 +1,5 @@
 #include "MainViewerWidget.h"
+#include "..\src\Algorithm\SurfaceMesher\Generator\Iso_Mesh.h"
 
 MainViewerWidget::MainViewerWidget(QWidget* _parent/* =0 */)
 {
@@ -55,6 +56,37 @@ void MainViewerWidget::createViewerDialog()
 	connect(MeshViewer,SIGNAL(loadMeshOK(bool,QString)), this, SLOT(LoadMeshFromInner(bool,QString)) );
 }
 
+void MainViewerWidget::open_CAD_query()
+{
+	QString fileName = QFileDialog::getOpenFileName(this,
+		tr("Open mesh file"),
+		tr("../model/CAD"),
+		tr("(*.STEP;*.stp;*.IGES;*.igs;*.obj);;")
+	);
+	if (!fileName.isEmpty())
+	{
+		if (fileName.endsWith(".stp") || fileName.endsWith(".igs") || fileName.endsWith(".STEP") || fileName.endsWith(".IGES"))
+		{
+			MeshViewer->SetCADFileName(fileName);
+			globalmodel.clear();
+			Iso_Mesh iso_mesh(fileName);
+			open_mesh_gui(Mesh(globalmodel.initial_trimesh));
+			////TriangleMeshRemeshing::expected_length = iso_mesh->occ_reader->expected_edge_length;
+			//if (MeshViewer->trianglemeshremeshing) {
+			//	delete MeshViewer->trianglemeshremeshing;
+			//	MeshViewer->trianglemeshremeshing = nullptr;
+			//}
+			//if (MeshViewer->aniso_remesh) {
+			//	delete MeshViewer->aniso_remesh;
+			//	MeshViewer->aniso_remesh = nullptr;
+			//}
+			//open_mesh_gui(globalmodel.initial_polymesh);
+			//MeshViewer->flag = true;
+			//MeshViewer->flag_ = true;
+		}
+	}
+}
+
 void MainViewerWidget::open_mesh_gui(QString fname)
 {
 	if (fname.isEmpty() || !MeshViewer->openMesh(fname.toLocal8Bit())) 
@@ -74,6 +106,26 @@ void MainViewerWidget::open_mesh_gui(QString fname)
 			SetMeshForALL();
 		}
 		emit(haveLoadMesh(fname));
+	}
+}
+
+void MainViewerWidget::open_mesh_gui(Mesh &aMesh)
+{
+	if (!MeshViewer->openMesh(aMesh))
+	{
+		QString msg = "some error in the format exchanging";
+		QMessageBox::critical(NULL, windowTitle(), msg);
+	}
+	else
+	{
+		LoadMeshSuccess = true;
+		MeshViewer->setDrawMode(InteractiveViewerWidget::FLAT_POINTS);
+		MeshViewer->setMouseMode(InteractiveViewerWidget::TRANS);
+		if (LoadMeshSuccess)
+		{
+			SetMeshForALL();
+		}
+		emit(haveLoadMesh("CAD model"));
 	}
 }
 

@@ -17,6 +17,7 @@ public:
 	~MeshViewerWidget();
 public:
 	bool openMesh(const char* filename);
+	bool openMesh(Mesh &aMesh);
 	void initMesh();
 	bool saveMesh(const char* filename);
 	bool saveScreen(const char* filePath);

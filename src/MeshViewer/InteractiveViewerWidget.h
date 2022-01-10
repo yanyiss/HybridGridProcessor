@@ -132,8 +132,10 @@ protected:
 	void dropEvent(QDropEvent *event);
 
 public:
+	void SetCADFileName(QString &fileName);
 
 private:
+	QString CADFileName;
 
 #pragma region Auxiliary_function
 public:

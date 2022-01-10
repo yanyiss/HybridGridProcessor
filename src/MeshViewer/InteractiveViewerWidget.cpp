@@ -6,6 +6,7 @@
 #include <QUrl>
 
 #include "InteractiveViewerWidget.h"
+#include "..\src\Toolbox\dprinter\dprint.h"
 
 InteractiveViewerWidget::InteractiveViewerWidget(QWidget* parent /* = 0 */)
 	:MeshViewerWidget(parent)
@@ -607,3 +608,14 @@ void InteractiveViewerWidget::render_text_slot(OpenMesh::Vec3d pos, QString str)
 	render_text(x,y,str);*/
 	render_text(pos[0],pos[1],pos[2],str);
 }
+
+void InteractiveViewerWidget::SetCADFileName(QString &fileName) {
+	int id = fileName.lastIndexOf("/");
+	assert(id != -1);
+	CADFileName = fileName.right(fileName.length() - id - 1);
+	id = CADFileName.lastIndexOf(".");
+	assert(id != -1);
+	CADFileName.truncate(id);
+	dprint(fileName, "\nCAD name:", CADFileName);
+	//BrepFileName = fileName;
+};

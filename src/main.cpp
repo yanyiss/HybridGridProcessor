@@ -10,10 +10,10 @@ int main(int argc, char *argv[])
 	mainWin.resize( mainWin.sizeHint() );*/
 	mainWin.showMaximized();
 
-	if( argc > 1 )
+	/*if( argc > 1 )
 	{
 		mainWin.open_mesh_from_main(argv[1]);
-	}
+	}*/
 
 	return app.exec();
 }

@@ -33,6 +33,12 @@ void SurfaceMeshProcessing::createActions()
 	openAction->setStatusTip(tr("Open a mesh file"));
 	connect(openAction, SIGNAL(triggered()), viewer, SLOT(open_mesh_query()));
 
+	openCADAction = new QAction(tr("&Open CAD"), this);
+	openCADAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/Open.png"));
+	openCADAction->setShortcut(QKeySequence::Open);
+	openCADAction->setStatusTip(tr("Open a CAD file"));
+	connect(openCADAction, SIGNAL(triggered()), viewer, SLOT(open_CAD_query()));
+
 	saveAction = new QAction(tr("&Save"), this);
 	saveAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/Save.png"));
 	saveAction->setShortcut(QKeySequence::Save);
@@ -257,6 +263,7 @@ void SurfaceMeshProcessing::createMenus()
 {
 	fileMenu = menuBar()->addMenu(tr("&File"));
 	fileMenu->addAction(openAction);
+	fileMenu->addAction(openCADAction);
 	fileMenu->addAction(saveAction);
 	fileMenu->addAction(saveAsAction);
 	fileMenu->addAction(clearAction);
@@ -307,6 +314,7 @@ void SurfaceMeshProcessing::createToolBars()
 {
 	fileToolBar = addToolBar(tr("&File"));
 	fileToolBar->addAction(openAction);
+	fileToolBar->addAction(openCADAction);
 	fileToolBar->addAction(saveAction);
 	fileToolBar->addAction(clearAction);
 	fileToolBar->addAction(saveScreenAction);
