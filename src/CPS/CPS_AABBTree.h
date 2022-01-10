@@ -189,13 +189,13 @@ namespace ClosestPointSearch
 			build();
 		}
 
-		AABBTree(Mesh& mesh, std::vector<OpenMesh::FaceHandle> face_handles)
+		AABBTree(TriMesh& mesh, std::vector<OpenMesh::FaceHandle> face_handles)
 		{
 			insert(mesh, face_handles);
 			build();
 		}
 
-		AABBTree(Mesh& mesh)
+		AABBTree(TriMesh& mesh)
 		{
 			insert(mesh);
 			build();
@@ -217,7 +217,7 @@ namespace ClosestPointSearch
 			}
 		}
 
-		void insert(const Mesh& mesh, std::vector<OpenMesh::FaceHandle> face_handles)
+		void insert(const TriMesh& mesh, std::vector<OpenMesh::FaceHandle> face_handles)
 		{
 			clear();
 			m_primitives.reserve(face_handles.size());
@@ -235,7 +235,7 @@ namespace ClosestPointSearch
 			}
 		}
 
-		void insert(const Mesh& mesh)
+		void insert(const TriMesh& mesh)
 		{
 			clear();
 			m_primitives.reserve(mesh.n_faces());

@@ -14,11 +14,17 @@
 class CheckBoardGenerator
 {
 public:
-	CheckBoardGenerator(Mesh &trimesh_) :trimesh(&trimesh_) {
+	CheckBoardGenerator(TriMesh &trimesh) :originalMesh(&trimesh) {
+		init();
+	}
+	CheckBoardGenerator(PolyMesh &polymesh) {
+		originalMesh = new TriMesh(polymesh);
+		isInputPolyMesh = true;
 		init();
 	}
 	~CheckBoardGenerator() {
 		if (aabbtree) { delete aabbtree; aabbtree = nullptr; }
+		if (isInputPolyMesh && originalMesh) { delete originalMesh; originalMesh = nullptr; }
 	}
 
 public:
@@ -39,14 +45,15 @@ public:
 	void getDual(m3xd &V, std::vector<vxu> &F);
 	void getMesh(Mesh &m, m3xd &V, std::vector<vxu> &F);
 
-	//private:
+	private:
 	struct triple {
 		int x, y, z;
 		triple(int x_,int y_,int z_):x(x_),y(y_),z(z_){}
 	};
 
+	bool isInputPolyMesh = false;
 	ui num[3];                                         //number of vertices, face and edges of polymesh
-	Mesh* trimesh = nullptr;
+	TriMesh* originalMesh = nullptr;
 	ClosestPointSearch::AABBTree* aabbtree = nullptr;
 	m3xd cof;                                           //coefficent of plane function
 	vxd ct;                                             //constant term of place function
@@ -55,7 +62,17 @@ public:
 	std::vector<std::vector<triple>> adj[2];            //connectivity
 	//OpenMesh::VPropHandleT<bool> diagonalMeshIndex;
 
-	void updateMesh(Mesh& m);
+	template <typename T>
+	void updateMesh(T& m)
+	{
+		m.request_vertex_status();
+		m.request_edge_status();
+		m.request_face_status();
+		m.request_face_normals();
+		m.request_vertex_normals();
+		m.update_face_normals();
+		m.update_vertex_normals();
+	}
 	void printCurrentInfo();
 
 	//void setDiagonalMeshIndex();//divide original mesh vertices into two diagonal mesh classes and mark with true & false

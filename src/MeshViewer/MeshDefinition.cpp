@@ -97,12 +97,3 @@ bool check_in_triangle_face(const std::vector<OpenMesh::Vec3d>& tri, const OpenM
 	else {return false;}
 }
 
-bool isClosedMesh(Mesh& mesh)
-{
-	for (OV tv : mesh.vertices())
-	{
-		if (mesh.is_boundary(tv))
-			return false;
-	}
-	return true;
-}

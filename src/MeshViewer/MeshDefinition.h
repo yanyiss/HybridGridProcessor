@@ -2,7 +2,7 @@
 #define MESHDEFINITION_H
 
 #include <OpenMesh/Core/Geometry/VectorT.hh>
-//#include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
+#include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
 #include <OpenMesh/Core/Mesh/PolyMesh_ArrayKernelT.hh>
 
 typedef OpenMesh::VertexHandle OV;
@@ -57,14 +57,27 @@ struct MeshTraits : public OpenMesh::DefaultTraits
 
 };
 
-//typedef OpenMesh::TriMesh_ArrayKernelT<MeshTraits> Mesh;
-typedef OpenMesh::PolyMesh_ArrayKernelT<MeshTraits> Mesh;
+typedef OpenMesh::TriMesh_ArrayKernelT<MeshTraits> TriMesh;
+typedef OpenMesh::PolyMesh_ArrayKernelT<MeshTraits> PolyMesh;
+typedef PolyMesh Mesh;
 
 bool is_flip_ok_openmesh(Mesh::EdgeHandle& eh, Mesh& mesh_);//just copy the code from openmesh
 bool flip_openmesh(Mesh::EdgeHandle& eh, Mesh& mesh_);
 
 bool check_in_triangle_face(const std::vector<OpenMesh::Vec3d>& tri, const OpenMesh::Vec3d& p);
 
-bool isClosedMesh(Mesh& mesh);
+
+#pragma region functions by yanyisheshou at GCL
+template <typename T>
+bool isClosedMesh(T& mesh)
+{
+	for (auto tv : mesh.vertices())
+	{
+		if (mesh.is_boundary(tv))
+			return false;
+	}
+	return true;
+}
+#pragma endregion
 
 #endif

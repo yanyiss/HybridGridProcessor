@@ -7,21 +7,21 @@ using namespace OpenMesh;
 void CheckBoardGenerator::init()
 {
 	//assert mesh is closed 
-	assert(isClosedMesh(*trimesh));
+	assert(isClosedMesh(*originalMesh));
 	dprint("Closed Mesh!");
 
 	//construct aabbtree
-	aabbtree = new ClosestPointSearch::AABBTree(*trimesh);
+	aabbtree = new ClosestPointSearch::AABBTree(*originalMesh);
 	dprint("construct aabbtree finished!");
 
 	//init plane function of each triangle 
-	auto nf = trimesh->n_faces();
+	auto nf = originalMesh->n_faces();
 	cof.resize(3, nf);
 	ct.resize(nf);
-	for (OF tf : trimesh->faces())
+	for (OF tf : originalMesh->faces())
 	{
-		Vec3d normal = trimesh->calc_face_normal(tf);
-		Vec3d pos = trimesh->point(trimesh->fv_begin(tf));
+		Vec3d normal = originalMesh->calc_face_normal(tf);
+		Vec3d pos = originalMesh->point(originalMesh->fv_begin(tf));
 		//cof.col(tf.idx()) << normal[0] / 2 , normal[1] / 2, normal[2] / 2;//here we divided by 2 because we replace (v_i+f_j)/2 with (v_i+f_j)
 		cof.col(tf.idx()) << normal[0], normal[1], normal[2];
 		ct(tf.idx()) = -normal.dot(pos);
@@ -249,17 +249,6 @@ void CheckBoardGenerator::getMesh(Mesh &m, m3xd &V, std::vector<vxu> &F)
 		m.add_face(vh);
 	}
 	updateMesh(m);
-}
-
-void CheckBoardGenerator::updateMesh(Mesh& m)
-{
-	m.request_vertex_status();
-	m.request_edge_status();
-	m.request_face_status();
-	m.request_face_normals();
-	m.request_vertex_normals();
-	m.update_face_normals();
-	m.update_vertex_normals();
 }
 
 void CheckBoardGenerator::printCurrentInfo()
