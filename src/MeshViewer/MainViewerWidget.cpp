@@ -68,9 +68,10 @@ void MainViewerWidget::open_CAD_query()
 		if (fileName.endsWith(".stp") || fileName.endsWith(".igs") || fileName.endsWith(".STEP") || fileName.endsWith(".IGES"))
 		{
 			MeshViewer->SetCADFileName(fileName);
-			globalmodel.clear();
-			Iso_Mesh iso_mesh(fileName);
-			open_mesh_gui(Mesh(globalmodel.initial_trimesh));
+			CADMesher::globalmodel.clear();
+		    CADMesher::Iso_Mesh iso_mesh(fileName);
+			open_mesh_gui(Mesh(CADMesher::globalmodel.initial_trimesh));
+
 			////TriangleMeshRemeshing::expected_length = iso_mesh->occ_reader->expected_edge_length;
 			//if (MeshViewer->trianglemeshremeshing) {
 			//	delete MeshViewer->trianglemeshremeshing;
