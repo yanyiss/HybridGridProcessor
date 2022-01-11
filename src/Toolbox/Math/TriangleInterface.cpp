@@ -57,7 +57,6 @@ void triangulate(const Eigen::MatrixX2d &all_pts, const Eigen::MatrixX2i &E, con
 	{
 		std::stringstream stream{};
 		stream << std::fixed << std::setprecision(15) << area_threshold;
-		//cout << stream.str() << endl;
 		full_flags = "qYYa" + stream.str() + "Qpz";
 	}
 	triangulate(const_cast<char*>(full_flags.c_str()), &in, &out, 0);
@@ -165,10 +164,7 @@ void triangulate(const Eigen::MatrixX2d &all_pts, const std::vector<Eigen::Matri
 		}
 	}
 
-	////根据逆向多边形外角和为360度判断外边界，记为outer_flag
-	//int outer_flag = -1;
-	//for (int i = 0; i < E.size(); i++) {
-	//}
+	//根据逆向多边形外角和为360度判断外边界，记为outer_flag
 	int itertimes = 0;
 	for (int i = 0; i < E.size(); i++) {
 		if (i == outerflag) continue;
@@ -198,7 +194,6 @@ void triangulate(const Eigen::MatrixX2d &all_pts, const std::vector<Eigen::Matri
 	else {
 		std::stringstream stream{};
 		stream << std::fixed << std::setprecision(15) << area_threshold;
-		//cout << stream.str() << endl;
 		full_flags = "qYYa" + stream.str() + "Qpz";
 	}
 	triangulate(const_cast<char*>(full_flags.c_str()), &in, &out, 0);

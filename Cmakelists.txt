@@ -3,6 +3,7 @@ project(HybridGridProcessor)
 
 add_subdirectory(src/Dependency/ANN)
 add_subdirectory(src/Dependency/BSpline)
+
 if (CMAKE_GENERATOR MATCHES "Visual Studio")
   set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 endif()
