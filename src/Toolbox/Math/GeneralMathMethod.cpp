@@ -141,23 +141,6 @@ namespace GeneralMathMethod {
 	double ComputeVoronoiArea(TriMesh* mesh, OpenMesh::VertexHandle v)//v不允许是边界点
 	{
 		double area = 0;
-		/*for (auto tvoh : mesh->voh_range(v)) {
-			double x = mesh->calc_edge_length(tvoh);
-			double y = mesh->calc_edge_length(mesh->next_halfedge_handle(tvoh));
-			double z = mesh->calc_edge_length(mesh->prev_halfedge_handle(tvoh));
-			double cosxz = (x*x + z * z - y * y) / (2 * x*z);
-			if (cosxz < 0) { area += 0.25*x*z*sqrt(1.0 - cosxz * cosxz); cout << 0.25*x*z*sqrt(1.0 - cosxz * cosxz) << endl; continue; }
-			else {
-				double cosxy = (x*x + y * y - z * z) / (2 * x*y);
-				if (cosxy < 0) { area += 0.125*x*z*sqrt(1.0 - cosxz * cosxz); continue; }
-				double cosyz = (y*y + z * z - x * x) / (2 * y*z);
-				if (cosyz < 0) { area += 0.125*x*z*sqrt(1.0 - cosxz * cosxz); continue; }
-			}
-			OpenMesh::Vec3d xv = mesh->calc_edge_vector(tvoh);
-			OpenMesh::Vec3d yv = mesh->calc_edge_vector(mesh->next_halfedge_handle(tvoh));
-			OpenMesh::Vec3d zv = mesh->calc_edge_vector(mesh->prev_halfedge_handle(tvoh));
-			area -= (x*x*yv.dot(zv) / yv.cross(zv).norm() + z * z*xv.dot(yv) / xv.cross(yv).norm()) * 0.125;
-		}*/
 		for (auto tvoh : mesh->voh_range(v)) {
 			double x = pow(mesh->calc_edge_length(tvoh), 2);
 			double y = pow(mesh->calc_edge_length(mesh->next_halfedge_handle(tvoh)), 2);

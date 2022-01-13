@@ -9,7 +9,9 @@ namespace CADMesher
 
 		Surface_TriMeshes.resize(faceshape.size());
 		for (int i = 0; i < faceshape.size(); i++)
+		//int i = 56;
 		{
+			dprint(i);
 			TriMesh &aMesh = Surface_TriMeshes[i];
 			auto &wires = faceshape[i].wires;
 			if (wires.empty())
@@ -83,6 +85,8 @@ namespace CADMesher
 
 			all_pnts.block(0, 1, all_pnts.rows(), 1) *= ra;
 
+			//dprint("all_pnts:", all_pnts, "\n\nbnd:", bnd);
+
 			triangulate(all_pnts, bnd, sqrt(3) * x_step * x_step / 4 * mu, aMesh);
 			for (auto tv : aMesh.vertices())
 			{
@@ -97,6 +101,17 @@ namespace CADMesher
 	void OccReader::ComputeFaceAndEdge()
 	{
 		TopoDS_Shape &aShape = globalmodel.aShape;
+
+		Vector3d ma(0, 0, 0);
+		Vector3d mi(DBL_MAX, DBL_MAX, DBL_MAX);
+		for (TopExp_Explorer vertexExp(aShape, TopAbs_VERTEX); vertexExp.More(); vertexExp.Next())
+		{
+			gp_Pnt v = BRep_Tool::Pnt(TopoDS::Vertex(vertexExp.Current()));
+			ma(0) = std::max(ma(0), v.X()); mi(0) = std::min(mi(0), v.X());
+			ma(1) = std::max(ma(1), v.Y()); mi(1) = std::min(mi(1), v.Y());
+			ma(2) = std::max(ma(2), v.Z()); mi(2) = std::min(mi(2), v.Z());
+		}
+		expected_edge_length = initialRate * (ma - mi).norm();
 
 		vector<ShapeFace> &faceshape = globalmodel.faceshape;
 		faceshape.clear();
@@ -143,6 +158,7 @@ namespace CADMesher
 						gp_Pnt p1 = BRep_Tool::Pnt(TopExp::LastVertex(aedge));
 						if (p0.IsEqual(p1, vertexThreshold))
 						{
+							dprint("fdjslah");
 							continue;
 						}
 					}
@@ -182,17 +198,6 @@ namespace CADMesher
 				}
 			}
 		}
-
-		Vector3d ma(0, 0, 0);
-		Vector3d mi(DBL_MAX, DBL_MAX, DBL_MAX);
-		for (TopExp_Explorer vertexExp(aShape, TopAbs_VERTEX); vertexExp.More(); vertexExp.Next())
-		{
-			gp_Pnt v = BRep_Tool::Pnt(TopoDS::Vertex(vertexExp.Current()));
-			ma(0) = std::max(ma(0), v.X()); mi(0) = std::min(mi(0), v.X());
-			ma(1) = std::max(ma(1), v.Y()); mi(1) = std::min(mi(1), v.Y());
-			ma(2) = std::max(ma(2), v.Z()); mi(2) = std::min(mi(2), v.Z());
-		}
-		expected_edge_length = initialRate * (ma - mi).norm();
 
 		dprint("CAD Info:\nModel Size: [", mi(0), ma(0), "],[", mi(1), ma(1), "],[", mi(2), ma(2), "]"
 			"\nSurface Number: ", faceshape.size(),

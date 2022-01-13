@@ -3,10 +3,11 @@
 #include <Eigen/Dense>
 #include <vector>
 #include "..\src\MeshViewer\MeshDefinition.h"
+
+namespace GeneralMathMethod
+{
 #define PI 3.1415926535897932
 
-namespace GeneralMathMethod{
-	using std::vector;
 	using namespace Eigen;
 	using namespace std;
 	typedef MatrixXd Polygon;

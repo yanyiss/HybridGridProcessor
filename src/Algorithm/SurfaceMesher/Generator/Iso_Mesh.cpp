@@ -9,7 +9,11 @@ namespace CADMesher
 		occ_reader = new OccReader(fileName);
 
 		occ_reader->Set_TriMesh();
+#if 0
+		globalmodel.initial_trimesh = occ_reader->Surface_TriMeshes[0];
+#else
 		MergeModel();
+#endif
 		Write_Obj(globalmodel.initial_trimesh);
 		ResetFeature();
 
@@ -56,32 +60,36 @@ namespace CADMesher
 		vector<ShapeEdge> edgeshape = globalmodel.edgeshape;
 		model_mesh.clear();
 		auto &surface_meshes = occ_reader->Surface_TriMeshes;
-		for (int i = 0; i < faceshape.size(); i++)
+		for(auto &face : faceshape)
 		{
-			auto &wires = faceshape[i].wires;
-			for (auto it = wires.begin(); it != wires.end(); it++)
+			auto &wires = face.wires;
+			for(auto &edges : wires)
 			{
-				auto &edges = *it;
-				for (auto itr_ = edges.begin(); itr_ != edges.end(); itr_++)
+				for (auto itr = edges.begin(); itr != edges.end(); itr++)
 				{
-					ShapeEdge &aedge = edgeshape[*itr_];
+					ShapeEdge &aedge = edgeshape[*itr];
 					if (aedge.reversed_edge == -1) continue;
 					auto &redge = edgeshape[aedge.reversed_edge];
-					if (!BRep_Tool::IsClosed(aedge.edge) && !BRep_Tool::IsClosed(redge.edge)) continue;
+					if (!BRep_Tool::IsClosed(aedge.edge) && !BRep_Tool::IsClosed(redge.edge))
+					{
+						continue;
+					}
 					int splitdump = 2;
 					if (redge.if_splitted)
 					{
 						splitdump = aedge.parameters.rows() - 3;
 					}
-					itr_ = edges.insert(itr_ + 1, edgeshape.size());
+					itr = edges.insert(itr + 1, edgeshape.size());
 					aedge.prev_edge = edgeshape.size();
-					edgeshape.push_back(ShapeEdge(edgeshape.size(), aedge.edge));
+					edgeshape.emplace_back(edgeshape.size(), aedge.edge);
 					auto &newedge = edgeshape.back();
 					newedge.main_face = aedge.main_face;
 					newedge.secondary_face = aedge.secondary_face;
 					newedge.parameters = aedge.parameters.block(splitdump, 0, aedge.parameters.rows() - splitdump, 2);
 					newedge.reversed_edge = aedge.reversed_edge;
-					aedge.parameters.conservativeResize(splitdump + 1, 2);
+					//aedge.parameters.conservativeResize(splitdump + 1, 2);
+					aedge.parameters = aedge.parameters.block(0, 0, splitdump + 1, 2);
+
 					//读M14_receiver.stp时此处会出问题 2021/09/10
 					//MatrixXd t = aedge.parameters.block(0, 0, splitdump + 1, 2);
 					////aedge.parameters = aedge.parameters.block(0, 0, splitdump + 1, 2);
@@ -113,6 +121,7 @@ namespace CADMesher
 			}
 		}
 		dprint("Split Edges Done!");
+
 		vector<unsigned> &triangle_surface_index = globalmodel.triangle_surface_index;
 		int pointsnum = 0;
 		for (auto &frac_mesh : surface_meshes)
@@ -140,7 +149,7 @@ namespace CADMesher
 				triangle_surface_index.push_back(i);
 			}
 			auto &wires = faceshape[i].wires;
-			for (auto edges : wires)
+			for (auto &edges : wires)
 			{
 				int start_id = pointsnum;
 				for (auto itr = edges.begin(); itr != edges.end(); itr++)
@@ -154,20 +163,23 @@ namespace CADMesher
 			}
 			pointsnum = model_mesh.n_vertices();
 		}
-		for (OE te : model_mesh.edges())
+
+		for (auto te : model_mesh.edges())
 		{
 			if (model_mesh.is_boundary(te))
 				model_mesh.data(te).set_edgeflag(true);
 			else
 				model_mesh.data(te).set_edgeflag(false);
 		}
-		for (OV tv : model_mesh.vertices())
+		for (auto tv : model_mesh.vertices())
 		{
 			if (model_mesh.is_boundary(tv))
 				model_mesh.data(tv).set_vertflag(true);
 			else
 				model_mesh.data(tv).set_vertflag(false);
 		}
+
+#if 1
 		for (int i = 0; i < edgeshape.size(); i++)
 		{
 			auto &edge0 = edgeshape[i];
@@ -243,6 +255,7 @@ namespace CADMesher
 			}
 		}
 		model_mesh.garbage_collection();
+#endif
 		dprint("Merge Meshes Done!");
 	}
 
