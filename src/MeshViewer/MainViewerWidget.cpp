@@ -65,7 +65,7 @@ void MainViewerWidget::open_CAD_query()
 	);
 	if (!fileName.isEmpty())
 	{
-		if (fileName.endsWith(".stp") || fileName.endsWith(".igs") || fileName.endsWith(".STEP") || fileName.endsWith(".IGES"))
+		if (fileName.endsWith(".stp") || fileName.endsWith(".igs") || fileName.endsWith(".IGS") || fileName.endsWith(".STEP") || fileName.endsWith(".IGES"))
 		{
 			MeshViewer->SetCADFileName(fileName);
 			CADMesher::globalmodel.clear();
