@@ -27,7 +27,7 @@ namespace CADMesher
 
 
 			int pointsnumber = 0;
-			vector<MatrixX2i> bnd;
+			vector<Matrix2Xi> bnd;
 			double x_step = 0;
 			double y_step = 0;
 			for (int m = 0; m < wires.size(); m++)
@@ -35,35 +35,35 @@ namespace CADMesher
 				auto &edges = wires[m];
 				int boundsum = 0;
 				auto &end_paras = edgeshape[*edges.rbegin()].parameters;
-				auto end_para = end_paras.row(end_paras.rows() - 1);
+				auto end_para = end_paras.col(end_paras.cols() - 1);
 				for (int j = 0; j < edges.size(); j++)
 				{
 					auto &aedge = edgeshape[edges[j]];
 					auto &boundpos = aedge.parameters;
-					int rows = boundpos.rows() - 1;
-					pointsnumber += rows;
-					boundsum += rows;
+					int cols = boundpos.cols() - 1;
+					pointsnumber += cols;
+					boundsum += cols;
 
 					double temp;
-					for (int r = 0; r < rows; r++)
+					for (int r = 0; r < cols; r++)
 					{
-						temp = fabs(boundpos(r + 1, 0) - boundpos(r, 0));
+						temp = fabs(boundpos(0, r + 1) - boundpos(0, r));
 						x_step = std::max(x_step, temp);
-						temp = fabs(boundpos(r + 1, 1) - boundpos(r, 1));
+						temp = fabs(boundpos(1, r + 1) - boundpos(1, r));
 						y_step = std::max(y_step, temp);
 					}
 				}
-				MatrixX2i bound(boundsum, 2);
+				Matrix2Xi bound(2, boundsum);
 				for (int j = 0; j < boundsum - 1; j++)
 				{
-					bound.row(j) << j + pointsnumber - boundsum, j + pointsnumber - boundsum + 1;
+					bound.col(j) << j + pointsnumber - boundsum, j + pointsnumber - boundsum + 1;
 				}
-				bound.row(boundsum - 1) << pointsnumber - 1, pointsnumber - boundsum;
+				bound.col(boundsum - 1) << pointsnumber - 1, pointsnumber - boundsum;
 				bnd.push_back(bound);
 			}
 
 
-			MatrixX2d all_pnts(pointsnumber, 2);
+			Matrix2Xd all_pnts(2, pointsnumber);
 			pointsnumber = 0;
 			int s = 0;
 			double if_reverse = aface.Orientation() ? -1.0 : 1.0;
@@ -76,14 +76,16 @@ namespace CADMesher
 				for (int k = 0; k < edges.size(); k++)
 				{
 					auto &boundpos = edgeshape[edges[k]].parameters;
-					int rows = boundpos.rows() - 1;
-					all_pnts.block(s, 0, rows, 2) = boundpos.block(0, 0, rows, 2);
-					s += rows;
+					int cols = boundpos.cols() - 1;
+					//all_pnts.block(s, 0, rows, 2) = boundpos.block(0, 0, rows, 2);
+					all_pnts.block(0, s, 2, cols) = boundpos.block(0, 0, 2, cols);
+					s += cols;
 				}
 				pointsnumber = s;
 			}
 
-			all_pnts.block(0, 1, all_pnts.rows(), 1) *= ra;
+			//all_pnts.block(0, 1, all_pnts.rows(), 1) *= ra;
+			all_pnts.block(1, 0, 1, all_pnts.cols()) *= ra;
 
 			//dprint("all_pnts:", all_pnts, "\n\nbnd:", bnd);
 
@@ -235,8 +237,8 @@ namespace CADMesher
 				curve_length += a * GL_c[i] * d1.Magnitude();
 			}
 
-			int segment_number = std::max(BRep_Tool::IsClosed(aedge) ? 3 : 2, int(curve_length / expected_edge_length));
-			edge->parameters.resize(segment_number + 1, 2);
+			int segment_number = std::max(BRep_Tool::IsClosed(aedge) ? 4 : 2, int(curve_length / expected_edge_length));
+			edge->parameters.resize(2, segment_number + 1);
 
 			Handle_Geom2d_Curve thePCurve = BRep_Tool::CurveOnSurface(aedge, mainface, first, last);
 			double step = (last - first) / segment_number;
@@ -246,20 +248,20 @@ namespace CADMesher
 				for (int i = 0; i < segment_number; i++)
 				{
 					uv = thePCurve->Value(first + i * step);
-					edge->parameters.row(i) << uv.X(), uv.Y();
+					edge->parameters.col(i) << uv.X(), uv.Y();
 				}
 				uv = thePCurve->Value(last);
-				edge->parameters.row(segment_number) << uv.X(), uv.Y();
+				edge->parameters.col(segment_number) << uv.X(), uv.Y();
 			}
 			else
 			{
 				for (int i = 0; i < segment_number; i++)
 				{
 					uv = thePCurve->Value(last - i * step);
-					edge->parameters.row(i) << uv.X(), uv.Y();
+					edge->parameters.col(i) << uv.X(), uv.Y();
 				}
 				uv = thePCurve->Value(first);
-				edge->parameters.row(segment_number) << uv.X(), uv.Y();
+				edge->parameters.col(segment_number) << uv.X(), uv.Y();
 			}
 		}
 		dprint("Discrete Edges Done!");

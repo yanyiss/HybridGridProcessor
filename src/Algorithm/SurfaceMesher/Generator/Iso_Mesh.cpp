@@ -65,58 +65,47 @@ namespace CADMesher
 			auto &wires = face.wires;
 			for(auto &edges : wires)
 			{
-				for (auto itr = edges.begin(); itr != edges.end(); itr++)
+				int s = edges.size();
+				for (int i = 0; i < s; ++i)
 				{
-					ShapeEdge &aedge = edgeshape[*itr];
-					if (aedge.reversed_edge == -1) continue;
-					auto &redge = edgeshape[aedge.reversed_edge];
-					if (!BRep_Tool::IsClosed(aedge.edge) && !BRep_Tool::IsClosed(redge.edge))
+					int ei = edges[i];
+					if (edgeshape[ei].reversed_edge == -1)
 					{
 						continue;
 					}
+					auto &redge = edgeshape[edgeshape[ei].reversed_edge];
+					if (!BRep_Tool::IsClosed(edgeshape[ei].edge) && !BRep_Tool::IsClosed(redge.edge))
+					{
+						continue;
+					}
+
 					int splitdump = 2;
 					if (redge.if_splitted)
 					{
-						splitdump = aedge.parameters.rows() - 3;
+						splitdump = edgeshape[ei].parameters.cols() - 3;
 					}
-					itr = edges.insert(itr + 1, edgeshape.size());
-					aedge.prev_edge = edgeshape.size();
-					edgeshape.emplace_back(edgeshape.size(), aedge.edge);
-					auto &newedge = edgeshape.back();
-					newedge.main_face = aedge.main_face;
-					newedge.secondary_face = aedge.secondary_face;
-					newedge.parameters = aedge.parameters.block(splitdump, 0, aedge.parameters.rows() - splitdump, 2);
-					newedge.reversed_edge = aedge.reversed_edge;
-					//aedge.parameters.conservativeResize(splitdump + 1, 2);
-					aedge.parameters = aedge.parameters.block(0, 0, splitdump + 1, 2);
+					edges.insert(edges.begin() + i + 1, edgeshape.size());
+					edgeshape[ei].prev_edge = edgeshape.size();
+					edgeshape.emplace_back(edgeshape.size(), edgeshape[ei].edge);
+					
+					ShapeEdge &newedge = edgeshape.back();
+					newedge.main_face = edgeshape[ei].main_face;
+					newedge.secondary_face = edgeshape[ei].secondary_face;
+					newedge.parameters = edgeshape[ei].parameters.block(0, splitdump, 2, edgeshape[ei].parameters.cols() - splitdump);
+					newedge.reversed_edge = edgeshape[ei].reversed_edge;
 
-					//读M14_receiver.stp时此处会出问题 2021/09/10
-					//MatrixXd t = aedge.parameters.block(0, 0, splitdump + 1, 2);
-					////aedge.parameters = aedge.parameters.block(0, 0, splitdump + 1, 2);
-					//if (aedge.parameters.rows() >= 47)
-					//{
-					//	print(aedge.parameters,"\n", t);
-					//}
-					//std::cout << splitdump << std::endl;
-					//std::cout << aedge.parameters.rows() << std::endl;
-					//aedge.parameters.resize(splitdump + 1, 2);
-					//std::cout << "resize parameter" << std::endl;
-					//aedge.parameters = t;
-					//std::cout << "fdjksal";
-					/*aedge.parameters.resize(48, 2);
-					aedge.parameters.resize(47, 2);
-					aedge.parameters.resize(3, 2);
-					aedge.parameters.resize(40, 2);
-					aedge.parameters.resize(splitdump + 1, 2);*/
-					aedge.if_splitted = true;
+					edgeshape[ei].parameters.conservativeResize(2, splitdump + 1);
+					edgeshape[ei].if_splitted = true;
 					newedge.if_splitted = true;
 					if (redge.if_splitted)
 					{
-						aedge.reversed_edge = redge.prev_edge;
+						edgeshape[ei].reversed_edge = redge.prev_edge;
 						newedge.reversed_edge = redge.id;
 						redge.reversed_edge = newedge.id;
-						edgeshape[redge.prev_edge].reversed_edge = aedge.id;
+						edgeshape[redge.prev_edge].reversed_edge = edgeshape[ei].id;
 					}
+					++i;
+					++s;
 				}
 			}
 		}
@@ -156,7 +145,7 @@ namespace CADMesher
 				{
 					auto &aedge = edgeshape[*itr];
 					aedge.begin_id = pointsnum;
-					pointsnum += aedge.parameters.rows() - 1;
+					pointsnum += aedge.parameters.cols() - 1;
 					aedge.end_id = itr != edges.end() - 1 ? pointsnum : start_id;
 					aedge.prev_edge = itr != edges.begin() ? *(itr - 1) : edges.back();
 				}
@@ -201,7 +190,7 @@ namespace CADMesher
 			{
 				model_mesh.add_face(model_mesh.vertex_handle(m1), model_mesh.vertex_handle(n0), model_mesh.vertex_handle(m1 + 1));
 			}
-			int length = edge0.parameters.rows();
+			int length = edge0.parameters.cols();
 			model_mesh.add_face(model_mesh.vertex_handle(m0 + 1), model_mesh.vertex_handle(n1), model_mesh.vertex_handle(m1 + length - 2));
 			model_mesh.add_face(model_mesh.vertex_handle(m1 + 1), model_mesh.vertex_handle(n0), model_mesh.vertex_handle(m0 + length - 2));
 			for (int j = 1; j < length - 2; j++)
