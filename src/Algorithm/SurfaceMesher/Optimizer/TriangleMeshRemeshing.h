@@ -14,56 +14,68 @@ namespace CADMesher
 	class TriangleMeshRemeshing
 	{
 	public:
-		TriangleMeshRemeshing(TriMesh *mesh_)
-			:mesh(mesh_)
+		TriangleMeshRemeshing(TriMesh *mesh_, double target_length = -1)
+			:mesh(mesh_), expected_length(target_length)
 		{
-			high = 4.0 / 3.0*expected_length;
-			low = 4.0 / 5.0*expected_length;
-			aabbtree = new ClosestPointSearch::AABBTree(*mesh);
-			/*std::vector<CGAL_3_Segment> segment_vectors;
-			for (auto te : mesh_->edges()) {
-				if (!mesh_->data(te).get_edgeflag()) continue;
-				O3d p0 = mesh_->point(te.v0());
-				O3d p1 = mesh_->point(te.v1());
-				segment_vectors.emplace_back(CGAL_double_3_Point(p0[0], p0[1], p0[2]), CGAL_double_3_Point(p1[0], p1[1], p1[2]));
+			if (expected_length < 0)
+			{
+				expected_length = meshAverageLength(*mesh);
 			}
-			AABB_Segment_tree = new CGAL_AABB_Segment_Tree(segment_vectors.begin(), segment_vectors.end());
-			AABB_Segment_tree->accelerate_distance_queries();*/
+			high = 1.33*expected_length;
+			low = 0.8*expected_length;
+			aabbtree = new ClosestPointSearch::AABBTree(*mesh);
 		};
-		~TriangleMeshRemeshing();
+#ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
+		TriangleMeshRemeshing(PolyMesh *mesh_, double target_length = -1)
+			:expected_length(target_length)
+		{
+			for (auto &tf : mesh_->faces())
+			{
+				if (tf.valence() == 3)
+				{
+					mesh_->delete_face(tf);
+				}
+				else
+				{
+
+				}
+			}
+		};
+#endif
+		TriangleMeshRemeshing(const TriangleMeshRemeshing &tmr) = delete;
+		~TriangleMeshRemeshing() { if (aabbtree) { delete aabbtree; aabbtree = nullptr; } }
 
 	public:
-		void RemeshingMethod();
+		void run();
 
-		//private:
+	private:
+		//main step
 		void split();
 		void collapse();
 		void equalize_valence();
+		void tangential_relaxation();
+		//auxiliary step
 		void adjustTargetLength();
 		void processAngle();
-		void tangential_relaxation();
-
-		double minAngle();
-
-	private:
+		//geometry support
 		O3d GravityPos(const OV &v);
 
-		bool split_one_edge(Mesh::EdgeHandle& eh, OpenMesh::Vec3d& p);
 
 	private:
 		double high;
 		double low;
+		double expected_length;
 
 		double lowerAngleBound = 0.05;
-		/*double beta_min = 7.0 * PI / 36.0;
-		double beta_max = 17.0 * PI / 36.0;*/
 		TriMesh *mesh = nullptr;
 		ClosestPointSearch::AABBTree *aabbtree = nullptr;
-		//CGAL_AABB_Segment_Tree* AABB_Segment_tree = nullptr;
 
-	public:
-		static double expected_length;
+#ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
+		bool polymeshInput = false;
+		PolyMesh *pmesh = nullptr;
+		OpenMesh::VPropHandleT<bool> fixedvertex;
 
+#endif
 	};
 }
 

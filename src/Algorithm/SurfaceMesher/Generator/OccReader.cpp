@@ -11,7 +11,7 @@ namespace CADMesher
 		for (int i = 0; i < faceshape.size(); i++)
 		//int i = 56;
 		{
-			dprint(i);
+			//dprint(i);
 			TriMesh &aMesh = Surface_TriMeshes[i];
 			auto &wires = faceshape[i].wires;
 			if (wires.empty())
@@ -77,18 +77,13 @@ namespace CADMesher
 				{
 					auto &boundpos = edgeshape[edges[k]].parameters;
 					int cols = boundpos.cols() - 1;
-					//all_pnts.block(s, 0, rows, 2) = boundpos.block(0, 0, rows, 2);
 					all_pnts.block(0, s, 2, cols) = boundpos.block(0, 0, 2, cols);
 					s += cols;
 				}
 				pointsnumber = s;
 			}
 
-			//all_pnts.block(0, 1, all_pnts.rows(), 1) *= ra;
 			all_pnts.block(1, 0, 1, all_pnts.cols()) *= ra;
-
-			//dprint("all_pnts:", all_pnts, "\n\nbnd:", bnd);
-
 			triangulate(all_pnts, bnd, sqrt(3) * x_step * x_step / 4 * mu, aMesh);
 			for (auto tv : aMesh.vertices())
 			{

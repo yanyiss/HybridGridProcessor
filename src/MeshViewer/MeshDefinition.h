@@ -158,6 +158,22 @@ void compute_principal_curvature(Mesh* mesh_,
 
 
 #pragma region functions by yanyisheshou at GCL
+double meshMinAngle(TriMesh &mesh);
+
+void printMeshQuality(TriMesh &mesh);
+
+template <typename T>
+void updateMesh(T& m)
+{
+	m.request_vertex_status();
+	m.request_edge_status();
+	m.request_face_status();
+	m.request_face_normals();
+	m.request_vertex_normals();
+	m.update_face_normals();
+	m.update_vertex_normals();
+}
+
 template <typename T>
 bool isClosedMesh(T& mesh)
 {
@@ -167,6 +183,17 @@ bool isClosedMesh(T& mesh)
 			return false;
 	}
 	return true;
+}
+
+template <typename T>
+double meshAverageLength(T &mesh)
+{
+	double le = 0;
+	for (auto te : mesh.edges())
+	{
+		le += mesh.calc_edge_length(te);
+	}
+	return le / mesh.n_edges();
 }
 #pragma endregion
 

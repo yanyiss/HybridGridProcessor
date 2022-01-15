@@ -6,7 +6,8 @@ namespace CADMesher
 	class Iso_Mesh
 	{
 	public:
-		Iso_Mesh(QString &fileName);
+		explicit Iso_Mesh(QString &fileName);
+		Iso_Mesh(const Iso_Mesh& im) = delete;
 		~Iso_Mesh()
 		{
 			if (occ_reader) { delete occ_reader; occ_reader = nullptr; }

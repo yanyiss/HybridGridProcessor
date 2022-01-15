@@ -553,7 +553,7 @@ void MeshViewerWidget::draw_scene_mesh(int drawmode)
 		glPolygonOffset(1.5f, 2.0f);
 		glEnable(GL_LIGHTING);
 		glShadeModel(GL_FLAT);
-		draw_checkboard();
+		draw_IsotropicMesh();
 		glDisable(GL_POLYGON_OFFSET_FILL);
 		//draw_meshpointset();
 		glDisable(GL_LIGHTING);
@@ -567,7 +567,7 @@ void MeshViewerWidget::draw_scene_mesh(int drawmode)
 		glPolygonOffset(1.5f, 2.0f);
 		glEnable(GL_LIGHTING);
 		glShadeModel(GL_FLAT);
-		draw_diagonalmesh();
+		draw_AnisotropicMesh();
 		glDisable(GL_POLYGON_OFFSET_FILL);
 		//draw_meshpointset();
 		glDisable(GL_LIGHTING);
@@ -868,119 +868,131 @@ void MeshViewerWidget::draw_mesh_pointset() const
 
 }
 
+#include "../src/Algorithm/SurfaceMesher/Optimizer/TriangleMeshRemeshing.h"
+void MeshViewerWidget::draw_IsotropicMesh()
+{
+	CADMesher::TriangleMeshRemeshing *tmr = new CADMesher::TriangleMeshRemeshing(&mesh);
+}
+
+void MeshViewerWidget::draw_AnisotropicMesh()
+{
+
+}
+
 #include "../src/Algorithm/CheckBoard/CheckBoardGenerator.h"
-static bool flag = true;
-static CheckBoardGenerator* cbg = nullptr;
-void MeshViewerWidget::draw_checkboard()
-{
-	static CheckBoardGenerator::m3xd V;
-	static std::vector<CheckBoardGenerator::vxu> F;
-	static Mesh checkboard;
-	if (flag)
-	{
-		flag = false;
-		cbg = new CheckBoardGenerator(mesh);
-		cbg->run();
-		cbg->getCheckBoard(V,F);
-		cbg->getMesh(checkboard, V, F);
-		OpenMesh::IO::write_mesh(checkboard, file + "_test.obj");
-	}
 
-	Mesh::ConstFaceIter fIt(checkboard.faces_begin()),
-		fEnd(checkboard.faces_end());
-	Mesh::ConstFaceVertexIter fvIt;
-
-	GLfloat mat_a[] = { 0.7f, 0.7f, 0.7f, 1.0f };
-	GLfloat mat_d[] = { 0.88f, 0.84f, 0.76f, 1.0f };
-	GLfloat mat_s[] = { 0.4f, 0.4f, 0.4f, 1.0f };
-	GLfloat shine[] = { 120.0f };
-
-	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, mat_a);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, mat_d);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, mat_s);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, shine);
-
-	for (; fIt != fEnd; ++fIt)
-	{
-		glBegin(GL_POLYGON);
-		glNormal3dv(&checkboard.normal(fIt)[0]);
-		fvIt = checkboard.cfv_iter(fIt.handle());
-		for (fvIt; fvIt; ++fvIt)
-		{
-			glVertex3dv(&checkboard.point(fvIt)[0]);
-		}
-		glEnd();
-	}
-	mesh = checkboard;
-}
-
-void MeshViewerWidget::draw_diagonalmesh()
-{
-	static CheckBoardGenerator::m3xd V0, V1;
-	static std::vector<CheckBoardGenerator::vxu> F0, F1;
-	static Mesh primal, dual;
-	if (flag)
-	{
-		flag = false;
-		cbg = new CheckBoardGenerator(mesh);
-		cbg->run();
-		cbg->getPrimal(V0, F0);
-		cbg->getMesh(primal, V0, F0);
-		cbg->getDual(V1, F1);
-		cbg->getMesh(dual, V1, F1);
-	}
-
-	Mesh::ConstFaceIter fIt(primal.faces_begin()),
-		fEnd(primal.faces_end());
-	Mesh::ConstFaceVertexIter fvIt;
-
-	GLfloat mat_a[] = { 0.7f, 0.7f, 0.7f, 1.0f };
-	GLfloat mat_d[] = { 0.88f, 0.84f, 0.76f, 1.0f };
-	GLfloat mat_s[] = { 0.4f, 0.4f, 0.4f, 1.0f };
-	GLfloat shine[] = { 120.0f };
-
-	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, mat_a);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, mat_d);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, mat_s);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, shine);
-
-	for (; fIt != fEnd; ++fIt)
-	{
-		glBegin(GL_POLYGON);
-		glNormal3dv(&primal.normal(fIt)[0]);
-		fvIt = primal.cfv_iter(fIt.handle());
-		for (fvIt; fvIt; ++fvIt)
-		{
-			glVertex3dv(&primal.point(fvIt)[0]);
-		}
-		glEnd();
-	}
-	mesh = primal;
-	/*glBegin(GL_POINTS);
-	for (int i = 0; i < V1.cols(); ++i)
-	{
-		glVertex3dv(V1.col(i).data());
-	}
-	glEnd();
-	glBegin(GL_LINES);
-	for (const auto &f : F1)
-	{
-		int s = f.size();
-		for (int i = 0; i < s; ++i)
-		{
-			glVertex3dv(V1.col(f(i)).data());
-			glVertex3dv(V1.col(f((i + 1) % s)).data());
-		}
-	}
-	glEnd();*/
-	/*for (const auto &f : F1)
-	{
-		glBegin(GL_POLYGON);
-		glNormal3dv((V1.col(f(1)) - V1.col(f(0))).cross(V1.col(f(2)) - V1.col(f(1))).data());
-		for (int i = 0; i < f.size(); ++i)
-		{
-			glVertex3dv(V1.col(f(i)).data());
-		}
-		glEnd();
-	}*/
-}
+//static bool flag = true;
+//static CheckBoardGenerator* cbg = nullptr;
+//void MeshViewerWidget::draw_IsotropicMesh()
+//{
+//	static CheckBoardGenerator::m3xd V;
+//	static std::vector<CheckBoardGenerator::vxu> F;
+//	static Mesh checkboard;
+//	if (flag)
+//	{
+//		flag = false;
+//		cbg = new CheckBoardGenerator(mesh);
+//		cbg->run();
+//		cbg->getCheckBoard(V,F);
+//		cbg->getMesh(checkboard, V, F);
+//		OpenMesh::IO::write_mesh(checkboard, file + "_test.obj");
+//	}
+//
+//	Mesh::ConstFaceIter fIt(checkboard.faces_begin()),
+//		fEnd(checkboard.faces_end());
+//	Mesh::ConstFaceVertexIter fvIt;
+//
+//	GLfloat mat_a[] = { 0.7f, 0.7f, 0.7f, 1.0f };
+//	GLfloat mat_d[] = { 0.88f, 0.84f, 0.76f, 1.0f };
+//	GLfloat mat_s[] = { 0.4f, 0.4f, 0.4f, 1.0f };
+//	GLfloat shine[] = { 120.0f };
+//
+//	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, mat_a);
+//	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, mat_d);
+//	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, mat_s);
+//	glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, shine);
+//
+//	for (; fIt != fEnd; ++fIt)
+//	{
+//		glBegin(GL_POLYGON);
+//		glNormal3dv(&checkboard.normal(fIt)[0]);
+//		fvIt = checkboard.cfv_iter(fIt.handle());
+//		for (fvIt; fvIt; ++fvIt)
+//		{
+//			glVertex3dv(&checkboard.point(fvIt)[0]);
+//		}
+//		glEnd();
+//	}
+//	mesh = checkboard;
+//}
+//
+//void MeshViewerWidget::draw_AnisotropicMesh()
+//{
+//	static CheckBoardGenerator::m3xd V0, V1;
+//	static std::vector<CheckBoardGenerator::vxu> F0, F1;
+//	static Mesh primal, dual;
+//	if (flag)
+//	{
+//		flag = false;
+//		cbg = new CheckBoardGenerator(mesh);
+//		cbg->run();
+//		cbg->getPrimal(V0, F0);
+//		cbg->getMesh(primal, V0, F0);
+//		cbg->getDual(V1, F1);
+//		cbg->getMesh(dual, V1, F1);
+//	}
+//
+//	Mesh::ConstFaceIter fIt(primal.faces_begin()),
+//		fEnd(primal.faces_end());
+//	Mesh::ConstFaceVertexIter fvIt;
+//
+//	GLfloat mat_a[] = { 0.7f, 0.7f, 0.7f, 1.0f };
+//	GLfloat mat_d[] = { 0.88f, 0.84f, 0.76f, 1.0f };
+//	GLfloat mat_s[] = { 0.4f, 0.4f, 0.4f, 1.0f };
+//	GLfloat shine[] = { 120.0f };
+//
+//	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, mat_a);
+//	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, mat_d);
+//	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, mat_s);
+//	glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, shine);
+//
+//	for (; fIt != fEnd; ++fIt)
+//	{
+//		glBegin(GL_POLYGON);
+//		glNormal3dv(&primal.normal(fIt)[0]);
+//		fvIt = primal.cfv_iter(fIt.handle());
+//		for (fvIt; fvIt; ++fvIt)
+//		{
+//			glVertex3dv(&primal.point(fvIt)[0]);
+//		}
+//		glEnd();
+//	}
+//	mesh = primal;
+//	/*glBegin(GL_POINTS);
+//	for (int i = 0; i < V1.cols(); ++i)
+//	{
+//		glVertex3dv(V1.col(i).data());
+//	}
+//	glEnd();
+//	glBegin(GL_LINES);
+//	for (const auto &f : F1)
+//	{
+//		int s = f.size();
+//		for (int i = 0; i < s; ++i)
+//		{
+//			glVertex3dv(V1.col(f(i)).data());
+//			glVertex3dv(V1.col(f((i + 1) % s)).data());
+//		}
+//	}
+//	glEnd();*/
+//	/*for (const auto &f : F1)
+//	{
+//		glBegin(GL_POLYGON);
+//		glNormal3dv((V1.col(f(1)) - V1.col(f(0))).cross(V1.col(f(2)) - V1.col(f(1))).data());
+//		for (int i = 0; i < f.size(); ++i)
+//		{
+//			glVertex3dv(V1.col(f(i)).data());
+//		}
+//		glEnd();
+//	}*/
+//}

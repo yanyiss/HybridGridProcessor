@@ -62,17 +62,6 @@ public:
 	std::vector<std::vector<triple>> adj[2];            //connectivity
 	//OpenMesh::VPropHandleT<bool> diagonalMeshIndex;
 
-	template <typename T>
-	void updateMesh(T& m)
-	{
-		m.request_vertex_status();
-		m.request_edge_status();
-		m.request_face_status();
-		m.request_face_normals();
-		m.request_vertex_normals();
-		m.update_face_normals();
-		m.update_vertex_normals();
-	}
 	void printCurrentInfo();
 
 	//void setDiagonalMeshIndex();//divide original mesh vertices into two diagonal mesh classes and mark with true & false

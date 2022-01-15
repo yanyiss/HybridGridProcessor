@@ -7,7 +7,7 @@ namespace CADMesher
 {
 	class OccReader {
 	public:
-		OccReader(QString &fileName)
+		explicit OccReader(QString &fileName)
 		{
 			std::string filetype;
 			if (fileName.endsWith(".stp") || fileName.endsWith(".STP") || fileName.endsWith(".STEP")) {
@@ -35,6 +35,7 @@ namespace CADMesher
 			ComputeFaceAndEdge();
 			Discrete_Edge();
 		}
+		OccReader(const OccReader* or ) = delete;
 		~OccReader() {
 			if (reader) { delete reader; reader = nullptr; }
 		}

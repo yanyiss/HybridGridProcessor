@@ -19,40 +19,6 @@ namespace CADMesher
 
 	}
 
-	//void Iso_Mesh::MergeModel()
-	//{
-	//	using OpenMesh::Vec3d;
-	//	TriMesh &model_mesh = globalmodel.initial_trimesh;
-	//	model_mesh.clear();
-	//	vector<ShapeFace> &faceshape = globalmodel.faceshape;
-	//	vector<ShapeEdge> &edgeshape = globalmodel.edgeshape;
-	//	const auto &surface_meshes = occ_reader->Surface_TriMeshes;
-	//	vector<unsigned> &triangle_surface_index = globalmodel.triangle_surface_index;
-	//	int nv = 0;
-	//	for (auto &frac_mesh : surface_meshes)
-	//	{
-	//		nv += frac_mesh.n_vertices();
-	//	}
-	//	triangle_surface_index.reserve(nv);
-	//	int edgePointNum = 0;
-	//	for (vector<ShapeEdge>::iterator edge = edgeshape.begin(); edge != edgeshape.end(); ++edge)
-	//	{
-	//		if (edge->reversed_edge = -1)
-	//		{
-	//			edgePointNum += 2 * (edge->parameters.rows() - 1);
-	//		}
-	//		else
-	//		{
-	//			edgePointNum += edge->parameters.rows() - 1;
-	//		}
-	//	}
-	//	/*nv -= edgePointNum / 2;
-	//	for (int i = 0; i < nv; ++i)
-	//	{
-	//		model_mesh.add_vertex(Vec3d());
-	//	}*/
-	//}
-
 	void Iso_Mesh::MergeModel()
 	{
 		TriMesh &model_mesh = globalmodel.initial_trimesh;
