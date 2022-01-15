@@ -25,6 +25,10 @@ namespace CADMesher
 		dprint("Remeshing Done!\n");
 
 		printMeshQuality(*mesh);
+
+#ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
+		assembleMesh();
+#endif
 	}
 
 	void TriangleMeshRemeshing::split()
@@ -341,6 +345,138 @@ namespace CADMesher
 		}
 		return sum / area;
 	}
+
+#ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
+	TriangleMeshRemeshing::TriangleMeshRemeshing(PolyMesh *mesh_, double target_length)
+		:expected_length(target_length), polymeshInput(true)
+	{
+		polymesh = new Mesh();
+		polymesh->reserve(mesh_->n_vertices(), mesh_->n_edges(), mesh_->n_faces());
+
+		enum vertexType { tri, poly, mixed };
+		OpenMesh::VPropHandleT<int> idMap;
+		OpenMesh::VPropHandleT<vertexType> typeMap;
+		mesh_->add_property(idMap);
+		mesh_->add_property(typeMap);
+		int i = 0, j = 0, k = 0;
+		{
+			bool allTri = true, allPoly = true;
+			for (auto &tv : mesh_->vertices())
+			{
+				allTri = allPoly = true;
+				for (auto &tvf : mesh_->vf_range(tv))
+				{
+					if (tvf.valence() == 3)
+					{
+						allPoly = false;
+					}
+					else
+					{
+						allTri = false;
+					}
+				}
+				if (allTri)
+				{
+					mesh_->property(idMap, tv) = i++;
+					mesh_->property(typeMap, tv) = tri;
+				}
+				else if (allPoly)
+				{
+					mesh_->property(idMap, tv) = j++;
+					mesh_->property(typeMap, tv) = poly;
+				}
+				else
+				{
+					mesh_->property(idMap, tv) = k++;
+					mesh_->property(typeMap, tv) = mixed;
+				}
+			}
+		
+			int triangleNum = 0;
+			for (auto &tf : mesh_->faces())
+			{
+				if (tf.valence() == 3)
+				{
+					++triangleNum;
+				}
+			}
+			mesh_->reserve(i + k, i + k + triangleNum, triangleNum);
+		}
+
+		for (auto &tv : mesh_->vertices())
+		{
+			if (mesh_->property(typeMap, tv) == mixed)
+			{
+				mesh->add_vertex(mesh_->point(tv));
+				polymesh->add_vertex(mesh_->point(tv));
+			}
+		}
+		for (auto &tv : mesh_->vertices())
+		{
+			switch (mesh_->property(typeMap, tv))
+			{
+			case tri:
+				mesh->add_vertex(mesh_->point(tv));
+				break;
+			case poly:
+				polymesh->add_vertex(mesh_->point(tv));
+				break;
+			default:
+				break;
+			}
+		}
+
+		int id[4];
+		int ii = 0;
+		for (auto &tf : mesh_->faces())
+		{
+			ii = 0;
+			if (tf.valence() == 3)
+			{
+				for (auto &tfv : mesh_->fv_range(tf))
+				{
+					id[ii++] = mesh_->property(typeMap, tfv) == tri ? mesh_->property(idMap, tfv) + k : mesh_->property(idMap, tfv);
+				}
+				mesh->add_face(mesh->vertex_handle(id[0]), mesh->vertex_handle(id[1]), mesh->vertex_handle(id[2]));
+			}
+			else
+			{
+				for (auto &tfv : mesh_->fv_range(tf))
+				{
+					id[ii++] = mesh_->property(typeMap, tfv) == poly ? mesh_->property(idMap, tfv) + k : mesh_->property(idMap, tfv);
+				}
+				polymesh->add_face(mesh->vertex_handle(id[0]), mesh->vertex_handle(id[1]), mesh->vertex_handle(id[2]), mesh->vertex_handle(id[3]));
+			}
+		}
+		boundaryNum = k;
+		mesh_->remove_property(idMap);
+		mesh_->remove_property(typeMap);
+		delete mesh_;
+		mesh_ = polymesh;
+	}
+
+	void TriangleMeshRemeshing::assembleMesh()
+	{
+		int nv = polymesh->n_vertices();
+		auto vItr = mesh->vertices_begin();
+		for (int i = 0; i < boundaryNum; ++i, ++vItr);
+		for (; vItr != mesh->vertices_end(); ++vItr, polymesh->add_vertex(mesh->point(*vItr)));
+
+		int id[3];
+		int ii = 0;
+		for (auto &tf : mesh->faces())
+		{
+			ii = 0;
+			for (auto &tfv : mesh->fv_range(tf))
+			{
+				id[ii++] = tfv.idx() < boundaryNum ? tfv.idx() : tfv.idx() + nv;
+			}
+			polymesh->add_face(polymesh->vertex_handle(id[0]), polymesh->vertex_handle(id[1]), polymesh->vertex_handle(id[2]));
+		}
+		delete mesh;
+		mesh = nullptr;
+	}
+#endif
 
 	/*bool TriangleMeshRemeshing::split_one_edge(Mesh::EdgeHandle& eh, OpenMesh::Vec3d& p)
 	{

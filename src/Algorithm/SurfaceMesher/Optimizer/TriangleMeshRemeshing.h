@@ -14,7 +14,7 @@ namespace CADMesher
 	class TriangleMeshRemeshing
 	{
 	public:
-		TriangleMeshRemeshing(TriMesh *mesh_, double target_length = -1)
+		explicit TriangleMeshRemeshing(TriMesh *mesh_, double target_length = -1)
 			:mesh(mesh_), expected_length(target_length)
 		{
 			if (expected_length < 0)
@@ -25,25 +25,10 @@ namespace CADMesher
 			low = 0.8*expected_length;
 			aabbtree = new ClosestPointSearch::AABBTree(*mesh);
 		};
-#ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
-		TriangleMeshRemeshing(PolyMesh *mesh_, double target_length = -1)
-			:expected_length(target_length)
-		{
-			for (auto &tf : mesh_->faces())
-			{
-				if (tf.valence() == 3)
-				{
-					mesh_->delete_face(tf);
-				}
-				else
-				{
-
-				}
-			}
-		};
-#endif
 		TriangleMeshRemeshing(const TriangleMeshRemeshing &tmr) = delete;
-		~TriangleMeshRemeshing() { if (aabbtree) { delete aabbtree; aabbtree = nullptr; } }
+		~TriangleMeshRemeshing() { 
+			if (aabbtree) { delete aabbtree; aabbtree = nullptr; } 
+		}
 
 	public:
 		void run();
@@ -71,10 +56,14 @@ namespace CADMesher
 		ClosestPointSearch::AABBTree *aabbtree = nullptr;
 
 #ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
+	public:
+		explicit TriangleMeshRemeshing(PolyMesh *mesh_, double target_length = -1);//, polymeshInput(true)
+	private:
 		bool polymeshInput = false;
-		PolyMesh *pmesh = nullptr;
-		OpenMesh::VPropHandleT<bool> fixedvertex;
-
+		int boundaryNum;
+		PolyMesh *polymesh;
+	private:
+		void assembleMesh();
 #endif
 	};
 }
