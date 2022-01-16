@@ -93,6 +93,7 @@ public:
 	void checkMeshMode();
 private:
 	int mesh_mode_;
+	bool ifUpdateMesh = true;
 	//std::vector<unsigned int> Indices;
 	//std::vector<unsigned int> VIndices;
 };

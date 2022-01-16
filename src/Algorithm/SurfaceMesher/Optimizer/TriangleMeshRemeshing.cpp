@@ -7,7 +7,7 @@ namespace CADMesher
 		for (auto tv : mesh->vertices())
 			mesh->data(tv).set_targetlength(expected_length);
 
-		for (int i = 0; i < 20; i++)
+		for (int i = 0; i < 10; i++)
 		{
 			dprint("\niteration times:", i + 1);
 			split();
@@ -27,7 +27,10 @@ namespace CADMesher
 		printMeshQuality(*mesh);
 
 #ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
-		assembleMesh();
+		if (polymeshInput)
+		{
+			assembleMesh();
+		}
 #endif
 	}
 
@@ -42,12 +45,8 @@ namespace CADMesher
 			OV newvert = mesh->add_vertex(mesh->calc_edge_midpoint(te));
 			mesh->data(newvert).set_targetlength(0.5*(t0 + t1));
 			bool flag = mesh->data(te).get_edgeflag();
-			std::pair<OV, OV> vert(te.v0(), te.v1());
-#ifdef  OPENMESH_TRIMESH_ARRAY_KERNEL_HH
+			std::pair<OV, OV> vert(te.v0(), te.v1()); 
 			mesh->split_edge(te, newvert);
-#else
-			split_one_edge(te, mesh->point(newvert));
-#endif
 
 			if (flag) {
 				mesh->data(newvert).set_vertflag(true);
@@ -56,7 +55,6 @@ namespace CADMesher
 				continue;
 			}
 			mesh->set_point(newvert, aabbtree->closest_point(GravityPos(newvert)));
-			//mesh->set_point(newvert, aabbtree->closest_point(mesh->point(newvert)));
 		}
 		mesh->garbage_collection();
 		mesh->update_normals();
@@ -96,7 +94,6 @@ namespace CADMesher
 					if (z > x) mesh->set_point(fromvert, aabbtree->closest_point((mesh->point(v) + mesh->point(tovert))*0.5));
 					else {
 						mesh->collapse(the);
-						//mesh->property(edgeflag, mesh->edge_handle(mesh->find_halfedge(v, tovert))) = true;
 						mesh->data(mesh->edge_handle(mesh->find_halfedge(v, tovert))).set_edgeflag(true);
 					}
 				}
@@ -104,8 +101,8 @@ namespace CADMesher
 			}
 			if (mesh->data(mesh->edge_handle(the)).get_edgeflag()) continue;
 			if (mesh->data(fromvert).get_vertflag()) {
-				if (mesh->data(tovert).get_vertflag() && x < min_of_t0_t1*0.2) mesh->collapse(the);
-				continue;
+				//if (mesh->data(tovert).get_vertflag() && x < min_of_t0_t1*0.2) mesh->collapse(the);
+				//continue;
 			}
 			O3d pos = mesh->data(tovert).get_vertflag() ? mesh->point(tovert) : mesh->calc_centroid(the);
 
@@ -119,20 +116,16 @@ namespace CADMesher
 			auto t_f = mesh->opposite_halfedge_handle(the);
 			auto he = mesh->prev_halfedge_handle(mesh->opposite_halfedge_handle(mesh->prev_halfedge_handle(the)));
 			while (he != t_f) {
-				O3d p1 = mesh->point(he.from());
-#ifdef  OPENMESH_TRIMESH_ARRAY_KERNEL_HH
+				O3d p1 = mesh->point(mesh->from_vertex_handle(he));
 				O3d p2 = mesh->point(mesh->opposite_vh(he));
-#else 
-				O3d p2 = mesh->point(mesh->to_vertex_handle(mesh->next_halfedge_handle(he)));
-#endif
 				O3d p01 = (p1 - pos).normalize();
 				O3d p12 = (p2 - p1).normalize();
 				O3d p20 = (pos - p2).normalize();
 				if (acos(-p01.dot(p12)) < 0.1) goto goto20210523;
 				if (acos(-p12.dot(p20)) < 0.1) goto goto20210523;
 				if (acos(-p20.dot(p01)) < 0.1) goto goto20210523;
-				//he = mesh->prev_halfedge_handle(mesh->opposite_halfedge_handle(he));
-				he = he.opp().prev();
+				he = mesh->prev_halfedge_handle(mesh->opposite_halfedge_handle(he));
+				//he = he.opp().prev();
 			}
 
 			//stop if collapsing results in selfintersection
@@ -148,40 +141,35 @@ namespace CADMesher
 
 	void TriangleMeshRemeshing::equalize_valence()
 	{
+		double PiDividedByThree = PI / 3.0;
+		auto va = [&](OV v) {return mesh->valence(v) + (mesh->is_boundary(v) ? 2 : 0); };
+		auto opt = [&](OpenMesh::SmartHalfedgeHandle &he) {
+			return fabs(mesh->calc_sector_angle(he) - PiDividedByThree) + fabs(mesh->calc_sector_angle(mesh->prev_halfedge_handle(he)/*he.prev()*/) - PiDividedByThree) +
+				fabs(mesh->calc_sector_angle(mesh->next_halfedge_handle(he)/*he.next()*/) - PiDividedByThree);
+		};
 		for (auto te : mesh->edges()) {
-			if (
-#ifdef  OPENMESH_TRIMESH_ARRAY_KERNEL_HH
-				!mesh->is_flip_ok(te) ||
-#endif
-				mesh->data(te).get_edgeflag()
-				)
+			if (!mesh->is_flip_ok(te) || mesh->data(te).get_edgeflag())
 				continue;
-			auto va = [&](OV v) {return mesh->valence(v) + (mesh->is_boundary(v) ? 2 : 0); };
 			auto h0 = te.h0();
 			auto h1 = te.h1();
 			int v0 = va(te.v0());
 			int v1 = va(te.v1());
-#ifdef  OPENMESH_TRIMESH_ARRAY_KERNEL_HH
 			int u0 = va(mesh->opposite_vh(h0));
 			int u1 = va(mesh->opposite_vh(h1));
-#else
-			int u0 = va(mesh->to_vertex_handle(mesh->next_halfedge_handle(h0)));
-			int u1 = va(mesh->to_vertex_handle(mesh->next_halfedge_handle(h1)));
-#endif
 			if (fabs(v0 - 6) + fabs(v1 - 6) + fabs(u0 - 6) + fabs(u1 - 6) <= fabs(v0 - 7) + fabs(v1 - 7) + fabs(u0 - 5) + fabs(u1 - 5)) continue;
 
 			//在一定程度上可防止翻折
 			double alpha0, alpha1;
-			alpha0 = acos(-mesh->calc_edge_vector(h0).dot(mesh->calc_edge_vector(h0.next())));
-			alpha1 = acos(-mesh->calc_edge_vector(h1).dot(mesh->calc_edge_vector(h1.prev())));
+			alpha0 = acos(-mesh->calc_edge_vector(h0).dot(mesh->calc_edge_vector(mesh->next_halfedge_handle(h0)/*h0.next()*/)));
+			alpha1 = acos(-mesh->calc_edge_vector(h1).dot(mesh->calc_edge_vector(mesh->prev_halfedge_handle(h1)/*h1.prev()*/)));
 			if (alpha0 + alpha1 > PI) continue;
-			alpha0 = acos(-mesh->calc_edge_vector(h0).dot(mesh->calc_edge_vector(h0.prev())));
-			alpha1 = acos(-mesh->calc_edge_vector(h1).dot(mesh->calc_edge_vector(h1.next())));
+			alpha0 = acos(-mesh->calc_edge_vector(h0).dot(mesh->calc_edge_vector(mesh->prev_halfedge_handle(h0)/*h0.prev()*/)));
+			alpha1 = acos(-mesh->calc_edge_vector(h1).dot(mesh->calc_edge_vector(mesh->next_halfedge_handle(h1)/*h1.next()*/)));
 			if (alpha0 + alpha1 > PI) continue;
 
 			//检查二面角
-			auto n0 = mesh->calc_face_normal(h0.face());
-			auto n1 = mesh->calc_face_normal(h1.face());
+			auto n0 = mesh->calc_face_normal(mesh->face_handle(h0)/*h0.face()*/);
+			auto n1 = mesh->calc_face_normal(mesh->face_handle(h1)/*h1.face()*/);
 			if (n0.dot(n1) < 0.8)
 			{
 				if (mesh->data(te.v0()).get_vertflag() && mesh->data(te.v1()).get_vertflag())
@@ -190,8 +178,6 @@ namespace CADMesher
 					continue;
 				}
 			}
-
-
 			////防止出现狭长三角形
 			//auto V0 = mesh->point(te->v0());
 			//auto V1 = mesh->point(te->v1());
@@ -201,24 +187,11 @@ namespace CADMesher
 			//if (((U0 - V0).norm() + (U1 - V0).norm()) / (U0 - U1).norm() < 1.1) continue;
 
 			//假设flip，检查局部网格角度是否被优化
-			auto opt = [&](OpenMesh::SmartHalfedgeHandle he) {
-				return fabs(mesh->calc_sector_angle(he) - PI / 3.0) + fabs(mesh->calc_sector_angle(he.prev()) - PI / 3.0) +
-					fabs(mesh->calc_sector_angle(he.next()) - PI / 3.0);
-			};
 			double opt_before = opt(h0) + opt(h1);
-#ifdef  OPENMESH_TRIMESH_ARRAY_KERNEL_HH
 			mesh->flip(te);
-#else
-			flip_openmesh(te, *mesh);
-#endif
 			//若局部网格角度未被优化，则再次flip回到初始状态
-#ifdef  OPENMESH_TRIMESH_ARRAY_KERNEL_HH
 			if (opt_before < opt(te.h0()) + opt(te.h1()))
 				mesh->flip(te);
-#else
-			if (opt_before < opt(te.h0()) + opt(te.h1()))
-				flip_openmesh(te, *mesh);
-#endif
 		}
 		dprint("equalize done");
 	}
@@ -391,6 +364,13 @@ namespace CADMesher
 					mesh_->property(typeMap, tv) = mixed;
 				}
 			}
+			for (auto &tv : mesh_->vertices())
+			{
+				if (mesh_->property(typeMap, tv) != mixed)
+				{
+					mesh_->property(idMap, tv) += k;
+				}
+			}
 		
 			int triangleNum = 0;
 			for (auto &tf : mesh_->faces())
@@ -400,7 +380,8 @@ namespace CADMesher
 					++triangleNum;
 				}
 			}
-			mesh_->reserve(i + k, i + k + triangleNum, triangleNum);
+			mesh = new TriMesh();
+			mesh->reserve(i + k, i + k + triangleNum, triangleNum);
 		}
 
 		for (auto &tv : mesh_->vertices())
@@ -409,6 +390,11 @@ namespace CADMesher
 			{
 				mesh->add_vertex(mesh_->point(tv));
 				polymesh->add_vertex(mesh_->point(tv));
+				if (mesh_->data(tv).get_vertflag())
+				{
+					mesh->data(mesh->vertex_handle(mesh->n_vertices() - 1)).set_vertflag(true);
+					polymesh->data(polymesh->vertex_handle(polymesh->n_vertices() - 1)).set_vertflag(true);
+				}
 			}
 		}
 		for (auto &tv : mesh_->vertices())
@@ -416,11 +402,23 @@ namespace CADMesher
 			switch (mesh_->property(typeMap, tv))
 			{
 			case tri:
-				mesh->add_vertex(mesh_->point(tv));
+			{
+				auto &av = mesh->add_vertex(mesh_->point(tv));
+				if (mesh_->data(tv).get_vertflag())
+				{
+					mesh->data(av).set_vertflag(true);
+				}
 				break;
+			}
 			case poly:
-				polymesh->add_vertex(mesh_->point(tv));
+			{
+				auto &av = polymesh->add_vertex(mesh_->point(tv));
+				if (mesh_->data(tv).get_vertflag())
+				{
+					polymesh->data(av).set_vertflag(true);
+				}
 				break;
+			}
 			default:
 				break;
 			}
@@ -435,7 +433,7 @@ namespace CADMesher
 			{
 				for (auto &tfv : mesh_->fv_range(tf))
 				{
-					id[ii++] = mesh_->property(typeMap, tfv) == tri ? mesh_->property(idMap, tfv) + k : mesh_->property(idMap, tfv);
+					id[ii++] = mesh_->property(idMap, tfv);
 				}
 				mesh->add_face(mesh->vertex_handle(id[0]), mesh->vertex_handle(id[1]), mesh->vertex_handle(id[2]));
 			}
@@ -443,16 +441,54 @@ namespace CADMesher
 			{
 				for (auto &tfv : mesh_->fv_range(tf))
 				{
-					id[ii++] = mesh_->property(typeMap, tfv) == poly ? mesh_->property(idMap, tfv) + k : mesh_->property(idMap, tfv);
+					id[ii++] = mesh_->property(idMap, tfv);
 				}
 				polymesh->add_face(mesh->vertex_handle(id[0]), mesh->vertex_handle(id[1]), mesh->vertex_handle(id[2]), mesh->vertex_handle(id[3]));
+			}
+		}
+		for (auto &te : mesh_->edges())
+		{
+			if (mesh_->data(te).get_edgeflag())
+			{
+				vertexType vt0 = mesh_->property(typeMap, te.v0());
+				vertexType vt1 = mesh_->property(typeMap, te.v1()); 
+				auto th = mesh_->find_halfedge(mesh_->vertex_handle(mesh_->property(idMap, te.v0())),
+					mesh_->vertex_handle(mesh_->property(idMap, te.v0())));
+				if (vt0 == tri || vt1 == tri)
+				{
+					mesh->data(mesh->edge_handle(mesh->find_halfedge(mesh->vertex_handle(mesh_->property(idMap, te.v0())),
+						mesh->vertex_handle(mesh_->property(idMap, te.v1()))))).set_edgeflag(true);
+				}
+				else if (vt0 == poly || vt1 == poly)
+				{
+					polymesh->data(polymesh->edge_handle(polymesh->find_halfedge(polymesh->vertex_handle(mesh_->property(idMap, te.v0())),
+						polymesh->vertex_handle(mesh_->property(idMap, te.v1()))))).set_edgeflag(true);
+				}
+				else
+				{
+					mesh->data(mesh->edge_handle(mesh->find_halfedge(mesh->vertex_handle(mesh_->property(idMap, te.v0())),
+						mesh->vertex_handle(mesh_->property(idMap, te.v1()))))).set_edgeflag(true);
+					polymesh->data(polymesh->edge_handle(polymesh->find_halfedge(polymesh->vertex_handle(mesh_->property(idMap, te.v0())),
+						polymesh->vertex_handle(mesh_->property(idMap, te.v1()))))).set_edgeflag(true);
+				}
 			}
 		}
 		boundaryNum = k;
 		mesh_->remove_property(idMap);
 		mesh_->remove_property(typeMap);
-		delete mesh_;
-		mesh_ = polymesh;
+
+		*mesh_ = *polymesh;
+		delete polymesh;
+		polymesh = mesh_;
+		initMeshStatusAndNormal(*mesh);
+
+		if (expected_length < 0)
+		{
+			expected_length = meshAverageLength(*mesh);
+		}
+		high = 1.33*expected_length;
+		low = 0.8*expected_length;
+		aabbtree = new ClosestPointSearch::AABBTree(*mesh);
 	}
 
 	void TriangleMeshRemeshing::assembleMesh()
@@ -460,7 +496,14 @@ namespace CADMesher
 		int nv = polymesh->n_vertices();
 		auto vItr = mesh->vertices_begin();
 		for (int i = 0; i < boundaryNum; ++i, ++vItr);
-		for (; vItr != mesh->vertices_end(); ++vItr, polymesh->add_vertex(mesh->point(*vItr)));
+		for (; vItr != mesh->vertices_end(); ++vItr)
+		{
+			auto &av = polymesh->add_vertex(mesh->point(*vItr));
+			if (mesh->data(*vItr).get_vertflag())
+			{
+				polymesh->data(av).set_vertflag(true);
+			}
+		}
 
 		int id[3];
 		int ii = 0;
@@ -473,6 +516,17 @@ namespace CADMesher
 			}
 			polymesh->add_face(polymesh->vertex_handle(id[0]), polymesh->vertex_handle(id[1]), polymesh->vertex_handle(id[2]));
 		}
+		for (auto &te : mesh->edges())
+		{
+			if (mesh->data(te).get_edgeflag())
+			{
+				polymesh->data(polymesh->edge_handle(polymesh->find_halfedge(
+					polymesh->vertex_handle(te.v0().idx() < boundaryNum ? te.v0().idx() : te.v0().idx() + nv),
+					polymesh->vertex_handle(te.v1().idx() < boundaryNum ? te.v1().idx() : te.v1().idx() + nv)))).set_edgeflag(true);
+			}
+		}
+		initMeshStatusAndNormal(*polymesh);
+
 		delete mesh;
 		mesh = nullptr;
 	}

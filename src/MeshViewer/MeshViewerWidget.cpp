@@ -167,6 +167,7 @@ void MeshViewerWidget::initMesh()
 	mesh.request_vertex_normals();
 	printBasicMeshInfo();
 	updateMesh();
+	ifUpdateMesh = true;
 }
 
 void MeshViewerWidget::printBasicMeshInfo()
@@ -554,6 +555,7 @@ void MeshViewerWidget::draw_scene_mesh(int drawmode)
 		glEnable(GL_LIGHTING);
 		glShadeModel(GL_FLAT);
 		draw_IsotropicMesh();
+		draw_mesh_solidflat();
 		glDisable(GL_POLYGON_OFFSET_FILL);
 		//draw_meshpointset();
 		glDisable(GL_LIGHTING);
@@ -871,7 +873,33 @@ void MeshViewerWidget::draw_mesh_pointset() const
 #include "../src/Algorithm/SurfaceMesher/Optimizer/TriangleMeshRemeshing.h"
 void MeshViewerWidget::draw_IsotropicMesh()
 {
-	CADMesher::TriangleMeshRemeshing *tmr = new CADMesher::TriangleMeshRemeshing(&mesh);
+	if (ifUpdateMesh)
+	{
+//#if 0
+//		CADMesher::TriangleMeshRemeshing *tmr = new CADMesher::TriangleMeshRemeshing(&mesh);
+//		tmr->run();
+//#else
+//		CADMesher::TriangleMeshRemeshing *tmr = new CADMesher::TriangleMeshRemeshing(&CADMesher::globalmodel.initial_trimesh);
+//		tmr->run();
+//		mesh = Mesh(CADMesher::globalmodel.initial_trimesh);
+//		initMeshStatusAndNormal(mesh);
+//#endif
+//		delete tmr;
+//		ifUpdateMesh = false;
+	}
+
+	glPolygonMode(GL_FRONT_AND_BACK, GL_POINTS);
+	glColor3f(1.0, 0.0, 0.0);
+	glPointSize(10);
+	Mesh::VertexIter v_it = mesh.vertices_begin();
+	glBegin(GL_POINTS);
+	for (v_it; v_it != mesh.vertices_end(); ++v_it)
+	{
+		if(mesh.data(v_it).get_vertflag())
+			glVertex3dv(mesh.point(v_it).data());
+	}
+	glEnd();
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 void MeshViewerWidget::draw_AnisotropicMesh()
