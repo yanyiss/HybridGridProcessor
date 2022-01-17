@@ -7,12 +7,12 @@ namespace CADMesher
 		for (auto tv : mesh->vertices())
 			mesh->data(tv).set_targetlength(expected_length);
 
-		for (int i = 0; i < 1; i++)
+		for (int i = 0; i < 10; i++)
 		{
 			dprint("\niteration times:", i + 1);
 			split();
-			//collapse();
-			//equalize_valence();
+			collapse();
+			equalize_valence();
 			if (i > 10 && meshMinAngle(*mesh) < lowerAngleBound)
 			{
 				adjustTargetLength();
@@ -73,25 +73,28 @@ namespace CADMesher
 			double x = mesh->calc_edge_length(the);
 			double min_of_t0_t1 = std::min(t0, t1);
 
-			if (x >= 4.0 / 5.0 * min_of_t0_t1) continue;
+			if (x >= 0.8 * min_of_t0_t1) continue;
 
 			if (mesh->data(mesh->edge_handle(the)).get_edgeflag()) {
-				if (x >= 2.0 / 3.0 * min_of_t0_t1) continue;
+				if (x >= 0.666 * min_of_t0_t1) continue;
 				int count = 0;
 				OV v = fromvert;
 				for (auto tvoh : mesh->voh_range(fromvert)) {
 					if (!mesh->data(mesh->edge_handle(tvoh)).get_edgeflag()) continue;
 					if (mesh->to_vertex_handle(tvoh) == tovert) continue;
-					count++;
+					++count;
 					v = mesh->to_vertex_handle(tvoh);
 				}
 				if (count == 1) {
 					double y = (mesh->point(v) - mesh->point(tovert)).norm();
 					double z = (mesh->point(v) - mesh->point(fromvert)).norm();
-					double a = sqrt((x + y + z)*(x + y - z)*(x + z - y)*(y + z - x)) / 4.0;
+					double a = sqrt((x + y + z)*(x + y - z)*(x + z - y)*(y + z - x)) * 0.25;
 					//if (400 * a > expected_length*y) continue;//要保证由x,y,z构成的三角形在y上的高，小于err=expected_length*0.05
 					//这里为了进一步固定特征，要求更严格
-					if (z > x) mesh->set_point(fromvert, aabbtree->closest_point((mesh->point(v) + mesh->point(tovert))*0.5));
+					if (z > x)
+					{
+						mesh->set_point(fromvert, aabbtree->closest_point((mesh->point(v) + mesh->point(tovert))*0.5));
+					}
 					else {
 						mesh->collapse(the);
 						mesh->data(mesh->edge_handle(mesh->find_halfedge(v, tovert))).set_edgeflag(true);
@@ -99,18 +102,21 @@ namespace CADMesher
 				}
 				continue;
 			}
-			if (mesh->data(mesh->edge_handle(the)).get_edgeflag()) continue;
+			//if (mesh->data(mesh->edge_handle(the)).get_edgeflag()) continue;
 			if (mesh->data(fromvert).get_vertflag()) {
-				//if (mesh->data(tovert).get_vertflag() && x < min_of_t0_t1*0.2) mesh->collapse(the);
-				//continue;
+				if (mesh->data(tovert).get_vertflag() && x < min_of_t0_t1*0.1)
+				{
+					mesh->collapse(the);
+				}
+				continue;
 			}
 			O3d pos = mesh->data(tovert).get_vertflag() ? mesh->point(tovert) : mesh->calc_centroid(the);
 
 			//stop if collapsing results in long edges
 			for (OV thev : mesh->vv_range(fromvert))
-				if ((pos - mesh->point(thev)).norm() > 4.0 / 3.0 * min_of_t0_t1) goto goto20210523;
+				if ((pos - mesh->point(thev)).norm() > 1.33 * min_of_t0_t1) goto goto20210523;
 			for (OV thev : mesh->vv_range(tovert))
-				if ((pos - mesh->point(thev)).norm() > 4.0 / 3.0 * min_of_t0_t1) goto goto20210523;
+				if ((pos - mesh->point(thev)).norm() > 1.33 * min_of_t0_t1) goto goto20210523;
 
 			//stop if collapsing results in small angles
 			auto t_f = mesh->opposite_halfedge_handle(the);

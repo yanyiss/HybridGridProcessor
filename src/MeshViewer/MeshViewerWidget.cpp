@@ -903,19 +903,20 @@ void MeshViewerWidget::draw_feature()
 #include "../src/Algorithm/SurfaceMesher/Optimizer/TriangleMeshRemeshing.h"
 void MeshViewerWidget::draw_IsotropicMesh()
 {
-#if 1
 	if (ifUpdateMesh)
 	{
-#if 0
+//#if 0
+		timeRecorder tr;
 		CADMesher::TriangleMeshRemeshing *tmr = new CADMesher::TriangleMeshRemeshing(&mesh);
 		tmr->run();
-#else
-		initMeshStatusAndNormal(CADMesher::globalmodel.initial_trimesh);
-		CADMesher::TriangleMeshRemeshing *tmr = new CADMesher::TriangleMeshRemeshing(&CADMesher::globalmodel.initial_trimesh);
-		tmr->run();
-		mesh = Mesh(CADMesher::globalmodel.initial_trimesh);
-#endif
-		//delete tmr;
+		tr.out("Isotropic Remesing Time:");
+//#else
+//		initMeshStatusAndNormal(CADMesher::globalmodel.initial_trimesh);
+//		CADMesher::TriangleMeshRemeshing *tmr = new CADMesher::TriangleMeshRemeshing(&CADMesher::globalmodel.initial_trimesh);
+//		tmr->run();
+//		mesh = Mesh(CADMesher::globalmodel.initial_trimesh);
+//#endif
+		delete tmr;
 		ifUpdateMesh = false; 
 		
 		std::string cfn = CADFileName.toLatin1().data();
@@ -925,36 +926,30 @@ void MeshViewerWidget::draw_IsotropicMesh()
 		else
 			dprint("Save isotropic mesh failed");
 	}
-#else
-	static CADMesher::TriangleMeshRemeshing *trianglemeshremeshing  = nullptr;
-	if (!trianglemeshremeshing) {
-		initMeshStatusAndNormal(CADMesher::globalmodel.initial_trimesh);
-		trianglemeshremeshing = new CADMesher::TriangleMeshRemeshing(&CADMesher::globalmodel.initial_trimesh);;
-	}
-	static int pick_times = 0;
-	switch (pick_times)
-	{
-	case 0:
-		trianglemeshremeshing->split();
-		break;
-	case 1:
-		trianglemeshremeshing->collapse();
-		break;
-	case 2:
-		trianglemeshremeshing->equalize_valence();
-		break;
-	case 3:
-		trianglemeshremeshing->tangential_relaxation();
-		break;
-	}
-	++pick_times %= 4;
-	mesh = Mesh(CADMesher::globalmodel.initial_trimesh);
-#endif
 }
 
+#include "../src/Algorithm/SurfaceMesher/Optimizer/AnisotropicMeshRemeshing.h"
 void MeshViewerWidget::draw_AnisotropicMesh()
 {
+	if (ifUpdateMesh)
+	{
+		timeRecorder tr;
+		CADMesher::AnisotropicMeshRemeshing *amr = new CADMesher::AnisotropicMeshRemeshing();
+		amr->SetMesh(&mesh);
+		amr->load_ref_mesh(&mesh);
+		double tl = amr->get_ref_mesh_ave_anisotropic_edge_length();
+		dprint("anisotropic edge length:", tl);
+		amr->do_remeshing(tl, 1.5);
+		tr.out("Anistropic Remeshing Time:");
 
+		std::string cfn = CADFileName.toLatin1().data();
+		bool if_saveOK = OpenMesh::IO::write_mesh(mesh,
+			"../model/CAD/Anisotropic Mesh/" + cfn + "_aniso.obj");
+		if (if_saveOK)
+			dprint("The isotropic mesh has been saved in \"Anisotropic Mesh\" folder");
+		else
+			dprint("Save anisotropic mesh failed");
+	}
 }
 
 #include "../src/Algorithm/CheckBoard/CheckBoardGenerator.h"
