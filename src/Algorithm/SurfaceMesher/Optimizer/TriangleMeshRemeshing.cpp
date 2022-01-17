@@ -7,12 +7,12 @@ namespace CADMesher
 		for (auto tv : mesh->vertices())
 			mesh->data(tv).set_targetlength(expected_length);
 
-		for (int i = 0; i < 10; i++)
+		for (int i = 0; i < 1; i++)
 		{
 			dprint("\niteration times:", i + 1);
 			split();
-			collapse();
-			equalize_valence();
+			//collapse();
+			//equalize_valence();
 			if (i > 10 && meshMinAngle(*mesh) < lowerAngleBound)
 			{
 				adjustTargetLength();

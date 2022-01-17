@@ -903,23 +903,23 @@ void MeshViewerWidget::draw_feature()
 #include "../src/Algorithm/SurfaceMesher/Optimizer/TriangleMeshRemeshing.h"
 void MeshViewerWidget::draw_IsotropicMesh()
 {
-#if 0
+#if 1
 	if (ifUpdateMesh)
 	{
-#if 1
+#if 0
 		CADMesher::TriangleMeshRemeshing *tmr = new CADMesher::TriangleMeshRemeshing(&mesh);
 		tmr->run();
 #else
+		initMeshStatusAndNormal(CADMesher::globalmodel.initial_trimesh);
 		CADMesher::TriangleMeshRemeshing *tmr = new CADMesher::TriangleMeshRemeshing(&CADMesher::globalmodel.initial_trimesh);
 		tmr->run();
 		mesh = Mesh(CADMesher::globalmodel.initial_trimesh);
-		initMeshStatusAndNormal(mesh);
 #endif
 		//delete tmr;
 		ifUpdateMesh = false; 
 		
-		std::string bfn = CADFileName.toLatin1().data();
-		bool if_saveOK = OpenMesh::IO::write_mesh(mesh, "../model/CAD/Isotropic Mesh/" + bfn + "_iso.obj");
+		std::string cfn = CADFileName.toLatin1().data();
+		bool if_saveOK = OpenMesh::IO::write_mesh(mesh, "../model/CAD/Isotropic Mesh/" + cfn + "_iso.obj");
 		if (if_saveOK)
 			dprint("The isotropic mesh has been saved in \"Isotropic Mesh\" folder");
 		else
