@@ -33,7 +33,7 @@ namespace CADMesher
 	public:
 		void run();
 
-	private:
+	//private:
 		//main step
 		void split();
 		void collapse();

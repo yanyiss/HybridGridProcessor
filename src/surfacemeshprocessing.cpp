@@ -170,6 +170,34 @@ void SurfaceMeshProcessing::createActions()
 	moveVertexAction->setChecked(false);
 	connect(moveVertexAction, SIGNAL(triggered()), this, SLOT(moveVertex()));
 
+	showFeatureAction = new QAction(tr("&Show Feature"), this);
+	showFeatureAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/move_vertex.png"));
+	showFeatureAction->setStatusTip(tr("Show Feature of the mesh"));
+	showFeatureAction->setCheckable(true);
+	showFeatureAction->setChecked(false);
+	connect(showFeatureAction, SIGNAL(triggered()), this, SLOT(showFeature()));
+
+	showIsotropicMeshAction = new QAction(tr("&Show Isotropic Mesh"), this);
+	showIsotropicMeshAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/move_vertex.png"));
+	showIsotropicMeshAction->setStatusTip(tr("Show Isotropic Mesh"));
+	showIsotropicMeshAction->setCheckable(true);
+	showIsotropicMeshAction->setChecked(false);
+	connect(showIsotropicMeshAction, SIGNAL(triggered()), this, SLOT(showIsotropicMesh()));
+
+	showAnisotropicMeshAction = new QAction(tr("&Show Anisotropic Mesh"), this);
+	showAnisotropicMeshAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/move_vertex.png"));
+	showAnisotropicMeshAction->setStatusTip(tr("Show Anisotropic Mesh"));
+	showAnisotropicMeshAction->setCheckable(true);
+	showAnisotropicMeshAction->setChecked(false);
+	connect(showAnisotropicMeshAction, SIGNAL(triggered()), this, SLOT(showAnisotropicMesh()));
+
+	showDebugTestAction = new QAction(tr("&Show Debug Test"), this);
+	showDebugTestAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/move_vertex.png"));
+	showDebugTestAction->setStatusTip(tr("Show Debug Test"));
+	showDebugTestAction->setCheckable(true);
+	showDebugTestAction->setChecked(false);
+	connect(showDebugTestAction, SIGNAL(triggered()), this, SLOT(showDebugTest()));
+
 	EditUndoAction = new QAction(tr("&Undo"), this);
 	EditUndoAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/edit-undo.png"));
 	EditUndoAction->setStatusTip(tr("Undo"));
@@ -475,6 +503,38 @@ void SurfaceMeshProcessing::moveVertex()
 	setAllMouseActionChecked(false);
 	moveVertexAction->setChecked(true);
 	viewer->setMouseMode(InteractiveViewerWidget::MOVE);
+}
+void SurfaceMeshProcessing::showFeature()
+{
+	setAllViewActionChecked(false);
+	setAllMouseActionChecked(false);
+	showFeatureAction->setChecked(true);
+	viewer->setMouseMode(InteractiveViewerWidget::FEATURE);
+	viewer->showFeature();
+}
+void SurfaceMeshProcessing::showIsotropicMesh()
+{
+	setAllViewActionChecked(false);
+	setAllMouseActionChecked(false);
+	showIsotropicMeshAction->setChecked(true);
+	viewer->setMouseMode(InteractiveViewerWidget::ISOTROPIC);
+	viewer->showIsotropicMesh();
+}
+void SurfaceMeshProcessing::showAnisotropicMesh()
+{
+	setAllViewActionChecked(false);
+	setAllMouseActionChecked(false);
+	showAnisotropicMeshAction->setChecked(true);
+	viewer->setMouseMode(InteractiveViewerWidget::ANISOTROPIC);
+	viewer->showAnisotropicMesh();
+}
+void SurfaceMeshProcessing::showDebugTest()
+{
+	setAllViewActionChecked(false);
+	setAllMouseActionChecked(false);
+	showDebugTestAction->setChecked(true);
+	viewer->setMouseMode(InteractiveViewerWidget::DEBUGTEST);
+	viewer->showDebugTest();
 }
 
 void SurfaceMeshProcessing::edge_collpase()

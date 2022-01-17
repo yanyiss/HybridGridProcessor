@@ -30,7 +30,7 @@ namespace CADMesher
 			reader->ReadFile(fileName.toLatin1().data());
 			Standard_Integer NbTrans = reader->TransferRoots();
 			globalmodel.aShape = reader->OneShape();
-			dprint(filetype + "file read finished!\n");
+			dprint(filetype + "file read finished\n");
 
 			ComputeFaceAndEdge();
 			Discrete_Edge();

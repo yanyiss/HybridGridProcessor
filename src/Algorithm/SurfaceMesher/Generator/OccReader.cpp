@@ -25,7 +25,6 @@ namespace CADMesher
 			Standard_Real x, y, z, w;
 			asurface->Bounds(x, y, z, w);
 
-
 			int pointsnumber = 0;
 			vector<Matrix2Xi> bnd;
 			double x_step = 0;
@@ -99,7 +98,7 @@ namespace CADMesher
 	{
 		TopoDS_Shape &aShape = globalmodel.aShape;
 
-		Vector3d ma(0, 0, 0);
+		Vector3d ma(DBL_MIN, DBL_MIN, DBL_MIN);
 		Vector3d mi(DBL_MAX, DBL_MAX, DBL_MAX);
 		for (TopExp_Explorer vertexExp(aShape, TopAbs_VERTEX); vertexExp.More(); vertexExp.Next())
 		{
@@ -155,7 +154,6 @@ namespace CADMesher
 						gp_Pnt p1 = BRep_Tool::Pnt(TopExp::LastVertex(aedge));
 						if (p0.IsEqual(p1, vertexThreshold))
 						{
-							dprint("fdjslah");
 							continue;
 						}
 					}
