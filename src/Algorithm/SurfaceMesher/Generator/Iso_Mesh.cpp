@@ -8,30 +8,31 @@ namespace CADMesher
 	Iso_Mesh::Iso_Mesh(QString & fileName)
 	{
 		occ_reader = new OccReader(fileName);
-
-		//occ_reader->Set_TriMesh();
+#if 1
+		occ_reader->Set_TriMesh();
+		MergeModel();
+		ResetFeature();
+		Write_Obj(globalmodel.initial_trimesh);
+#else 
 		occ_reader->Set_PolyMesh();
-#if 0
-		//globalmodel.initial_trimesh = occ_reader->Surface_TriMeshes[67];
-		//globalmodel.initial_polymesh = occ_reader->Surface_PolyMeshes[66];
-#else
-		//MergeModel();
+		MergeModel();
+		ResetFeature();
+		Write_Obj(globalmodel.initial_polymesh);
 #endif
-		//Write_Obj(globalmodel.initial_trimesh);
-		//ResetFeature();
-		//ResetFeature1();
-		//Write_Obj(globalmodel.initial_polymesh);
 	}
 
 	void Iso_Mesh::MergeModel()
 	{
-		//TriMesh &model_mesh = globalmodel.initial_trimesh;
+#if 1
+		TriMesh &model_mesh = globalmodel.initial_trimesh;
+		auto &surface_meshes = occ_reader->Surface_TriMeshes;
+#else
 		Mesh &model_mesh = globalmodel.initial_polymesh;
+		auto &surface_meshes = occ_reader->Surface_PolyMeshes;
+#endif
 		vector<ShapeFace> faceshape = globalmodel.faceshape;
 		vector<ShapeEdge> edgeshape = globalmodel.edgeshape;
 		model_mesh.clear();
-		//auto &surface_meshes = occ_reader->Surface_TriMeshes;
-		auto &surface_meshes = occ_reader->Surface_PolyMeshes;
 		for(auto &face : faceshape)
 		{
 			auto &wires = face.wires;

@@ -36,7 +36,7 @@ namespace CADMesher
 			ComputeFaceAndEdge();
 			Discrete_Edge();
 		}
-		OccReader(const OccReader* or ) = delete;
+		OccReader(const OccReader& or) = delete;
 		~OccReader() {
 			if (reader) { delete reader; reader = nullptr; }
 		}
