@@ -1,6 +1,6 @@
-# A software for converting CAD models(STEP and IGES files) to hybrid grid
+# A software for converting CAD models to hybrid grid
 
-The program is used to convert CAD models to meshes and render using OpenGL.
+The program is used to convert CAD models(STEP and IGES files) to meshes and render using OpenGL.
 
 ## External Libraries
 
