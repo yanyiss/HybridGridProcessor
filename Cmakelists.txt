@@ -3,7 +3,6 @@ project(HybridGridProcessor)
 
 add_subdirectory(src/Dependency/ANN)
 add_subdirectory(src/Dependency/BSpline)
-
 if (CMAKE_GENERATOR MATCHES "Visual Studio")
   set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 endif()
@@ -34,15 +33,15 @@ endif()
 
 #path
 #include
-SET(EIGEN_PATH "D:/eigen3")
+SET(EIGEN_PATH "D:/eigen-3.4.0")
 SET(OPENMESH_PATH "D:/OpenMesh 8.1/include")
 SET(TBB_PATH "D:/tbb/tbb/include")
-SET(OPENCASCADE_PATH "E:/OpenCASCADE-7.4.0-vc14-64/opencascade-7.4.0/inc")
+SET(OPENCASCADE_PATH "D:/OpenCASCADE-7.4.0-vc14-64/opencascade-7.4.0/inc")
 SET(TRIANGLE_PATH src/Dependency/triangle)
 #lib
 SET(OPENMESH_LIB_PATH "D:/OpenMesh 8.1/lib")
 SET(TBB_LIB_PATH "D:/tbb/tbb/lib/intel64/vc14")
-SET(OPENCASCADE_LIB_PATH "E:/OpenCASCADE-7.4.0-vc14-64/opencascade-7.4.0/win64/vc14/lib")
+SET(OPENCASCADE_LIB_PATH "D:/OpenCASCADE-7.4.0-vc14-64/opencascade-7.4.0/win64/vc14/lib")
 SET(TRIANGLE_LIB_PATH src/Dependency/triangle)
 
 #QT

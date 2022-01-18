@@ -608,6 +608,14 @@ void MeshViewerWidget::draw_mesh_wireframe()
 			}
 			glEnd();
 		}
+		//std::cout<<"OK";
+		//glColor3d(1., 0., 0.);
+		//glBegin(GL_POLYGON);
+		//glVertex3dv(mesh.point(mesh.vertex_handle(19953)).data());
+		//glVertex3dv(mesh.point(mesh.vertex_handle(19952)).data());
+		//glVertex3dv(mesh.point(mesh.vertex_handle(37708)).data());
+		//glVertex3dv(mesh.point(mesh.vertex_handle(37707)).data());
+		//glEnd();
 	}
 
 	/*OpenMesh::Vec3d pos = mesh.point(mesh.vertex_handle(0));
@@ -847,6 +855,7 @@ void MeshViewerWidget::draw_mesh_solidsmooth() const
 		glEnd();
 	}
 
+
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_NORMAL_ARRAY);
 }
@@ -958,6 +967,35 @@ void MeshViewerWidget::draw_AnisotropicMesh()
 	}
 }
 
+/*<<<<<<< john
+void MeshViewerWidget::draw_feature()
+{
+	//glPointSize(8);
+	//glBegin(GL_POINTS);
+	//glColor3d(1.0, 0.0, 0.0);
+	//for (auto &tv : mesh.vertices())
+	//{
+	//	if (mesh.data(tv).curvatureflag)
+	//	{
+	//		glVertex3dv(mesh.point(tv).data());
+	//	}
+	//}
+	//glEnd();
+
+	glLineWidth(3);
+	glColor3d(1.0, 0.0, 0.0);
+	glBegin(GL_LINES);
+	for (auto &te : mesh.edges())
+	{
+		if (mesh.data(te).get_edgeflag())
+		{
+			glVertex3dv(mesh.point(te.v0()).data());
+			glVertex3dv(mesh.point(te.v1()).data());
+		}
+	}
+	glEnd();
+}
+=======*/
 #include "../src/Algorithm/CheckBoard/CheckBoardGenerator.h"
 
 //static bool flag = true;
@@ -1075,3 +1113,4 @@ void MeshViewerWidget::draw_AnisotropicMesh()
 //		glEnd();
 //	}*/
 //}
+//>>>>>>> main

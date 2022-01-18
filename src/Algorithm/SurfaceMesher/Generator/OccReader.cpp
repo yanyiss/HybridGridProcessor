@@ -9,7 +9,6 @@ namespace CADMesher
 
 		Surface_TriMeshes.resize(faceshape.size());
 		for (int i = 0; i < faceshape.size(); i++)
-		//int i = 56;
 		{
 			//dprint(i);
 			TriMesh &aMesh = Surface_TriMeshes[i];
@@ -94,8 +93,6 @@ namespace CADMesher
 		dprint("Piecewise TriMesh Done!");
 	}
 
-<<<<<<< Updated upstream
-=======
 	void OccReader::Set_PolyMesh()
 	{
 		vector<ShapeFace> &faceshape = globalmodel.faceshape;
@@ -338,7 +335,7 @@ namespace CADMesher
 			avelen /= cols;
 			step = avelen / 10;
 
-			//ÌáÈ¡¹Õµã²¢°´½ÇÆ½·ÖÏßÉè¶¨²½³¤
+			//æå–æ‹ç‚¹å¹¶æŒ‰è§’å¹³åˆ†çº¿è®¾å®šæ­¥é•¿
 			std::vector<int> pntAngle(cols, 0);
 			for (int j = 1; j < cols + 1; j++)
 			{
@@ -365,9 +362,9 @@ namespace CADMesher
 				}
 				id1 = startid + j - 1;
 				newall_pnts.col(id1) = all_pnts.col(id1) + p3 ;
-				inflexion.push_back(id1);   //±ß½çµÄ¹Õµã
+				inflexion.push_back(id1);   //è¾¹ç•Œçš„æ‹ç‚¹
 			}
-			//ÅĞ¶Ï×Ô½»
+			//åˆ¤æ–­è‡ªäº¤
 			std::vector<int>::iterator iter;
 			Matrix2d A1, A2;
 			for (int j = 0; j < inflexion.size(); j++)
@@ -389,7 +386,7 @@ namespace CADMesher
 				A2.col(0) = A1.col(0) = p2 - p1;
 				A1.col(1) = p3 - p1;
 				A2.col(1) = p4 - p1;
-				if (A1.determinant()*A2.determinant() < 0)   //Á½½ÇÆ½·ÖÏßÏà½»
+				if (A1.determinant()*A2.determinant() < 0)   //ä¸¤è§’å¹³åˆ†çº¿ç›¸äº¤
 				{
 					if (pntAngle[id1 - startid] > pntAngle[id2 - startid])
 					{
@@ -403,13 +400,13 @@ namespace CADMesher
 					}
 				}
 			}
-			//²åÖµÆäÓàµã
+			//æ’å€¼å…¶ä½™ç‚¹
 			int n;
 			for (int j = 0; j < inflexion.size() - 1; j++)
 			{
 				id1 = inflexion[j];
 				id2 = inflexion[j + 1];
-				n = id2 - id1;  //nµÈ·Ö
+				n = id2 - id1;  //nç­‰åˆ†
 				if (n == 1) continue;
 				p1 = newall_pnts.col(id1);
 				p2 = newall_pnts.col(id2);
@@ -420,7 +417,7 @@ namespace CADMesher
 			}
 			id1 = inflexion.back();
 			id2 = inflexion.front();
-			n = P(0, 0) - id1 + id2 - P(0, 1) + 1;  //nµÈ·Ö 
+			n = P(0, 0) - id1 + id2 - P(0, 1) + 1;  //nç­‰åˆ† 
 			if (n > 1)
 			{
 				p1 = newall_pnts.col(id1);
@@ -442,7 +439,6 @@ namespace CADMesher
 		return newall_pnts;
 	}
 
->>>>>>> Stashed changes
 	void OccReader::ComputeFaceAndEdge()
 	{
 		TopoDS_Shape &aShape = globalmodel.aShape;
@@ -570,7 +566,7 @@ namespace CADMesher
 			double curve_length = 0;
 			gp_Pnt P;
 			gp_Vec d1;
-			//Gauss-Lengred»ı·Ö¹«Ê½
+			//Gauss-Lengredç§¯åˆ†å…¬å¼
 			double a = (last - first) / 2;
 			double b = (last + first) / 2;
 			for (int i = 0; i < 8; i++)
