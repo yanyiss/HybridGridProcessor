@@ -519,19 +519,17 @@ void printMeshQuality(TriMesh &mesh)
 	double c = 4 * std::sqrt(3);
 	double minAngle = 4, maxAngle = 0, avgAngle = 0;
 	double minQuality = 1, avgQuality = 0;
-	for (auto th : mesh.halfedges())
-	{
-		double angle = mesh.calc_sector_angle(th);
-		minAngle = std::min(angle, minAngle);
-		maxAngle = std::max(angle, maxAngle);
-		avgAngle += angle;
-	}
 	for (auto tf : mesh.faces())
 	{
 		double h = 0, p = 0;
-		for (auto tfe : mesh.fe_range(tf))
+		for (auto &tfh : mesh.fh_range(tf))
 		{
-			double l = mesh.calc_edge_length(tfe);
+			double angle = mesh.calc_sector_angle(tfh);
+			minAngle = std::min(angle, minAngle);
+			maxAngle = std::max(angle, maxAngle);
+			avgAngle += angle;
+
+			double l = mesh.calc_edge_length(tfh);
 			h = std::max(l, h);
 			p += l;
 		}
@@ -540,6 +538,6 @@ void printMeshQuality(TriMesh &mesh)
 		avgQuality += q;
 	}
 	dprint("mesh quality info:\nmin, max and avg angle:", minAngle, maxAngle, avgAngle / mesh.n_halfedges(),
-		"min and avg quality:", minQuality, avgQuality / mesh.n_faces());
+		"\nmin and avg quality:", minQuality, avgQuality / mesh.n_faces());
 }
 #pragma endregion

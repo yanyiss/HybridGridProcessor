@@ -535,6 +535,7 @@ void MeshViewerWidget::draw_scene_mesh(int drawmode)
 		glDisable(GL_LIGHTING);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		draw_mesh_wireframe();
+		draw_feature();
 		//draw_meshpointset();
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		break;
@@ -874,7 +875,7 @@ void MeshViewerWidget::draw_mesh_pointset() const
 
 void MeshViewerWidget::draw_feature()
 {
-	glPointSize(8);
+	glPointSize(12);
 	glBegin(GL_POINTS);
 	glColor3d(1.0, 0.0, 0.0);
 	for (auto &tv : mesh.vertices())
@@ -892,6 +893,11 @@ void MeshViewerWidget::draw_feature()
 	for (auto &te : mesh.edges())
 	{
 		if (mesh.data(te).get_edgeflag())
+		{
+			glVertex3dv(mesh.point(te.v0()).data());
+			glVertex3dv(mesh.point(te.v1()).data());
+		}
+		if (te.h0().is_valid() && mesh.calc_sector_angle(te.h0()) < 0.05)
 		{
 			glVertex3dv(mesh.point(te.v0()).data());
 			glVertex3dv(mesh.point(te.v1()).data());
@@ -933,7 +939,7 @@ void MeshViewerWidget::draw_AnisotropicMesh()
 {
 	if (ifUpdateMesh)
 	{
-		timeRecorder tr;
+		/*timeRecorder tr;
 		CADMesher::AnisotropicMeshRemeshing *amr = new CADMesher::AnisotropicMeshRemeshing();
 		amr->SetMesh(&mesh);
 		amr->load_ref_mesh(&mesh);
@@ -948,7 +954,7 @@ void MeshViewerWidget::draw_AnisotropicMesh()
 		if (if_saveOK)
 			dprint("The isotropic mesh has been saved in \"Anisotropic Mesh\" folder");
 		else
-			dprint("Save anisotropic mesh failed");
+			dprint("Save anisotropic mesh failed");*/
 	}
 }
 

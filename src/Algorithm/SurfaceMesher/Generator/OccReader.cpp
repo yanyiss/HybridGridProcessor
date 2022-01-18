@@ -230,7 +230,7 @@ namespace CADMesher
 				curve_length += a * GL_c[i] * d1.Magnitude();
 			}
 
-			int segment_number = std::max(BRep_Tool::IsClosed(aedge) ? 4 : 2, int(curve_length / expected_edge_length));
+			int segment_number = std::max(BRep_Tool::IsClosed(aedge) ? 4 : 4, int(curve_length / expected_edge_length));
 			edge->parameters.resize(2, segment_number + 1);
 
 			Handle_Geom2d_Curve thePCurve = BRep_Tool::CurveOnSurface(aedge, mainface, first, last);

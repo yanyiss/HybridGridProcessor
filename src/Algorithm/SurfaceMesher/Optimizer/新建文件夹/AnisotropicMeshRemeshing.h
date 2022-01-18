@@ -7,7 +7,7 @@
 #include "..\src\Dependency\Common\CommonDefinitions.h"
 #include "CGAL_Definition.h"
 #include "..\Generator\basic_def.h"
-#if 0
+
 namespace CADMesher
 {
 	class AnisotropicMeshRemeshing
@@ -45,10 +45,20 @@ namespace CADMesher
 		void flip_based_particle_energy();
 
 		void delete_boundary_small_tri();
+		//void set_draw_small_tri_ok(bool ok){draw_small_tri_ok = ok; emit updateGL_Manual_signal();};
+		//void set_smallest_angle_th(double th){smallest_angle_th = th; emit updateGL_Manual_signal();};
 		double get_ref_mesh_ave_anisotropic_edge_length() { return ref_mesh_ave_anisotropic_edge_length; }
 
+		//public slots:
+			//void draw_for_this_part();
+
+		//signals:
+			//void updateGL_Manual_signal();
+			//void finish_one_editing_signal();
+			//void save_opengl_screen_AM_signal(QString);
+
 	private:
-		bool draw_small_tri_ok;
+		void draw_small_tri_below_th(); bool draw_small_tri_ok;
 
 		void project_on_reference_mesh_with_metric(Mesh::VertexHandle vh, OpenMesh::Vec3d& p);
 		void project_on_reference_edge_with_metric(Mesh::VertexHandle vh, OpenMesh::Vec3d& p);
@@ -82,5 +92,4 @@ namespace CADMesher
 		double largest_angle = PI * 0.975;
 	};
 }
-#endif
 #endif

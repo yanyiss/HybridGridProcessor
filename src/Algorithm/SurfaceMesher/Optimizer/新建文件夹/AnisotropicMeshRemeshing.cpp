@@ -1,9 +1,10 @@
 //#include "OpenglHeaders.h"
 #include "AnisotropicMeshRemeshing.h"
 #include <Eigen/Dense>
-#if 0
+
 namespace CADMesher
 {
+
 #define USE_FEATURE
 #define USE_PROMOTION
 #define USE_FEWERITERATION
@@ -2568,4 +2569,3 @@ namespace CADMesher
 	}
 }
 
-#endif

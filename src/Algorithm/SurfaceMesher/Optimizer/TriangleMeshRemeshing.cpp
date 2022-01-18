@@ -7,7 +7,8 @@ namespace CADMesher
 		for (auto tv : mesh->vertices())
 			mesh->data(tv).set_targetlength(expected_length);
 
-		for (int i = 0; i < 10; i++)
+		printMeshQuality(*mesh);
+		for (int i = 0; i < 20; i++)
 		{
 			dprint("\niteration times:", i + 1);
 			split();
@@ -25,7 +26,6 @@ namespace CADMesher
 		dprint("Remeshing Done!\n");
 
 		printMeshQuality(*mesh);
-
 #ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
 		if (polymeshInput)
 		{
@@ -37,6 +37,12 @@ namespace CADMesher
 	void TriangleMeshRemeshing::split()
 	{
 		for (auto te : mesh->edges()) {
+#ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
+			if (polymeshInput && te.v0().idx() < boundaryNum && te.v1().idx() < boundaryNum)
+			{
+				continue;
+			}
+#endif
 			//dprint(te.idx());
 			double t0 = mesh->data(te.v0()).get_targetlength();
 			double t1 = mesh->data(te.v1()).get_targetlength();
@@ -64,8 +70,16 @@ namespace CADMesher
 	void TriangleMeshRemeshing::collapse()
 	{
 		for (auto the : mesh->halfedges()) {
-			if (!mesh->is_collapse_ok(the)) continue;
-
+			if (!mesh->is_collapse_ok(the))
+			{
+				continue;
+			}
+#ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
+			if (polymeshInput && the.from().idx() < boundaryNum)
+			{
+				continue;
+			}
+#endif
 			OV fromvert = mesh->from_vertex_handle(the);
 			OV tovert = mesh->to_vertex_handle(the);
 			double t0 = mesh->data(fromvert).get_targetlength();
@@ -147,11 +161,18 @@ namespace CADMesher
 
 	void TriangleMeshRemeshing::equalize_valence()
 	{
-		double PiDividedByThree = PI / 3.0;
 		auto va = [&](OV v) {return mesh->valence(v) + (mesh->is_boundary(v) ? 2 : 0); };
+
+		double PiDividedByThree = PI / 3.0;
+		double temp = PiDividedByThree - lowerAngleBound; temp *= temp;
+		auto penaltyFunction = [&](double a)
+		{
+			double t = a - PiDividedByThree; t *= t;
+			return t > temp ? t * t : t;
+		};
 		auto opt = [&](OpenMesh::SmartHalfedgeHandle &he) {
-			return fabs(mesh->calc_sector_angle(he) - PiDividedByThree) + fabs(mesh->calc_sector_angle(mesh->prev_halfedge_handle(he)/*he.prev()*/) - PiDividedByThree) +
-				fabs(mesh->calc_sector_angle(mesh->next_halfedge_handle(he)/*he.next()*/) - PiDividedByThree);
+			return penaltyFunction(mesh->calc_sector_angle(he)) + penaltyFunction(mesh->calc_sector_angle(he.prev()))
+				+ penaltyFunction(mesh->calc_sector_angle(he.next()));
 		};
 		for (auto te : mesh->edges()) {
 			if (!mesh->is_flip_ok(te) || mesh->data(te).get_edgeflag())
@@ -199,6 +220,7 @@ namespace CADMesher
 			if (opt_before < opt(te.h0()) + opt(te.h1()))
 				mesh->flip(te);
 		}
+		mesh->garbage_collection();
 		dprint("equalize done");
 	}
 
@@ -340,6 +362,7 @@ namespace CADMesher
 		int i = 0, j = 0, k = 0;
 		{
 			bool allTri = true, allPoly = true;
+			int triangleNum = 0;
 			for (auto &tv : mesh_->vertices())
 			{
 				allTri = allPoly = true;
@@ -348,6 +371,7 @@ namespace CADMesher
 					if (tvf.valence() == 3)
 					{
 						allPoly = false;
+						++triangleNum;
 					}
 					else
 					{
@@ -370,6 +394,7 @@ namespace CADMesher
 					mesh_->property(typeMap, tv) = mixed;
 				}
 			}
+			triangleNum /= 3;
 			for (auto &tv : mesh_->vertices())
 			{
 				if (mesh_->property(typeMap, tv) != mixed)
@@ -377,29 +402,20 @@ namespace CADMesher
 					mesh_->property(idMap, tv) += k;
 				}
 			}
-		
-			int triangleNum = 0;
-			for (auto &tf : mesh_->faces())
-			{
-				if (tf.valence() == 3)
-				{
-					++triangleNum;
-				}
-			}
 			mesh = new TriMesh();
-			mesh->reserve(i + k, i + k + triangleNum, triangleNum);
+			mesh->reserve(i + k, i + k + triangleNum, triangleNum);//V+F-E=2-2g-b  =>  E~=V+F
 		}
 
 		for (auto &tv : mesh_->vertices())
 		{
 			if (mesh_->property(typeMap, tv) == mixed)
 			{
-				mesh->add_vertex(mesh_->point(tv));
-				polymesh->add_vertex(mesh_->point(tv));
+				auto &av = mesh->add_vertex(mesh_->point(tv));
+				auto &pav = polymesh->add_vertex(mesh_->point(tv));
 				if (mesh_->data(tv).get_vertflag())
 				{
-					mesh->data(mesh->vertex_handle(mesh->n_vertices() - 1)).set_vertflag(true);
-					polymesh->data(polymesh->vertex_handle(polymesh->n_vertices() - 1)).set_vertflag(true);
+					mesh->data(av).set_vertflag(true);
+					polymesh->data(pav).set_vertflag(true);
 				}
 			}
 		}
@@ -449,7 +465,8 @@ namespace CADMesher
 				{
 					id[ii++] = mesh_->property(idMap, tfv);
 				}
-				polymesh->add_face(mesh->vertex_handle(id[0]), mesh->vertex_handle(id[1]), mesh->vertex_handle(id[2]), mesh->vertex_handle(id[3]));
+				polymesh->add_face(polymesh->vertex_handle(id[0]), polymesh->vertex_handle(id[1]),
+					polymesh->vertex_handle(id[2]), polymesh->vertex_handle(id[3]));
 			}
 		}
 		for (auto &te : mesh_->edges())
@@ -488,6 +505,8 @@ namespace CADMesher
 		polymesh = mesh_;
 		initMeshStatusAndNormal(*mesh);
 
+		//*polymesh = Mesh(*mesh);
+
 		if (expected_length < 0)
 		{
 			expected_length = meshAverageLength(*mesh);
@@ -499,6 +518,7 @@ namespace CADMesher
 
 	void TriangleMeshRemeshing::assembleMesh()
 	{
+#if 1
 		int nv = polymesh->n_vertices();
 		auto vItr = mesh->vertices_begin();
 		for (int i = 0; i < boundaryNum; ++i, ++vItr);
@@ -518,7 +538,7 @@ namespace CADMesher
 			ii = 0;
 			for (auto &tfv : mesh->fv_range(tf))
 			{
-				id[ii++] = tfv.idx() < boundaryNum ? tfv.idx() : tfv.idx() + nv;
+				id[ii++] = tfv.idx() < boundaryNum ? tfv.idx() : (tfv.idx() + nv - boundaryNum);
 			}
 			polymesh->add_face(polymesh->vertex_handle(id[0]), polymesh->vertex_handle(id[1]), polymesh->vertex_handle(id[2]));
 		}
@@ -531,6 +551,9 @@ namespace CADMesher
 					polymesh->vertex_handle(te.v1().idx() < boundaryNum ? te.v1().idx() : te.v1().idx() + nv)))).set_edgeflag(true);
 			}
 		}
+#else
+		*polymesh = Mesh(*mesh);
+#endif
 		initMeshStatusAndNormal(*polymesh);
 
 		delete mesh;
