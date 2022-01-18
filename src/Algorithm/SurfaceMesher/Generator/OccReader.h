@@ -53,6 +53,11 @@ namespace CADMesher
 		void ComputeFaceAndEdge();
 		void Discrete_Edge();
 		void Set_TriMesh();
+<<<<<<< Updated upstream
+=======
+		void Set_PolyMesh();
+		Matrix2Xd Subdomain(Matrix2Xd &all_pnts, vector<Matrix2Xi> &bnd, int &pointsnumber);
+>>>>>>> Stashed changes
 	private:
 		double initialRate = 0.003;
 		double degeneratedRate = 0.01;
