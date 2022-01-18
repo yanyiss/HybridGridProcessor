@@ -72,8 +72,8 @@ void MainViewerWidget::open_CAD_query()
 			MeshViewer->SetCADFileName(fileName);
 			CADMesher::globalmodel.clear();
 		    CADMesher::Iso_Mesh iso_mesh(fileName);
-			open_mesh_gui(Mesh(CADMesher::globalmodel.initial_trimesh));
-
+			//open_mesh_gui(Mesh(CADMesher::globalmodel.initial_trimesh));
+			//open_mesh_gui(CADMesher::globalmodel.initial_polymesh);
 			////TriangleMeshRemeshing::expected_length = iso_mesh->occ_reader->expected_edge_length;
 			//if (MeshViewer->trianglemeshremeshing) {
 			//	delete MeshViewer->trianglemeshremeshing;

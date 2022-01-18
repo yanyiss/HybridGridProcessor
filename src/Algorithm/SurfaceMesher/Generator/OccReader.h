@@ -2,6 +2,7 @@
 #define OCCREADER_H
 #include "occheader.h"
 #include "basic_def.h"
+#include"Riemann.h"
 
 namespace CADMesher
 {
@@ -53,6 +54,8 @@ namespace CADMesher
 		void ComputeFaceAndEdge();
 		void Discrete_Edge();
 		void Set_TriMesh();
+		void Set_PolyMesh();
+		MatrixX2d Subdomain(MatrixX2d &all_pnts, vector<MatrixX2i> &bnd, int &pointsnumber);
 	private:
 		double initialRate = 0.003;
 		double degeneratedRate = 0.01;

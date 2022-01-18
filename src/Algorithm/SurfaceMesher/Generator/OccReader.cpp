@@ -9,7 +9,6 @@ namespace CADMesher
 
 		Surface_TriMeshes.resize(faceshape.size());
 		for (int i = 0; i < faceshape.size(); i++)
-		//int i = 56;
 		{
 			//dprint(i);
 			TriMesh &aMesh = Surface_TriMeshes[i];
@@ -92,6 +91,349 @@ namespace CADMesher
 			}
 		}
 		dprint("Piecewise TriMesh Done!");
+	}
+
+	void OccReader::Set_PolyMesh()
+	{
+		vector<ShapeFace> &faceshape = globalmodel.faceshape;
+		vector<ShapeEdge> &edgeshape = globalmodel.edgeshape;
+
+		Surface_PolyMeshes.resize(faceshape.size());
+		for (int i = 105; i < 106; i++)
+		{
+			dprint(i);
+			TriMesh aMesh;
+			auto &wires = faceshape[i].wires;
+			if (wires.empty())
+			{
+				continue;
+			}
+
+			auto &aface = faceshape[i].face;
+			TopLoc_Location loc;
+			Handle(Geom_Surface) asurface = BRep_Tool::Surface(aface, loc);
+			Standard_Real x, y, z, w;
+			asurface->Bounds(x, y, z, w);
+
+
+			int pointsnumber = 0;
+			vector<MatrixX2i> bnd;
+			double x_step = 0;
+			double y_step = 0;
+			for (int m = 0; m < wires.size(); m++)
+			{
+				auto &edges = wires[m];
+				int boundsum = 0;
+				auto &end_paras = edgeshape[*edges.rbegin()].parameters;
+				auto end_para = end_paras.row(end_paras.rows() - 1);
+				for (int j = 0; j < edges.size(); j++)
+				{
+					auto &aedge = edgeshape[edges[j]];
+					auto &boundpos = aedge.parameters;
+					int rows = boundpos.rows() - 1;
+					pointsnumber += rows;
+					boundsum += rows;
+
+					double temp;
+					for (int r = 0; r < rows; r++)
+					{
+						temp = fabs(boundpos(r + 1, 0) - boundpos(r, 0));
+						x_step = std::max(x_step, temp);
+						temp = fabs(boundpos(r + 1, 1) - boundpos(r, 1));
+						y_step = std::max(y_step, temp);
+					}
+				}
+				MatrixX2i bound(boundsum, 2);
+				for (int j = 0; j < boundsum - 1; j++)
+				{
+					bound.row(j) << j + pointsnumber - boundsum, j + pointsnumber - boundsum + 1;
+				}
+				bound.row(boundsum - 1) << pointsnumber - 1, pointsnumber - boundsum;
+				bnd.push_back(bound);
+			}
+
+
+			MatrixX2d all_pnts(pointsnumber, 2), newall_pnts(pointsnumber, 2);
+			pointsnumber = 0;
+			int s = 0;
+			double if_reverse = aface.Orientation() ? -1.0 : 1.0;
+
+			double ra = x_step / y_step * if_reverse;
+
+			for (int j = 0; j < wires.size(); j++)
+			{
+				auto &edges = wires[j];
+				for (int k = 0; k < edges.size(); k++)
+				{
+					auto &boundpos = edgeshape[edges[k]].parameters;
+					int rows = boundpos.rows() - 1;
+					all_pnts.block(s, 0, rows, 2) = boundpos.block(0, 0, rows, 2);
+					s += rows;
+				}
+				pointsnumber = s;
+			}
+			all_pnts.block(0, 1, all_pnts.rows(), 1) *= if_reverse;
+			newall_pnts = Subdomain(all_pnts, bnd, pointsnumber);
+			newall_pnts.block(0, 1, newall_pnts.rows(), 1) *= x_step / y_step;
+			triangulate(newall_pnts, bnd, sqrt(3) * x_step * x_step / 4 * mu, aMesh);
+			for (auto v = aMesh.vertices_begin(); v != aMesh.vertices_end(); v++)
+			{
+				auto p = aMesh.point(*v);
+				aMesh.set_point(*v, Mesh::Point{ p[0],p[1] / ra,0 });
+			}
+
+			TopLoc_Location loca;
+			opencascade::handle<Geom_Surface> geom_surface = BRep_Tool::Surface(faceshape[i].face, loca);
+			opencascade::handle<Standard_Type> type = geom_surface->DynamicType();
+			if (type == STANDARD_TYPE(Geom_BSplineSurface))
+			{
+				BSplineSurface bsplinesurface;
+
+				opencascade::handle<Geom_BSplineSurface> geom_bsplinesurface = Handle(Geom_BSplineSurface)::DownCast(geom_surface);
+				TColStd_Array1OfReal uknotsequence = geom_bsplinesurface->UKnotSequence();
+				TColStd_Array1OfReal vknotsequence = geom_bsplinesurface->VKnotSequence();
+				vector<double> u;
+				vector<double> v;
+				for (auto itr = uknotsequence.begin(); itr != uknotsequence.end(); itr++)
+					u.push_back(*itr);
+				for (auto itr = vknotsequence.begin(); itr != vknotsequence.end(); itr++)
+					v.push_back(*itr);
+
+				TColgp_Array2OfPnt controlpoints = geom_bsplinesurface->Poles();
+				vector<vector<Point>> cp(controlpoints.NbRows());
+				for (int r = 1; r <= controlpoints.NbRows(); r++)
+				{
+					cp[r - 1].reserve(controlpoints.NbColumns());
+					for (int c = 1; c <= controlpoints.NbColumns(); c++) {
+						gp_Pnt pos = controlpoints.Value(r, c);
+						cp[r - 1].emplace_back(pos.X(), pos.Y(), pos.Z());
+					}
+				}
+				const TColStd_Array2OfReal* weights = geom_bsplinesurface->Weights();
+				if (weights) {
+					vector<vector<double>> w(weights->NbRows());
+					for (int r = 1; r <= weights->NbRows(); r++)
+					{
+						w[r - 1].reserve(weights->NbColumns());
+						for (int c = 1; c <= weights->NbColumns(); c++)
+							w[r - 1].push_back(weights->Value(r, c));
+					}
+					bsplinesurface = { geom_bsplinesurface->UDegree(), geom_bsplinesurface->VDegree(), u, v, w, cp };
+				}
+				else
+					bsplinesurface = { geom_bsplinesurface->UDegree(), geom_bsplinesurface->VDegree(), u, v, cp };
+				Riemannremesh Remesh(bsplinesurface, aMesh);
+				Remesh.remesh();
+				aMesh = Remesh.mesh;
+			}
+			else
+			{
+				dprint( "this is not Bsplinesurface!" );
+			}
+
+			Mesh newmesh;
+			Mesh::VertexHandle vh1, vh2, vh3, vh4, vend3, vend4;
+			std::vector<Mesh::VertexHandle> facevhandle;
+			Mesh::Point newp;
+
+			//add boundary points
+			for (int j = 0; j < pointsnumber; j++)
+			{
+				newp = Mesh::Point(all_pnts(j, 0), all_pnts(j, 1)*if_reverse, 0);
+				newmesh.add_vertex(newp);
+			}
+
+			//add internal points
+			for (auto v : aMesh.vertices())
+			{
+				newp = Mesh::Point(aMesh.point(v));
+				vh1 = newmesh.add_vertex(newp);
+			}
+
+			//add boundary faces
+			int count = 0;
+			for (int j = 0; j < bnd.size(); j++)
+			{
+				vend3 = vh1 = newmesh.vertex_handle(count);
+				vend4 = vh4 = newmesh.vertex_handle(count + pointsnumber);
+				for (int k = 0; k < bnd[j].rows() - 1; k++)
+				{
+					vh2 = newmesh.vertex_handle(count + 1);
+					vh3 = newmesh.vertex_handle(count + pointsnumber + 1);
+					facevhandle = { vh1,vh2,vh3,vh4 };
+					newmesh.add_face(facevhandle);
+					facevhandle.clear();
+					vh1 = vh2;
+					vh4 = vh3;
+					count++;
+				}
+				facevhandle = { vh1,vend3,vend4,vh4 };
+				newmesh.add_face(facevhandle);
+				facevhandle.clear();
+				count++;
+			}
+
+			//add internal faces
+			for (auto f : aMesh.faces())
+			{
+				for (auto fv = aMesh.fv_begin(f); fv.is_valid(); fv++)
+				{
+					vh1 = newmesh.vertex_handle((*fv).idx() + pointsnumber);
+					facevhandle.push_back(vh1);
+				}
+				newmesh.add_face(facevhandle);
+				facevhandle.clear();
+			}
+
+			if (!OpenMesh::IO::write_mesh(newmesh, "one.obj"))
+			{
+				std::cerr << "fail";
+			}
+
+			//for (auto tv : newmesh.vertices())
+			//{
+			//	auto pos = newmesh.point(tv);
+			//	auto v = asurface->Value(pos[0], pos[1]);
+			//	newmesh.set_point(tv, Mesh::Point(v.X(), v.Y(), v.Z()));
+			//}
+			//Surface_PolyMeshes[i] = newmesh; 
+		}
+
+		dprint("Piecewise PolyMesh Done!");
+	}
+
+	MatrixX2d OccReader::Subdomain(MatrixX2d &all_pnts, vector<MatrixX2i> &bnd, int &pointsnumber)
+	{
+		MatrixX2d newall_pnts(pointsnumber, 2),edge;
+		MatrixX2i P;
+		MatrixX2d p1 = MatrixX2d::Zero(1, 2), p2, p3, p4;
+		p4 = p3 = p2 = p1;
+
+		int rows;   //edges number
+		double step, avelen=0;
+		bool dire_global = true, dire;
+		std::vector<int>inflexion;
+
+		for (int i = 0; i < bnd.size(); i++)
+		{
+			if (i) dire_global = false;
+			rows = bnd[i].rows();
+			edge = MatrixX2d::Zero(rows+1, 2);
+			P = MatrixX2i::Zero(rows + 1, 2);
+			P << bnd[i].row(rows - 1), bnd[i];
+			int startid = P(0, 1), id1, id2;
+
+			for (int j = 1; j < rows+1; j++)
+			{
+				edge.row(j) = all_pnts.row(P(j, 1)) - all_pnts.row(P(j, 0));
+				avelen += edge.row(j).norm();
+			}
+			edge.row(0) = edge.row(rows);
+			avelen /= rows;
+			step = avelen / 10;
+
+			//提取拐点并按角平分线设定步长
+			std::vector<int> pntAngle(rows, 0);
+			for (int j = 1; j < rows + 1; j++)
+			{
+				p1 = edge.row(j - 1);
+				p2 = edge.row(j);
+				if (p1.norm() < 0.7*avelen && p2.norm() < 0.7*avelen) continue;
+				p1.normalize();
+				p2.normalize();
+				if ((p2 - p1).norm() < 0.001)
+				{
+					p3 << -p1(1), p1(0);
+					p3 *= step;
+					pntAngle[j - 1] = 3.2;
+				}
+				else
+				{
+					double angle = acos(-p1(0)*p2(0) - p1(1)*p2(1));	
+					dire = !(dire_global ^ (p1(0)*p2(1) - p1(1)*p2(0) > 0));
+					if (!dire) angle = 2 * PI - angle;
+					pntAngle[j-1] = angle;
+					if (angle < 0.6) continue;
+					double step1 = step / std::max(sin(angle*0.5), 0.1);
+					p3 = step1 * ((p2 - p1).normalized())* (dire ? 1 : -1);
+				}
+				id1 = startid + j - 1;
+				newall_pnts.row(id1) = all_pnts.row(id1) + p3 ;
+				inflexion.push_back(id1);   //边界的拐点
+			}
+			//判断自交
+			std::vector<int>::iterator iter;
+			Matrix2d A1, A2;
+			for (int j = 0; j < inflexion.size(); j++)
+			{
+				if (j < inflexion.size() - 1)
+				{
+					id1 = inflexion[j];
+					id2 = inflexion[j + 1];
+				}
+				else
+				{
+					id1 = inflexion.front();
+					id2 = inflexion.back();
+				}
+				p1 = all_pnts.row(id2);
+				p2 = newall_pnts.row(id2);
+				p3 = all_pnts.row(id1);
+				p4 = newall_pnts.row(id1);
+				A2.row(0) = A1.row(0) = p2 - p1;
+				A1.row(1) = p3 - p1;
+				A2.row(1) = p4 - p1;
+				if (A1.determinant()*A2.determinant() < 0)   //两角平分线相交
+				{
+					if (pntAngle[id1 - startid] > pntAngle[id2 - startid])
+					{
+						iter = std::find(inflexion.begin(), inflexion.end(), id1);
+						inflexion.erase(iter);
+					}
+					else
+					{
+						iter = std::find(inflexion.begin(), inflexion.end(), id2);
+						inflexion.erase(iter);
+					}
+				}
+			}
+			//插值其余点
+			int n;
+			for (int j = 0; j < inflexion.size() - 1; j++)
+			{
+				id1 = inflexion[j];
+				id2 = inflexion[j + 1];
+				n = id2 - id1;  //n等分
+				if (n == 1) continue;
+				p1 = newall_pnts.row(id1);
+				p2 = newall_pnts.row(id2);
+				for (double k = 1; k < n; k++)
+				{
+					newall_pnts.row(id1 + k) = (1 - k / n)*p1 + k / n * p2;
+				}
+			}
+			id1 = inflexion.back();
+			id2 = inflexion.front();
+			n = P(0, 0) - id1 + id2 - P(0, 1) + 1;  //n等分 
+			if (n > 1)
+			{
+				p1 = newall_pnts.row(id1);
+				p2 = newall_pnts.row(id2);
+				for (double k = 1; k < n; k++)
+				{
+					if (id1 + k <= P(0, 0))
+					{
+						newall_pnts.row(id1 + k) = (1 - k / n)*p1 + k / n * p2;
+					}
+					else
+					{
+						newall_pnts.row(id1 + k - P(0, 0) + P(0, 1) - 1) = (1 - k / n)*p1 + k / n * p2;
+					}
+				}
+			}
+			inflexion.clear();
+		}
+		return newall_pnts;
 	}
 
 	void OccReader::ComputeFaceAndEdge()

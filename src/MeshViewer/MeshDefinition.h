@@ -5,6 +5,7 @@
 #include <OpenMesh/Core/IO/MeshIO.hh>
 #include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
 #include <OpenMesh/Core/Mesh/PolyMesh_ArrayKernelT.hh>
+#include <Eigen/Dense>
 
 typedef OpenMesh::PolyConnectivity::FaceIter faceiter;
 typedef OpenMesh::PolyConnectivity::EdgeIter edgeiter;
@@ -32,12 +33,12 @@ struct MeshTraits : public OpenMesh::DefaultTraits
 
 	FaceTraits
 	{
-		FaceT(): area( 0.0 ),new_area(0.0), w(0)
+		FaceT(): area( 0.0 ),new_area(0.0), w(0), faceflag(false)
 		{};
 	private:
 		double area; double new_area;
 		double w;
-		bool faceflag;
+		bool faceflag ;
 	public:
 		void set_area(const double& a){area = a;};
 		double& get_area(){return area;};
@@ -68,6 +69,11 @@ struct MeshTraits : public OpenMesh::DefaultTraits
 
 		void set_edgeflag(bool b) { edgeflag = b; };
 		bool get_edgeflag() { return edgeflag; };
+
+		bool offsetflag = false;
+		std::vector<O3d> offsetpnt;   //存放offset点
+		std::vector<OV> offsetvh;     //存放offset点对应的handle
+
 	};
 
 	HalfedgeTraits
@@ -99,6 +105,8 @@ struct MeshTraits : public OpenMesh::DefaultTraits
 		bool vertflag;
 		double targetlength;
 	public:
+		Eigen::Matrix2d M;   //存放第一基本量
+
 		void set_Hessian(const OpenMesh::Vec6d& h_){h = h_;};
 		OpenMesh::Vec6d& get_Hessian(){return h;};
 
@@ -122,6 +130,8 @@ struct MeshTraits : public OpenMesh::DefaultTraits
 
 		void set_targetlength(double d) { targetlength = d; };
 		double get_targetlength() { return targetlength; };
+
+		bool curvatureflag = false;
 	};
 };
 
