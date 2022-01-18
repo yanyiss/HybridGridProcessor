@@ -7,8 +7,8 @@ The program is used to convert CAD models(STEP and IGES files) to meshes and ren
 * [OpenGL](https://www.opengl.org/resources/)            Render
 * [Qt](https://www.qt.io/)                               GUI
 * [Eigen](http://eigen.tuxfamily.org/)                   Linear Algebra
-* [OpenMesh](https://www.openmesh.org/)                  Mesh 
-* [Open CADCADE](https://dev.opencascade.org/release)    Polyon Mesh Data Structure
+* [OpenMesh](https://www.openmesh.org/)                  Polyon Mesh Data Structure 
+* [Open CADCADE](https://dev.opencascade.org/release)    CAD Models Read
 * [tbb](https://github.com/oneapi-src/oneTBB)            Parallel Computation
 * [triangle](http://www.cs.cmu.edu/~quake/triangle.html) Planar Triangle Mesh Generation
 
