@@ -117,7 +117,7 @@ namespace CADMesher
 
 
 			int pointsnumber = 0;
-			vector<MatrixX2i> bnd;
+			vector<Matrix2Xi> bnd;
 			double x_step = 0;
 			double y_step = 0;
 			for (int m = 0; m < wires.size(); m++)
@@ -125,35 +125,35 @@ namespace CADMesher
 				auto &edges = wires[m];
 				int boundsum = 0;
 				auto &end_paras = edgeshape[*edges.rbegin()].parameters;
-				auto end_para = end_paras.row(end_paras.rows() - 1);
+				auto end_para = end_paras.col(end_paras.cols() - 1);
 				for (int j = 0; j < edges.size(); j++)
 				{
 					auto &aedge = edgeshape[edges[j]];
 					auto &boundpos = aedge.parameters;
-					int rows = boundpos.rows() - 1;
-					pointsnumber += rows;
-					boundsum += rows;
+					int cols = boundpos.cols() - 1;
+					pointsnumber += cols;
+					boundsum += cols;
 
 					double temp;
-					for (int r = 0; r < rows; r++)
+					for (int r = 0; r < cols; r++)
 					{
-						temp = fabs(boundpos(r + 1, 0) - boundpos(r, 0));
+						temp = fabs(boundpos(0, r + 1) - boundpos(0, r));
 						x_step = std::max(x_step, temp);
-						temp = fabs(boundpos(r + 1, 1) - boundpos(r, 1));
+						temp = fabs(boundpos(1, r + 1) - boundpos(1, r));
 						y_step = std::max(y_step, temp);
 					}
 				}
-				MatrixX2i bound(boundsum, 2);
+				Matrix2Xi bound(2, boundsum);
 				for (int j = 0; j < boundsum - 1; j++)
 				{
-					bound.row(j) << j + pointsnumber - boundsum, j + pointsnumber - boundsum + 1;
+					bound.col(j) << j + pointsnumber - boundsum, j + pointsnumber - boundsum + 1;
 				}
-				bound.row(boundsum - 1) << pointsnumber - 1, pointsnumber - boundsum;
+				bound.col(boundsum - 1) << pointsnumber - 1, pointsnumber - boundsum;
 				bnd.push_back(bound);
 			}
 
 
-			MatrixX2d all_pnts(pointsnumber, 2), newall_pnts(pointsnumber, 2);
+			Matrix2Xd all_pnts(2, pointsnumber), newall_pnts(2, pointsnumber);
 			pointsnumber = 0;
 			int s = 0;
 			double if_reverse = aface.Orientation() ? -1.0 : 1.0;
@@ -166,15 +166,18 @@ namespace CADMesher
 				for (int k = 0; k < edges.size(); k++)
 				{
 					auto &boundpos = edgeshape[edges[k]].parameters;
-					int rows = boundpos.rows() - 1;
-					all_pnts.block(s, 0, rows, 2) = boundpos.block(0, 0, rows, 2);
-					s += rows;
+					int cols = boundpos.cols() - 1;
+					//all_pnts.block(s, 0, rows, 2) = boundpos.block(0, 0, rows, 2);
+					all_pnts.block(0, s, 2, cols) = boundpos.block(0, 0, cols, 2);
+					s += cols;
 				}
 				pointsnumber = s;
 			}
-			all_pnts.block(0, 1, all_pnts.rows(), 1) *= if_reverse;
+			//all_pnts.block(0, 1, all_pnts.rows(), 1) *= if_reverse;
+			all_pnts.block(1, 0, 1, all_pnts.cols()) *= if_reverse;
 			newall_pnts = Subdomain(all_pnts, bnd, pointsnumber);
-			newall_pnts.block(0, 1, newall_pnts.rows(), 1) *= x_step / y_step;
+			//newall_pnts.block(0, 1, newall_pnts.rows(), 1) *= x_step / y_step;
+			newall_pnts.block(1, 0, 1, newall_pnts.cols()) *= x_step / y_step;
 			triangulate(newall_pnts, bnd, sqrt(3) * x_step * x_step / 4 * mu, aMesh);
 			for (auto v = aMesh.vertices_begin(); v != aMesh.vertices_end(); v++)
 			{
@@ -239,7 +242,7 @@ namespace CADMesher
 			//add boundary points
 			for (int j = 0; j < pointsnumber; j++)
 			{
-				newp = Mesh::Point(all_pnts(j, 0), all_pnts(j, 1)*if_reverse, 0);
+				newp = Mesh::Point(all_pnts(0, j), all_pnts(1, j)*if_reverse, 0);
 				newmesh.add_vertex(newp);
 			}
 
@@ -256,7 +259,7 @@ namespace CADMesher
 			{
 				vend3 = vh1 = newmesh.vertex_handle(count);
 				vend4 = vh4 = newmesh.vertex_handle(count + pointsnumber);
-				for (int k = 0; k < bnd[j].rows() - 1; k++)
+				for (int k = 0; k < bnd[j].cols() - 1; k++)
 				{
 					vh2 = newmesh.vertex_handle(count + 1);
 					vh3 = newmesh.vertex_handle(count + pointsnumber + 1);
@@ -302,14 +305,14 @@ namespace CADMesher
 		dprint("Piecewise PolyMesh Done!");
 	}
 
-	MatrixX2d OccReader::Subdomain(MatrixX2d &all_pnts, vector<MatrixX2i> &bnd, int &pointsnumber)
+	Matrix2Xd OccReader::Subdomain(Matrix2Xd &all_pnts, vector<Matrix2Xi> &bnd, int &pointsnumber)
 	{
-		MatrixX2d newall_pnts(pointsnumber, 2),edge;
-		MatrixX2i P;
-		MatrixX2d p1 = MatrixX2d::Zero(1, 2), p2, p3, p4;
+		Matrix2Xd newall_pnts(2, pointsnumber),edge;
+		Matrix2Xi P;
+		Matrix2Xd p1 = Matrix2Xd::Zero(2, 1), p2, p3, p4;
 		p4 = p3 = p2 = p1;
 
-		int rows;   //edges number
+		int cols;   //edges number
 		double step, avelen=0;
 		bool dire_global = true, dire;
 		std::vector<int>inflexion;
@@ -317,27 +320,27 @@ namespace CADMesher
 		for (int i = 0; i < bnd.size(); i++)
 		{
 			if (i) dire_global = false;
-			rows = bnd[i].rows();
-			edge = MatrixX2d::Zero(rows+1, 2);
-			P = MatrixX2i::Zero(rows + 1, 2);
-			P << bnd[i].row(rows - 1), bnd[i];
-			int startid = P(0, 1), id1, id2;
+			cols = bnd[i].cols();
+			edge = Matrix2Xd::Zero(2, cols+1);
+			P = Matrix2Xi::Zero(2, cols + 1);
+			P << bnd[i].col(cols - 1), bnd[i];
+			int startid = P(1, 0), id1, id2;
 
-			for (int j = 1; j < rows+1; j++)
+			for (int j = 1; j < cols+1; j++)
 			{
-				edge.row(j) = all_pnts.row(P(j, 1)) - all_pnts.row(P(j, 0));
-				avelen += edge.row(j).norm();
+				edge.col(j) = all_pnts.col(P(1, j)) - all_pnts.col(P(0, j));
+				avelen += edge.col(j).norm();
 			}
-			edge.row(0) = edge.row(rows);
-			avelen /= rows;
+			edge.col(0) = edge.col(cols);
+			avelen /= cols;
 			step = avelen / 10;
 
-			//Ã·»°π’µ„≤¢∞¥Ω«∆Ω∑÷œﬂ…Ë∂®≤Ω≥§
-			std::vector<int> pntAngle(rows, 0);
-			for (int j = 1; j < rows + 1; j++)
+			//ÊèêÂèñÊãêÁÇπÂπ∂ÊåâËßíÂπ≥ÂàÜÁ∫øËÆæÂÆöÊ≠•Èïø
+			std::vector<int> pntAngle(cols, 0);
+			for (int j = 1; j < cols + 1; j++)
 			{
-				p1 = edge.row(j - 1);
-				p2 = edge.row(j);
+				p1 = edge.col(j - 1);
+				p2 = edge.col(j);
 				if (p1.norm() < 0.7*avelen && p2.norm() < 0.7*avelen) continue;
 				p1.normalize();
 				p2.normalize();
@@ -358,10 +361,10 @@ namespace CADMesher
 					p3 = step1 * ((p2 - p1).normalized())* (dire ? 1 : -1);
 				}
 				id1 = startid + j - 1;
-				newall_pnts.row(id1) = all_pnts.row(id1) + p3 ;
-				inflexion.push_back(id1);   //±ﬂΩÁµƒπ’µ„
+				newall_pnts.col(id1) = all_pnts.col(id1) + p3 ;
+				inflexion.push_back(id1);   //ËæπÁïåÁöÑÊãêÁÇπ
 			}
-			//≈–∂œ◊‘Ωª
+			//Âà§Êñ≠Ëá™‰∫§
 			std::vector<int>::iterator iter;
 			Matrix2d A1, A2;
 			for (int j = 0; j < inflexion.size(); j++)
@@ -376,14 +379,14 @@ namespace CADMesher
 					id1 = inflexion.front();
 					id2 = inflexion.back();
 				}
-				p1 = all_pnts.row(id2);
-				p2 = newall_pnts.row(id2);
-				p3 = all_pnts.row(id1);
-				p4 = newall_pnts.row(id1);
-				A2.row(0) = A1.row(0) = p2 - p1;
-				A1.row(1) = p3 - p1;
-				A2.row(1) = p4 - p1;
-				if (A1.determinant()*A2.determinant() < 0)   //¡ΩΩ«∆Ω∑÷œﬂœ‡Ωª
+				p1 = all_pnts.col(id2);
+				p2 = newall_pnts.col(id2);
+				p3 = all_pnts.col(id1);
+				p4 = newall_pnts.col(id1);
+				A2.col(0) = A1.col(0) = p2 - p1;
+				A1.col(1) = p3 - p1;
+				A2.col(1) = p4 - p1;
+				if (A1.determinant()*A2.determinant() < 0)   //‰∏§ËßíÂπ≥ÂàÜÁ∫øÁõ∏‰∫§
 				{
 					if (pntAngle[id1 - startid] > pntAngle[id2 - startid])
 					{
@@ -397,37 +400,37 @@ namespace CADMesher
 					}
 				}
 			}
-			//≤Â÷µ∆‰”‡µ„
+			//ÊèíÂÄºÂÖ∂‰ΩôÁÇπ
 			int n;
 			for (int j = 0; j < inflexion.size() - 1; j++)
 			{
 				id1 = inflexion[j];
 				id2 = inflexion[j + 1];
-				n = id2 - id1;  //nµ»∑÷
+				n = id2 - id1;  //nÁ≠âÂàÜ
 				if (n == 1) continue;
-				p1 = newall_pnts.row(id1);
-				p2 = newall_pnts.row(id2);
+				p1 = newall_pnts.col(id1);
+				p2 = newall_pnts.col(id2);
 				for (double k = 1; k < n; k++)
 				{
-					newall_pnts.row(id1 + k) = (1 - k / n)*p1 + k / n * p2;
+					newall_pnts.col(id1 + k) = (1 - k / n)*p1 + k / n * p2;
 				}
 			}
 			id1 = inflexion.back();
 			id2 = inflexion.front();
-			n = P(0, 0) - id1 + id2 - P(0, 1) + 1;  //nµ»∑÷ 
+			n = P(0, 0) - id1 + id2 - P(0, 1) + 1;  //nÁ≠âÂàÜ 
 			if (n > 1)
 			{
-				p1 = newall_pnts.row(id1);
-				p2 = newall_pnts.row(id2);
+				p1 = newall_pnts.col(id1);
+				p2 = newall_pnts.col(id2);
 				for (double k = 1; k < n; k++)
 				{
 					if (id1 + k <= P(0, 0))
 					{
-						newall_pnts.row(id1 + k) = (1 - k / n)*p1 + k / n * p2;
+						newall_pnts.col(id1 + k) = (1 - k / n)*p1 + k / n * p2;
 					}
 					else
 					{
-						newall_pnts.row(id1 + k - P(0, 0) + P(0, 1) - 1) = (1 - k / n)*p1 + k / n * p2;
+						newall_pnts.col(id1 + k - P(0, 0) + P(0, 1) - 1) = (1 - k / n)*p1 + k / n * p2;
 					}
 				}
 			}
@@ -563,7 +566,7 @@ namespace CADMesher
 			double curve_length = 0;
 			gp_Pnt P;
 			gp_Vec d1;
-			//Gauss-Lengredª˝∑÷π´ Ω
+			//Gauss-LengredÁßØÂàÜÂÖ¨Âºè
 			double a = (last - first) / 2;
 			double b = (last + first) / 2;
 			for (int i = 0; i < 8; i++)

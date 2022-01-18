@@ -47,13 +47,15 @@ namespace CADMesher
 
 	public:
 		double expected_edge_length;
-		double mu = 1.2;//Èı½ÇĞÎÃæ»ıÔÊĞíÀ©ÕÅÏµÊı
+		double mu = 1.2;//ä¸‰è§’å½¢é¢ç§¯å…è®¸æ‰©å¼ ç³»æ•°
 		vector<TriMesh> Surface_TriMeshes;
 		vector<PolyMesh> Surface_PolyMeshes;
 
 		void ComputeFaceAndEdge();
 		void Discrete_Edge();
 		void Set_TriMesh();
+		void Set_PolyMesh();
+		Matrix2Xd Subdomain(Matrix2Xd &all_pnts, vector<Matrix2Xi> &bnd, int &pointsnumber);
 		void Set_PolyMesh();
 		MatrixX2d Subdomain(MatrixX2d &all_pnts, vector<MatrixX2i> &bnd, int &pointsnumber);
 	private:
