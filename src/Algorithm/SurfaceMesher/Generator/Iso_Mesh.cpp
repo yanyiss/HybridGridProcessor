@@ -15,12 +15,12 @@ namespace CADMesher
 		//globalmodel.initial_trimesh = occ_reader->Surface_TriMeshes[67];
 		//globalmodel.initial_polymesh = occ_reader->Surface_PolyMeshes[66];
 #else
-		//MergeModel();
+		MergeModel();
 #endif
 		//Write_Obj(globalmodel.initial_trimesh);
 		//ResetFeature();
-		//ResetFeature1();
-		//Write_Obj(globalmodel.initial_polymesh);
+		ResetFeature1();
+		Write_Obj(globalmodel.initial_polymesh);
 	}
 
 	void Iso_Mesh::MergeModel()
