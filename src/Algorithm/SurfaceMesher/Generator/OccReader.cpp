@@ -99,7 +99,7 @@ namespace CADMesher
 		vector<ShapeEdge> &edgeshape = globalmodel.edgeshape;
 
 		Surface_PolyMeshes.resize(faceshape.size());
-		for (int i = 105; i < 106; i++)
+		for (int i = 0; i < faceshape.size(); i++)
 		{
 			dprint(i);
 			TriMesh aMesh;
@@ -168,7 +168,7 @@ namespace CADMesher
 					auto &boundpos = edgeshape[edges[k]].parameters;
 					int cols = boundpos.cols() - 1;
 					//all_pnts.block(s, 0, rows, 2) = boundpos.block(0, 0, rows, 2);
-					all_pnts.block(0, s, 2, cols) = boundpos.block(0, 0, cols, 2);
+					all_pnts.block(0, s, 2, cols) = boundpos.block(0, 0, 2, cols);
 					s += cols;
 				}
 				pointsnumber = s;

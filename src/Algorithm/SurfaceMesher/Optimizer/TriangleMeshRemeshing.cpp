@@ -89,6 +89,7 @@ namespace CADMesher
 
 			if (x >= 0.8 * min_of_t0_t1) continue;
 
+			//特征线上移动点
 			if (mesh->data(mesh->edge_handle(the)).get_edgeflag()) {
 				if (x >= 0.666 * min_of_t0_t1) continue;
 				int count = 0;
@@ -117,6 +118,7 @@ namespace CADMesher
 				continue;
 			}
 			//if (mesh->data(mesh->edge_handle(the)).get_edgeflag()) continue;
+			//移除短边
 			if (mesh->data(fromvert).get_vertflag()) {
 				if (mesh->data(tovert).get_vertflag() && x < min_of_t0_t1*0.1)
 				{

@@ -183,6 +183,8 @@ namespace ClosestPointSearch
 	public:
 		AABBTree() {}
 
+		AABBTree(const AABBTree &t) = delete;
+
 		AABBTree(TriIter first, TriIter beyond)
 		{
 			insert(first, beyond);
