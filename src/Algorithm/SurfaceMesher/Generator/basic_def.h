@@ -40,7 +40,7 @@ namespace CADMesher
 		int reversed_edge;
 		int prev_edge;
 		int next_reversed_edge;
-		MatrixX2d parameters;
+		Matrix2Xd parameters;
 		int begin_id;
 		int end_id;
 

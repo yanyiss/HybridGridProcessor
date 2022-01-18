@@ -98,7 +98,7 @@ file (GLOB MeshViewer_FILE
 file (GLOB Algorithm_FILE
     src/Algorithm/CheckBoard/*
     src/Algorithm/SurfaceMesher/Generator/*
-    src/Algorithm/SurfaceMesher/Optimizer/TriangleMeshRemeshing.*
+    src/Algorithm/SurfaceMesher/Optimizer/*
 )
 
 file (GLOB Toolbox_FILE

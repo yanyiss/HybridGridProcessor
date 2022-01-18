@@ -61,11 +61,13 @@ void MainViewerWidget::open_CAD_query()
 	QString fileName = QFileDialog::getOpenFileName(this,
 		tr("Open mesh file"),
 		tr("../model/CAD"),
-		tr("(*.STEP;*.stp;*.IGES;*.igs;*.obj);;")
+		tr("(*.STEP;*.STP;*.stp;*.IGES;*.IGS;*.igs;*.obj);;")
 	);
 	if (!fileName.isEmpty())
 	{
-		if (fileName.endsWith(".stp") || fileName.endsWith(".igs") || fileName.endsWith(".IGS") || fileName.endsWith(".STEP") || fileName.endsWith(".IGES"))
+		if (fileName.endsWith(".stp") || fileName.endsWith(".igs") || 
+			fileName.endsWith(".IGS") || fileName.endsWith(".STP") ||
+			fileName.endsWith(".STEP") || fileName.endsWith(".IGES"))
 		{
 			MeshViewer->SetCADFileName(fileName);
 			CADMesher::globalmodel.clear();

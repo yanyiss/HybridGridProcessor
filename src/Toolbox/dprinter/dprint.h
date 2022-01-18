@@ -37,6 +37,7 @@ class timeRecorder
 {
 public:
 	timeRecorder() { timeKnots.push_back(clock()); }
+	timeRecorder(const timeRecorder& tr) = delete;
 	~timeRecorder() {}
 private:
 	std::vector<clock_t> timeKnots;
