@@ -12,3 +12,10 @@ const char CommonDefinition::PointColor_String[2][512] = {"color: rgb(128,0,42)"
 const int CommonDefinition::SingularityColor[12][3] = {{255,85,0}, {255,170,0}, {255,255,0},{170,255,0},
 													   {0,255,255},{0,255,170},{0,85,255},{0,170,255},
 													   {85,0,255},{170,0,255},{255,0,85},{255,0,170}};
+
+
+const char CommonDefinition::distortion_type_name[3][128] = {"Conformal","Isometric","LSCM"};
+
+const char CommonDefinition::tri_mapping_energy[13][128] = { "MIPS_AREA_N", "MIPS_AREA_G", "LSCM", "EXP_MIPS_AREA_G","AMIPS_Bound" , "EXP_MIPS_AREA_N", "AMIPS_Untangling", "MIPS_AREA_G_S", "LSCM_S", "EXP_MIPS_AREA_G_S", "LCOT ISO", "Dilation_G", "Dilation_N" };
+
+const char CommonDefinition::bound_smooth_error_method[3][128] = {"BSE_LSCM","BSE_LSCM_Beta","BSE_LSCM_Bound"};

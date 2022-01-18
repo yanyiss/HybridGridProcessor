@@ -69,9 +69,12 @@ private:
 	void draw_mesh_solidflat() const;
 	void draw_mesh_solidsmooth() const;
 	void draw_mesh_pointset() const;
-	void draw_checkboard();
-	void draw_diagonalmesh();//see definition of diagonal mesh in paper: Checkerboard Patterns with Black Rectangles
+	void draw_IsotropicMesh();
+	void draw_AnisotropicMesh();//see definition of diagonal mesh in paper: Checkerboard Patterns with Black Rectangles
+	void draw_feature();
 	std::string file;
+protected:
+	QString CADFileName;
 
 protected:
 	bool first_init;
@@ -91,6 +94,7 @@ public:
 	void setMeshMode(int mm) { mesh_mode_ = mm;}
 	int meshMode() const { return mesh_mode_; }
 	void checkMeshMode();
+	bool ifUpdateMesh = true;
 private:
 	int mesh_mode_;
 	//std::vector<unsigned int> Indices;

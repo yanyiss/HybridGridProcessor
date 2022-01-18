@@ -83,7 +83,7 @@ public slots:
 	}
 
 public:
-	enum { TRANS, POINTPICK, VERTEXPICK, EDGEPICK, FACEPICK, EDGECOLLAPSE, EDGEFLIP, EDGESPLIT , MOVE, T2_MODE, N_MODE };
+	enum { TRANS, POINTPICK, VERTEXPICK, EDGEPICK, FACEPICK, EDGECOLLAPSE, EDGEFLIP, EDGESPLIT , MOVE, FEATURE, ISOTROPIC, ANISOTROPIC, DEBUGTEST, T2_MODE, N_MODE };
 	void setMouseMode(int mm);
 	int mouseMode() const { return mouse_mode_; }
 
@@ -133,9 +133,12 @@ protected:
 
 public:
 	void SetCADFileName(QString &fileName);
-
+public:
+	void showFeature();
+	void showIsotropicMesh();
+	void showAnisotropicMesh();
+	void showDebugTest();
 private:
-	QString CADFileName;
 
 #pragma region Auxiliary_function
 public:

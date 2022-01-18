@@ -47,6 +47,10 @@ private slots:
 	void edgePick();
 	void facePick();
 	void moveVertex();
+	void showFeature();
+	void showIsotropicMesh();
+	void showAnisotropicMesh();
+	void showDebugTest();
 	void edit_undo();
 	void set_edit_undo_enable(bool b);
 	void edit_redo();
@@ -115,6 +119,10 @@ private:
 	QAction* EdgePickAction;
 	QAction* clearSelectedAction;
 	QAction* moveVertexAction;
+	QAction* showFeatureAction;
+	QAction* showIsotropicMeshAction;
+	QAction* showAnisotropicMeshAction;
+	QAction* showDebugTestAction;
 
 	QAction* EditUndoAction;
 	QAction* EditRedoAction;

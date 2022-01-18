@@ -11,9 +11,13 @@ typedef OpenMesh::PolyConnectivity::EdgeIter edgeiter;
 typedef OpenMesh::PolyConnectivity::HalfedgeIter halfedgeiter;
 typedef OpenMesh::PolyConnectivity::VertexIter vertexiter;
 typedef OpenMesh::VertexHandle OV;
+typedef OpenMesh::SmartVertexHandle SOV;
 typedef OpenMesh::EdgeHandle OE;
+typedef OpenMesh::SmartEdgeHandle SOE;
 typedef OpenMesh::HalfedgeHandle OH;
+typedef OpenMesh::SmartHalfedgeHandle SOH;
 typedef OpenMesh::FaceHandle OF;
+typedef OpenMesh::SmartFaceHandle SOF;
 typedef OpenMesh::Vec3d O3d;
 
 struct MeshTraits : public OpenMesh::DefaultTraits
@@ -54,7 +58,7 @@ struct MeshTraits : public OpenMesh::DefaultTraits
 		{
 		};
 	private:
-		bool is_feature; double weight; bool edgeflag;
+		bool is_feature; double weight; bool edgeflag = false;
 	public:
 		void set_edge_feature(bool b){is_feature = b;};
 		bool get_edge_feature(){return is_feature;};
@@ -158,6 +162,24 @@ void compute_principal_curvature(Mesh* mesh_,
 
 
 #pragma region functions by yanyisheshou at GCL
+double meshMinAngle(TriMesh &mesh);
+
+void printMeshQuality(TriMesh &mesh);
+
+template <typename T>
+void initMeshStatusAndNormal(T& m)
+{
+	m.request_vertex_status();
+	m.request_edge_status();
+	m.request_face_status();
+
+	m.request_face_normals();
+	m.request_vertex_normals();
+
+	m.update_face_normals();
+	m.update_vertex_normals();
+}
+
 template <typename T>
 bool isClosedMesh(T& mesh)
 {
@@ -167,6 +189,17 @@ bool isClosedMesh(T& mesh)
 			return false;
 	}
 	return true;
+}
+
+template <typename T>
+double meshAverageLength(T &mesh)
+{
+	double le = 0;
+	for (auto te : mesh.edges())
+	{
+		le += mesh.calc_edge_length(te);
+	}
+	return le / mesh.n_edges();
 }
 #pragma endregion
 

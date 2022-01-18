@@ -4,15 +4,15 @@
 namespace GeneralMathMethod {
 	Eigen::Vector2d ComputePolygonInteriorPoint(Polygon &polygon)
 	{
-		int n = polygon.rows();
+		int n = polygon.cols();
 		double alpha = cos(PI * (n - 2) / n);
 
 		int convex_point = 0;
 		Vector2d frac_ray;
 		while (convex_point < n)
 		{
-			Vector2d v0 = (polygon.row((convex_point + 1) % n) - polygon.row(convex_point)).normalized();
-			Vector2d v1 = (polygon.row((convex_point + 2) % n) - polygon.row((convex_point + 1) % n)).normalized();
+			Vector2d v0 = (polygon.col((convex_point + 1) % n) - polygon.col(convex_point)).normalized();
+			Vector2d v1 = (polygon.col((convex_point + 2) % n) - polygon.col((convex_point + 1) % n)).normalized();
 			if (v0(0)*v1(1) - v0(1)*v1(0) > 0)
 			{
 				if (-v0.dot(v1) >= alpha)
@@ -24,14 +24,14 @@ namespace GeneralMathMethod {
 			convex_point++;
 		}
 		convex_point = (convex_point + 1) % n;
-		Vector2d pc = polygon.row(convex_point);
+		Vector2d pc = polygon.col(convex_point);
 		double c = frac_ray(0)*pc(1) - frac_ray(1)*pc(0);
 		Vector2d intersect_point;
 		double dis = DBL_MAX;
 		for (int i = 0; i < n; i++) {
 			if (i == convex_point || (i + 1) % n == convex_point) continue;
-			auto &p0 = polygon.row(i);
-			auto &p1 = polygon.row((i + 1) % n);
+			auto &p0 = polygon.col(i);
+			auto &p1 = polygon.col((i + 1) % n);
 			if ((frac_ray(1)*p0(0) - frac_ray(0)*p0(1) + c)*(frac_ray(1)*p1(0) - frac_ray(0)*p1(1) + c) <= 0) {
 				Matrix2d A(2, 2);
 				A << frac_ray(1), -frac_ray(0), p0(1) - p1(1), p1(0) - p0(0);
@@ -52,11 +52,13 @@ namespace GeneralMathMethod {
 
 	bool IsInPolygon(Polygon &polygon, Eigen::Vector2d &p)
 	{
-		int n = polygon.rows();
+		int n = polygon.cols();
 		double sum = 0;
 		for (int i = 0; i < n; i++) {
-			auto s = Vector2d(polygon(i, 0), polygon(i, 1)) - p;
-			auto t = Vector2d(polygon((i + 1) % n, 0), polygon((i + 1) % n, 1)) - p;
+			//auto s = Vector2d(polygon(0, i), polygon(1, i)) - p;
+			//auto t = Vector2d(polygon(0, (i + 1) % n), polygon(1, (i + 1) % n)) - p;
+			auto s = polygon.col(i) - p;
+			auto t = polygon.col((i + 1) % n) - p;
 			sum += atan2(-s(1)*t(0) + s(0)*t(1), s(0)*t(0) + s(1)*t(1));
 		}
 		//cout << "the sum of angles: " << sum << endl;
@@ -70,31 +72,31 @@ namespace GeneralMathMethod {
 	double ComputePolygonArea(Polygon &polygon)
 	{
 		double area = 0;
-		int n = polygon.rows();
-		auto x = Vector2d::Zero();
+		int n = polygon.cols();
 		for (int i = 0; i < n; i++) {
-			auto a = polygon.row(i);
-			auto b = polygon.row((i + 1) % n);
-			if (a(1)*b(0) > a(0)*b(1)) area -= Vector3d(a(0), a(1), 0).cross(Vector3d(b(0), b(1), 0)).norm();
-			else area += Vector3d(a(0), a(1), 0).cross(Vector3d(b(0), b(1), 0)).norm();
+			auto &a = polygon.col(i);
+			auto &b = polygon.col((i + 1) % n);
+			//if (a(1)*b(0) > a(0)*b(1)) area -= Vector3d(a(0), a(1), 0).cross(Vector3d(b(0), b(1), 0)).norm();
+			//else area += Vector3d(a(0), a(1), 0).cross(Vector3d(b(0), b(1), 0)).norm();
+			area -= a(0)*b(1) - a(1)*b(0);
 		}
-		return area / 2.0;
+		return std::fabs(area)*0.5;
 	}
 
 
 	double ComputePolygonPerimeter(Polygon &polygon)
 	{
-		double perimeter = (polygon.row(polygon.rows() - 1) - polygon.row(0)).norm();
-		for (int i = 0; i < polygon.rows() - 1; i++) perimeter += (polygon.row(i) - polygon.row(i + 1)).norm();
+		double perimeter = (polygon.col(polygon.cols() - 1) - polygon.col(0)).norm();
+		for (int i = 0; i < polygon.cols() - 1; i++) perimeter += (polygon.col(i) - polygon.col(i + 1)).norm();
 		return perimeter;
 	}
 
 	Eigen::Vector4d ComputePolygonBound(Polygon &polygon)
 	{
 		Vector4d bound(DBL_MAX, -DBL_MAX, DBL_MAX, -DBL_MAX);
-		int n = polygon.rows();
+		int n = polygon.cols();
 		for (int i = 0; i < n; i++) {
-			auto pos = polygon.row(i);
+			auto &pos = polygon.col(i);
 			bound(0) = min(bound(0), pos(0));
 			bound(1) = max(bound(1), pos(0));
 			bound(2) = min(bound(2), pos(1));
@@ -108,11 +110,11 @@ namespace GeneralMathMethod {
 		if (polygons.size() == 1) return 0;
 		for (int i = 0; i < polygons.size(); i++) {
 			auto &pi = polygons[i];
-			int n = pi.rows();
+			int n = pi.cols();
 			double sum = 0;
 			for (int j = 0; j < n; j++) {
-				Vector2d p0 = pi.row((j + 2) % n) - pi.row((j + 1) % n);
-				Vector2d p1 = pi.row((j + 1) % n) - pi.row(j);
+				Vector2d p0 = pi.col((j + 2) % n) - pi.col((j + 1) % n);
+				Vector2d p1 = pi.col((j + 1) % n) - pi.col(j);
 				sum += atan2(p0(0)*p1(1) - p0(1)*p1(0), p0(0)*p1(0) + p0(1)*p1(1));
 			}
 			cout << "the sum should be 2*PI or -2*PI: " << sum << endl;

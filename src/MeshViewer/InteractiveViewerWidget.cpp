@@ -619,3 +619,23 @@ void InteractiveViewerWidget::SetCADFileName(QString &fileName) {
 	dprint(fileName, "\nCAD name:", CADFileName);
 	//BrepFileName = fileName;
 };
+
+void InteractiveViewerWidget::showFeature()
+{
+
+}
+
+void InteractiveViewerWidget::showIsotropicMesh()
+{
+
+}
+
+void InteractiveViewerWidget::showAnisotropicMesh()
+{
+
+}
+
+void InteractiveViewerWidget::showDebugTest()
+{
+
+}

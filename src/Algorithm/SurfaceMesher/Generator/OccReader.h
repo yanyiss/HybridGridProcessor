@@ -7,7 +7,7 @@ namespace CADMesher
 {
 	class OccReader {
 	public:
-		OccReader(QString &fileName)
+		explicit OccReader(QString &fileName)
 		{
 			std::string filetype;
 			if (fileName.endsWith(".stp") || fileName.endsWith(".STP") || fileName.endsWith(".STEP")) {
@@ -30,11 +30,12 @@ namespace CADMesher
 			reader->ReadFile(fileName.toLatin1().data());
 			Standard_Integer NbTrans = reader->TransferRoots();
 			globalmodel.aShape = reader->OneShape();
-			dprint(filetype + "file read finished!\n");
+			dprint(filetype + "file read finished\n");
 
 			ComputeFaceAndEdge();
 			Discrete_Edge();
 		}
+		OccReader(const OccReader* or ) = delete;
 		~OccReader() {
 			if (reader) { delete reader; reader = nullptr; }
 		}

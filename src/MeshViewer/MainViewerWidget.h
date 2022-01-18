@@ -153,6 +153,20 @@ protected:
 	virtual void open_mesh_gui(Mesh &aMesh);
 	virtual void save_screen_gui(QString fname);
 
+public:
+		void showFeature() {
+			MeshViewer->showFeature();
+
+		}
+		void showIsotropicMesh() {
+			MeshViewer->showIsotropicMesh();
+		}
+		void showAnisotropicMesh() {
+			MeshViewer->showAnisotropicMesh();
+		}
+		void showDebugTest() {
+			MeshViewer->showDebugTest();
+		}
 protected:
 	bool LoadMeshSuccess;
 

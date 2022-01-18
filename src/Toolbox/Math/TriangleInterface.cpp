@@ -1,8 +1,8 @@
 #include "TriangleInterface.h"
 #include <iostream>
-void triangulate(const Eigen::MatrixX2d &all_pts, const Eigen::MatrixX2i &E, const double area_threshold, TriMesh &mesh)
+void triangulate(const Eigen::Matrix2Xd &all_pts, const Eigen::Matrix2Xi &E, const double area_threshold, TriMesh &mesh)
 {
-	int p_num = all_pts.rows();
+	int p_num = all_pts.cols();
 	triangulateio in;
 
 	in.numberofpoints = p_num;
@@ -10,8 +10,8 @@ void triangulate(const Eigen::MatrixX2d &all_pts, const Eigen::MatrixX2i &E, con
 
 	for (size_t i = 0; i < p_num; i++)
 	{
-		in.pointlist[2 * i] = all_pts(i, 0);
-		in.pointlist[2 * i + 1] = all_pts(i, 1);
+		in.pointlist[2 * i] = all_pts(0, i);
+		in.pointlist[2 * i + 1] = all_pts(1, i);
 	}
 
 	in.numberofpointattributes = 0;
@@ -26,17 +26,17 @@ void triangulate(const Eigen::MatrixX2d &all_pts, const Eigen::MatrixX2i &E, con
 	in.numberoftriangleattributes = 0;
 	in.triangleattributelist = NULL;
 
-	in.numberofsegments = E.size() ? E.rows() : 0;
+	in.numberofsegments = E.size() ? E.cols() : 0;
 	in.segmentlist = (int*)calloc(E.size(), sizeof(int));
 
-	for (size_t i = 0; i < E.rows(); i++)
+	for (size_t i = 0; i < E.cols(); i++)
 	{
-		in.segmentlist[2 * i] = E(i, 0);
-		in.segmentlist[2 * i + 1] = E(i, 1);
+		in.segmentlist[2 * i] = E(0, i);
+		in.segmentlist[2 * i + 1] = E(1, i);
 	}
 
-	in.segmentmarkerlist = (int*)calloc(E.rows(), sizeof(int));
-	for (unsigned i = 0; i < E.rows(); ++i) in.segmentmarkerlist[i] = 1;
+	in.segmentmarkerlist = (int*)calloc(E.cols(), sizeof(int));
+	for (unsigned i = 0; i < E.cols(); ++i) in.segmentmarkerlist[i] = 1;
 
 	in.numberofholes = 0;
 	in.numberofregions = 0;
@@ -89,14 +89,14 @@ void triangulate(const Eigen::MatrixX2d &all_pts, const Eigen::MatrixX2i &E, con
 
 //若area_threshold为负值，则不允许在边界增加新点
 //E[0]是外边界，其他是洞，洞内不生成网格
-void triangulate(const Eigen::MatrixX2d &all_pts, const std::vector<Eigen::MatrixX2i> &E, const double area_threshold, TriMesh &mesh)
+void triangulate(const Eigen::Matrix2Xd &all_pts, const std::vector<Eigen::Matrix2Xi> &E, const double area_threshold, TriMesh &mesh)
 {
 	if (E.size() == 1)
 	{
 		triangulate(all_pts, E[0], area_threshold, mesh);
 		return;
 	}
-	int p_num = all_pts.rows();
+	int p_num = all_pts.cols();
 	triangulateio in;
 
 	in.numberofpoints = p_num;
@@ -104,8 +104,8 @@ void triangulate(const Eigen::MatrixX2d &all_pts, const std::vector<Eigen::Matri
 
 	for (size_t i = 0; i < p_num; i++)
 	{
-		in.pointlist[2 * i] = all_pts(i, 0);
-		in.pointlist[2 * i + 1] = all_pts(i, 1);
+		in.pointlist[2 * i] = all_pts(0, i);
+		in.pointlist[2 * i + 1] = all_pts(1, i);
 	}
 
 	in.numberofpointattributes = 0;
@@ -121,7 +121,7 @@ void triangulate(const Eigen::MatrixX2d &all_pts, const std::vector<Eigen::Matri
 	int sum = 0;
 	for (auto itr = E.begin(); itr != E.end(); itr++)
 	{
-		sum += (*itr).rows();
+		sum += (*itr).cols();
 	}
 	in.numberofsegments = sum;
 	in.segmentlist = (int*)calloc(sum * 2, sizeof(int));
@@ -129,10 +129,10 @@ void triangulate(const Eigen::MatrixX2d &all_pts, const std::vector<Eigen::Matri
 	sum = 0;
 	for (auto itr = E.begin(); itr != E.end(); itr++)
 	{
-		for (size_t i = 0; i < (*itr).rows(); i++)
+		for (size_t i = 0; i < (*itr).cols(); i++)
 		{
-			in.segmentlist[2 * sum] = (*itr)(i, 0);
-			in.segmentlist[2 * sum + 1] = (*itr)(i, 1);
+			in.segmentlist[2 * sum] = (*itr)(0, i);
+			in.segmentlist[2 * sum + 1] = (*itr)(1, i);
 			sum++;
 		}
 	}
@@ -148,8 +148,8 @@ void triangulate(const Eigen::MatrixX2d &all_pts, const std::vector<Eigen::Matri
 		auto &e = E[i];
 		double x_max = DBL_MIN;
 		double x_min = DBL_MAX;
-		for (int j = 0; j < e.rows(); j++) {
-			double p = all_pts(e(j, 0), 0);
+		for (int j = 0; j < e.cols(); j++) {
+			double p = all_pts(0, e(0, j));
 			x_max = std::max(x_max, p);
 			x_min = std::min(x_min, p);
 		}
@@ -168,10 +168,10 @@ void triangulate(const Eigen::MatrixX2d &all_pts, const std::vector<Eigen::Matri
 	int itertimes = 0;
 	for (int i = 0; i < E.size(); i++) {
 		if (i == outerflag) continue;
-		int r = E[i].rows() - 1;
-		GeneralMathMethod::Polygon polygon(E[i].rows(), 2);
-		for (int j = 0; j < E[i].rows(); j++) {
-			polygon.row(j) = all_pts.row(E[i](r--, 0));
+		int r = E[i].cols() - 1;
+		GeneralMathMethod::Polygon polygon(2, E[i].cols());
+		for (int j = 0; j < E[i].cols(); j++) {
+			polygon.col(j) = all_pts.col(E[i](0, r--));
 		}
 		auto interior_point = GeneralMathMethod::ComputePolygonInteriorPoint(polygon);
 		in.holelist[2 * itertimes] = interior_point(0);

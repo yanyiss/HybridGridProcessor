@@ -31,7 +31,7 @@ void CheckBoardGenerator::init()
 	//init primal mesh and dual mesh
 	Mesh polymesh;
 	OpenMesh::IO::read_mesh(polymesh, "../model/human_quad.obj");
-	updateMesh(polymesh);
+	initMeshStatusAndNormal(polymesh);
 
 	num[0] = polymesh.n_vertices();
 	num[1] = polymesh.n_faces();
@@ -248,7 +248,7 @@ void CheckBoardGenerator::getMesh(Mesh &m, m3xd &V, std::vector<vxu> &F)
 		}
 		m.add_face(vh);
 	}
-	updateMesh(m);
+	initMeshStatusAndNormal(m);
 }
 
 void CheckBoardGenerator::printCurrentInfo()

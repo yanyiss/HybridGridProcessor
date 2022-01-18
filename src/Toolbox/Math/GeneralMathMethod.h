@@ -10,7 +10,7 @@ namespace GeneralMathMethod
 
 	using namespace Eigen;
 	using namespace std;
-	typedef MatrixXd Polygon;
+	typedef Matrix2Xd Polygon;
 	typedef vector<Polygon> Polygons;
 
 #pragma region polygon method
