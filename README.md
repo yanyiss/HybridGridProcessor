@@ -1,29 +1,34 @@
-# Framework for surface mesh processing
+# A software for converting CAD models(STEP and IGES files) to hybrid grid
 
-The program is used to load meshes and render using OpenGL.
+The program is used to convert CAD models to meshes and render using OpenGL.
 
 ## External Libraries
 
-* [Eigen](http://eigen.tuxfamily.org/)
-* [OpenMesh](https://www.openmesh.org/), Recommended version: the latest 8.1(at Oct. 2020)
-* [Qt](https://www.qt.io/), Recommended version: 5.13.0
+* [OpenGL](https://www.opengl.org/resources/)            Render
+* [Qt](https://www.qt.io/)                               GUI
+* [Eigen](http://eigen.tuxfamily.org/)                   Linear Algebra
+* [OpenMesh](https://www.openmesh.org/)                  Mesh 
+* [Open CADCADE](https://dev.opencascade.org/release)    Polyon Mesh Data Structure
+* [tbb](https://github.com/oneapi-src/oneTBB)            Parallel Computation
+* [triangle](http://www.cs.cmu.edu/~quake/triangle.html) Planar Triangle Mesh Generation
 
 ## Usage
 
 ```
-git clone https://github.com/USTC-GCL-F/Surface-Mesh-Framework
-cd SurfaceFramework
+git clone https://github.com/yanyiss/HybridGridProcessor
+cd HybridGridProcessor
 ```
 
-Edit lines 7-9 of CmakeLists.txt to set the values of **EIGEN_PATH**,**OPENMESH_PATH** and **OPENMESH_LIB_PATH**
+Edit lines 36-45 of CmakeLists.txt to set the values of library path
 ```
 mkdir build && cd build
 cmake -A x64 ..
 ```
 
-Open **SurfaceFramework.sln**, select **SrufaceFramework** as launch project, and run.
+Open **HybridGridProcessor.sln**, select **HybridGridProcessor** as launch project, and run.
 
 
 ## Supported File Formats
 
-.obj .off .ply .stl
+Mesh Files Format: .obj .off .ply .stl
+CAD Files Format: .stp .STP .STEP .igs .IGS .IGES
