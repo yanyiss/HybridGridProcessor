@@ -16,7 +16,7 @@ namespace CADMesher
 #else 
 		occ_reader->Set_PolyMesh();
 		MergeModel();
-		ResetFeature();
+		ResetFeature1();
 		Write_Obj(globalmodel.initial_polymesh);
 #endif
 	}
