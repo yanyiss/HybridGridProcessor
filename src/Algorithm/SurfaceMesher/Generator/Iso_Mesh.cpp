@@ -1,6 +1,7 @@
 #include "Iso_Mesh.h"
 #include <fstream>
 #include <iostream>
+#include<algorithm>
 
 namespace CADMesher
 {
@@ -8,15 +9,18 @@ namespace CADMesher
 	{
 		occ_reader = new OccReader(fileName);
 
-		occ_reader->Set_TriMesh();
+		//occ_reader->Set_TriMesh();
+		occ_reader->Set_PolyMesh();
 #if 0
-		globalmodel.initial_trimesh = occ_reader->Surface_TriMeshes[0];
+		//globalmodel.initial_trimesh = occ_reader->Surface_TriMeshes[67];
+		//globalmodel.initial_polymesh = occ_reader->Surface_PolyMeshes[66];
 #else
-		MergeModel();
+		//MergeModel();
 #endif
-		Write_Obj(globalmodel.initial_trimesh);
-		ResetFeature();
-
+		//Write_Obj(globalmodel.initial_trimesh);
+		//ResetFeature();
+		//ResetFeature1();
+		//Write_Obj(globalmodel.initial_polymesh);
 	}
 
 	//void Iso_Mesh::MergeModel()
@@ -55,11 +59,13 @@ namespace CADMesher
 
 	void Iso_Mesh::MergeModel()
 	{
-		TriMesh &model_mesh = globalmodel.initial_trimesh;
+		//TriMesh &model_mesh = globalmodel.initial_trimesh;
+		Mesh &model_mesh = globalmodel.initial_polymesh;
 		vector<ShapeFace> faceshape = globalmodel.faceshape;
 		vector<ShapeEdge> edgeshape = globalmodel.edgeshape;
 		model_mesh.clear();
-		auto &surface_meshes = occ_reader->Surface_TriMeshes;
+		//auto &surface_meshes = occ_reader->Surface_TriMeshes;
+		auto &surface_meshes = occ_reader->Surface_PolyMeshes;
 		for(auto &face : faceshape)
 		{
 			auto &wires = face.wires;
@@ -142,10 +148,14 @@ namespace CADMesher
 			}
 			for (auto tf : frac_mesh.faces())
 			{
-				vector<int> pos;
+				vector<TriMesh::VertexHandle> pos;
+				/*for (auto tfv = frac_mesh.cfv_begin(tf); tfv != frac_mesh.cfv_end(tf); tfv++)
+				{
+					pos.push_back(tfv->idx());
+				}*/
 				for (auto tfv : frac_mesh.fv_range(tf))
-					pos.push_back(tfv.idx());
-				model_mesh.add_face(vhandle[pos[0]], vhandle[pos[1]], vhandle[pos[2]]);
+					pos.push_back(vhandle[tfv.idx()]);
+				model_mesh.add_face(pos);
 				triangle_surface_index.push_back(i);
 			}
 			auto &wires = faceshape[i].wires;
@@ -310,29 +320,163 @@ namespace CADMesher
 		dprint("Reset Feature Done!");
 	}
 
-#pragma region
-	std::string Iso_Mesh::Write_Obj(TriMesh &aMesh)
+	void Iso_Mesh::ResetFeature1()
 	{
-		std::ofstream file_writer;
-		Open_File(file_writer);
-
-		for (auto tv = aMesh.vertices_begin(); tv != aMesh.vertices_end(); tv++)
-		{
-			auto pos = aMesh.point(*tv);
-			file_writer << "v " << pos[0] << " " << pos[1] << " " << pos[2] << std::endl;
-		}
-		for (auto tf = aMesh.faces_begin(); tf != aMesh.faces_end(); tf++)
-		{
-			file_writer << "f";
-			for (auto tfv = aMesh.fv_begin(*tf); tfv != aMesh.fv_end(*tf); tfv++)
+		Mesh &model_mesh = globalmodel.initial_polymesh;
+		Mesh::VertexHandle v1, v2, v3, v4;
+		Mesh::Point p1, p2, p3, p4;
+		std::vector<Mesh::VertexHandle> facevhandle;
+		int num = 2;
+		for (auto te : model_mesh.edges()) {
+			if (!model_mesh.data(te).get_edgeflag()) continue;
+			auto he = model_mesh.opposite_halfedge_handle(model_mesh.next_halfedge_handle(model_mesh.next_halfedge_handle(te.h0())));
+			auto n0 = model_mesh.calc_face_normal(model_mesh.face_handle(he));
+			he = model_mesh.opposite_halfedge_handle(model_mesh.next_halfedge_handle(model_mesh.next_halfedge_handle(te.h1())));
+			auto n1 = model_mesh.calc_face_normal(model_mesh.face_handle(he));
+			if (n0.dot(n1) > 0.85 && !model_mesh.is_boundary(te))
 			{
-				file_writer << " " << tfv->idx() + 1;
+				model_mesh.data(te).set_edgeflag(false);
+				//divided non-feature quad into two triangles
+				for (int i = 0; i < 2; i++)
+				{
+					auto he = model_mesh.halfedge_handle(te, i);
+					v1 = model_mesh.from_vertex_handle(he);
+					v2 = model_mesh.to_vertex_handle(he);
+					v3 = model_mesh.to_vertex_handle(model_mesh.next_halfedge_handle(he));
+					v4 = model_mesh.from_vertex_handle(model_mesh.prev_halfedge_handle(he));
+					model_mesh.delete_face(model_mesh.face_handle(he));
+					facevhandle = { v1, v2, v3 };
+					model_mesh.add_face(facevhandle);
+					facevhandle = { v3, v4, v1 };
+					model_mesh.add_face(facevhandle);
+				}
+			}				
+			else 
+			{
+				//calculate the offset points, and push them into a vector named offsetpnt which is attributed for each edge
+				for (int i = 0; i < 2; i++)
+				{
+					auto he = model_mesh.halfedge_handle(te, i);
+					auto ev = model_mesh.edge_handle(model_mesh.next_halfedge_handle(he));
+					v1 = model_mesh.to_vertex_handle(he);
+					v2 = model_mesh.to_vertex_handle(model_mesh.next_halfedge_handle(he));
+					v3 = model_mesh.from_vertex_handle(model_mesh.prev_halfedge_handle(he));
+					v4 = model_mesh.from_vertex_handle(he);
+					for (int j = 0; j < 2; j++)
+					{
+						auto &offsetpnt = model_mesh.data(ev).offsetpnt;
+						if (offsetpnt.empty())
+						{
+							auto &offsetvh = model_mesh.data(ev).offsetvh;
+							offsetvh.resize(num + 2);
+							offsetvh[0] = v1;
+							offsetvh[num + 1] = v2;
+							p1 = model_mesh.point(v1);
+							p2 = model_mesh.point(v2);
+							model_mesh.data(ev).offsetflag = true;
+							model_mesh.data(ev.v0()).set_vertflag(true);
+							model_mesh.data(ev.v1()).set_vertflag(true);
+							auto dire = (p2 - p1) / (pow(2, num + 1) - 1);
+							for (int k = 0; k < num; k++)
+							{
+								offsetpnt.push_back(p1 + (pow(2, k + 1) - 1)*dire);
+							}
+						}						
+						if (j) break;
+						v1 = v4;
+						v2 = v3;
+						ev = model_mesh.edge_handle(model_mesh.prev_halfedge_handle(he));
+					}
+				}
 			}
-			file_writer << "\n";
 		}
-		file_writer.close();
-		return "step_to_obj.obj";
+		model_mesh.garbage_collection();
+
+		// global remesh
+
+		//add offsets point, and push their VertexHandle into a vector named offsetvh which is attributed for each edge
+		for (auto e : model_mesh.edges())
+		{
+			if (!model_mesh.data(e).offsetflag) continue;
+			for (int i = 1; i < num + 1; i++)
+			{
+				v1 = model_mesh.add_vertex(model_mesh.data(e).offsetpnt[i - 1]);
+				auto p3 = model_mesh.point(v1);
+				model_mesh.data(v1).set_vertflag(true);
+				model_mesh.data(e).offsetvh[i] = v1;
+			}
+		}
+		//add more offsets. 
+		std::vector<OV> offsetvh1, offsetvh2;
+		for (auto e : model_mesh.edges())
+		{
+			if (!model_mesh.data(e).get_edgeflag()) continue;
+			for (int i = 0; i < 2; i++)
+			{
+				auto he = model_mesh.halfedge_handle(e, i);
+				v1 = model_mesh.from_vertex_handle(he);
+				v2 = model_mesh.to_vertex_handle(he);
+				offsetvh1 = model_mesh.data(model_mesh.edge_handle(model_mesh.next_halfedge_handle(he))).offsetvh;
+				offsetvh2 = model_mesh.data(model_mesh.edge_handle(model_mesh.prev_halfedge_handle(he))).offsetvh;
+				model_mesh.delete_face(model_mesh.face_handle(he));
+				for (int j = 1; j < num+2; j++)
+				{
+					v3 = offsetvh1[j];
+					v4 = offsetvh2[j];
+					facevhandle = { v1, v2, v3, v4 };
+					auto fh = model_mesh.add_face(facevhandle);
+					model_mesh.data(fh).set_faceflag(true);
+					v1 = v4;
+					v2 = v3;
+				}
+			}
+		}
+		model_mesh.garbage_collection();
+
+		for (auto f : model_mesh.faces())
+		{
+			if (!model_mesh.data(f).get_faceflag()) continue;
+			for (auto fe : model_mesh.fe_range(f))
+			{
+				model_mesh.data(fe).set_edgeflag(true);
+			}
+		}
+
+		std::vector<double> K1, K2;
+		std::vector<OpenMesh::Vec3d> dir1, dir2;
+		compute_principal_curvature(&model_mesh, K1, K2, dir1, dir2);
+		for (int i = 0; i<K1.size();i++)
+		{
+			auto v = model_mesh.vertex_handle(i);
+			//if (model_mesh.data(v).get_vertflag()) continue;
+			double ave_K = std::accumulate(K1.begin(), K2.begin(), 0);
+			double k1 = std::max(std::abs(K1[i]), std::abs(K2[i]));
+			double k2 = std::min(std::abs(K1[i]), std::abs(K2[i]));
+			if (i == 40692 || i == 40693)
+			{
+				std::cout << k2 << '\t' << k1 << k2 / k1 << '\n';
+			}
+			if (k2 < 0.008) continue;
+			if (k2/k1 < 0.015)
+			{
+				//std::cout << k2 << '\t' << k1 << k2 / k1<<'\n';
+				model_mesh.data(v).curvatureflag = true;
+			}
+		}
+
+		for (auto tv : model_mesh.vertices()) {
+			if (!model_mesh.data(tv).get_vertflag())
+				continue;
+			for (auto tve : model_mesh.ve_range(tv))
+				if (model_mesh.data(tve).get_edgeflag())
+					goto goto20210605;
+			model_mesh.data(tv).set_vertflag(false);
+		goto20210605:;
+		}
+		dprint("Reset Feature Done!");
 	}
+
+#pragma region
 
 
 

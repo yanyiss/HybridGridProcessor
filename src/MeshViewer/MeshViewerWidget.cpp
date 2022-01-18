@@ -553,13 +553,14 @@ void MeshViewerWidget::draw_scene_mesh(int drawmode)
 		glPolygonOffset(1.5f, 2.0f);
 		glEnable(GL_LIGHTING);
 		glShadeModel(GL_FLAT);
-		draw_checkboard();
+		draw_mesh_solidflat();
 		glDisable(GL_POLYGON_OFFSET_FILL);
 		//draw_meshpointset();
 		glDisable(GL_LIGHTING);
+
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		draw_mesh_wireframe();
-		//draw_meshpointset();
+		draw_feature();
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		break;
 	case DIAGONAL_MESH:
@@ -603,6 +604,14 @@ void MeshViewerWidget::draw_mesh_wireframe()
 			}
 			glEnd();
 		}
+		//std::cout<<"OK";
+		//glColor3d(1., 0., 0.);
+		//glBegin(GL_POLYGON);
+		//glVertex3dv(mesh.point(mesh.vertex_handle(19953)).data());
+		//glVertex3dv(mesh.point(mesh.vertex_handle(19952)).data());
+		//glVertex3dv(mesh.point(mesh.vertex_handle(37708)).data());
+		//glVertex3dv(mesh.point(mesh.vertex_handle(37707)).data());
+		//glEnd();
 	}
 
 	/*OpenMesh::Vec3d pos = mesh.point(mesh.vertex_handle(0));
@@ -842,6 +851,7 @@ void MeshViewerWidget::draw_mesh_solidsmooth() const
 		glEnd();
 	}
 
+
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_NORMAL_ARRAY);
 }
@@ -983,4 +993,32 @@ void MeshViewerWidget::draw_diagonalmesh()
 		}
 		glEnd();
 	}*/
+}
+
+void MeshViewerWidget::draw_feature()
+{
+	//glPointSize(8);
+	//glBegin(GL_POINTS);
+	//glColor3d(1.0, 0.0, 0.0);
+	//for (auto &tv : mesh.vertices())
+	//{
+	//	if (mesh.data(tv).curvatureflag)
+	//	{
+	//		glVertex3dv(mesh.point(tv).data());
+	//	}
+	//}
+	//glEnd();
+
+	glLineWidth(3);
+	glColor3d(1.0, 0.0, 0.0);
+	glBegin(GL_LINES);
+	for (auto &te : mesh.edges())
+	{
+		if (mesh.data(te).get_edgeflag())
+		{
+			glVertex3dv(mesh.point(te.v0()).data());
+			glVertex3dv(mesh.point(te.v1()).data());
+		}
+	}
+	glEnd();
 }

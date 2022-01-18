@@ -71,6 +71,7 @@ private:
 	void draw_mesh_pointset() const;
 	void draw_checkboard();
 	void draw_diagonalmesh();//see definition of diagonal mesh in paper: Checkerboard Patterns with Black Rectangles
+	void draw_feature();
 	std::string file;
 
 protected:

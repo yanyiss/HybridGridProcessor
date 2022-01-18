@@ -350,9 +350,9 @@ void compute_principal_curvature(Mesh* mesh_,
 	if(!mesh_->has_vertex_normals())
 	{
 		mesh_->request_vertex_normals();
-		mesh_->update_vertex_normals();
+		//mesh_->update_vertex_normals();
+		mesh_->update_normals();
 	}
-
 	int nv = mesh_->n_vertices();
 	int nf = mesh_->n_faces();
 	Mesh::FaceIter f_it;
@@ -401,7 +401,7 @@ void compute_principal_curvature(Mesh* mesh_,
 				- mesh_->point( mesh_->from_vertex_handle(fhe_it));
 		}
 	}
-	
+
 	Mesh::VertexIter v_it;
 	int vertex_id; OpenMesh::Vec3d vn;
 	for(v_it = mesh_->vertices_begin();v_it != mesh_->vertices_end(); ++v_it)
