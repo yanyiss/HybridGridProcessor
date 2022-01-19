@@ -1,18 +1,16 @@
-#ifndef ANISOTROPICMESHREMESHING_H
-#define ANISOTROPICMESHREMESHING_H
+#ifndef ANISOTROPICMESHING_INTERFACE_H
+#define ANISOTROPICMESHING_INTERFACE_H
 
-//#include <QObject>
 #include "..\src\MeshViewer\MeshDefinition.h"
 #include <OpenMesh/Core/IO/MeshIO.hh>
 #include "..\src\Dependency\Common\CommonDefinitions.h"
 #include "CGAL_Definition.h"
-#include "..\Generator\basic_def.h"
-#if 0
+#include "..\src\Algorithm\SurfaceMesher\Generator\basic_def.h"
+
 namespace CADMesher
 {
 	class AnisotropicMeshRemeshing
 	{
-		//Q_OBJECT
 	public:
 		AnisotropicMeshRemeshing();
 		~AnisotropicMeshRemeshing();
@@ -48,7 +46,7 @@ namespace CADMesher
 		double get_ref_mesh_ave_anisotropic_edge_length() { return ref_mesh_ave_anisotropic_edge_length; }
 
 	private:
-		bool draw_small_tri_ok;
+		void draw_small_tri_below_th(); bool draw_small_tri_ok;
 
 		void project_on_reference_mesh_with_metric(Mesh::VertexHandle vh, OpenMesh::Vec3d& p);
 		void project_on_reference_edge_with_metric(Mesh::VertexHandle vh, OpenMesh::Vec3d& p);
@@ -82,5 +80,4 @@ namespace CADMesher
 		double largest_angle = PI * 0.975;
 	};
 }
-#endif
 #endif

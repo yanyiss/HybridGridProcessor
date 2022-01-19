@@ -1,13 +1,11 @@
-//#include "OpenglHeaders.h"
 #include "AnisotropicMeshRemeshing.h"
 #include <Eigen/Dense>
-#if 0
-namespace CADMesher
-{
+
 #define USE_FEATURE
 #define USE_PROMOTION
 #define USE_FEWERITERATION
-
+namespace CADMesher
+{
 	AnisotropicMeshRemeshing::AnisotropicMeshRemeshing()
 	{
 		AABB_tree = NULL;
@@ -904,7 +902,7 @@ namespace CADMesher
 							++collapse_count;
 						}
 					}
-
+					else
 					{
 						if (mesh_->is_collapse_ok(heh))
 						{
@@ -971,317 +969,21 @@ namespace CADMesher
 		LCOT_Optimize(50, 1.0);
 		LCOT_Optimize(25, 0.25);
 #endif // USE_FEWERITERATION
-		//vector<unsigned> &triangle_surface_index = globalmodel.triangle_surface_index;
-		//vector<vector<unsigned>> vertex_surface_index(globalmodel.faceshape.size());
-		//for (auto tv : mesh_->vertices()) {
-		//	OpenMesh::Vec3d p = mesh_->point(tv);
-		//	CGAL_AABB_Tree::Point_and_primitive_id point_primitive = AABB_tree->closest_point_and_primitive(CGAL_double_3_Point(p[0], p[1], p[2]));
-		//	CGAL_Triangle_Iterator it = point_primitive.second;
-		//	unsigned face_id = std::distance(triangle_vectors.begin(), it);
-		//	vertex_surface_index[triangle_surface_index[face_id]].push_back(tv.idx());
-		//}
-		///*print(vertex_surface_index[67].size());
-		//for (int i = 0; i < vertex_surface_index[67].size(); i++)
-		//	std::cout << vertex_surface_index[67][i] << ",";*/
-		//MeshProjectToSurface(mesh_, vertex_surface_index, &globalmodel);
+		/*vector<unsigned> &triangle_surface_index = globalmodel.triangle_surface_index;
+		vector<vector<unsigned>> vertex_surface_index(globalmodel.faceshape.size());
+		for (auto tv : mesh_->vertices()) {
+			OpenMesh::Vec3d p = mesh_->point(tv);
+			CGAL_AABB_Tree::Point_and_primitive_id point_primitive = AABB_tree->closest_point_and_primitive(CGAL_double_3_Point(p[0], p[1], p[2]));
+			CGAL_Triangle_Iterator it = point_primitive.second;
+			unsigned face_id = std::distance(triangle_vectors.begin(), it);
+			vertex_surface_index[triangle_surface_index[face_id]].push_back(tv.idx());
+		}*/
+		/*print(vertex_surface_index[67].size());
+		for (int i = 0; i < vertex_surface_index[67].size(); i++)
+			std::cout << vertex_surface_index[67][i] << ",";*/
+			//MeshProjectToSurface(mesh_, vertex_surface_index, &globalmodel);
 		calc_tri_quality();
 	}
-
-	//
-	//void anisotropic_meshing_interface::do_remeshing(double ref_edge_len /* = 1.0 */, double a /* = 1.5 */)
-	//{
-	//	if(ref_mesh_ == NULL) return;
-	//	unsigned nv = mesh_->n_vertices();
-	//	//project_on_reference();
-	//
-	//	unsigned ne = mesh_->n_edges();
-	//	Eigen::Matrix3d H, H0, H1; Eigen::Vector3d P0, P1, P;
-	//	Eigen::Matrix3d U; Eigen::Matrix3d V; Eigen::Vector3d sv; Eigen::Matrix3d diag_a; diag_a.setZero();
-	//	Eigen::Matrix3d Q; std::vector<double> h(9); 
-	//	int iter_num = 0; int split_count = 0; int collapse_count = 0;
-	//
-	//	std::cout << "Samplint tp " << std::endl;
-	//
-	//	clock_t start_time = clock();
-	//	clock_t t0 = 0, t1 = 0, t2 = 0, t3 = 0, t4 = 0;
-	//	std::vector<clock_t> each_iter_time;
-	//	for(unsigned ii =0;ii<10;++ii)
-	//	{
-	//		clock_t iter_start = clock();
-	//		int no_split_collapse = 0;
-	//		//std::cout << ii << std::endl;
-	//		no_split_collapse = 0;
-	//		flip_based_energy();
-	//		//flip_based_particle_energy();
-	//
-	//		if (ii >= 10)
-	//		{
-	//			reposition_LCOT(0.1);
-	//			//reposition_particle(0.1);
-	//		}
-	//		else
-	//		{
-	//			double step_length = 0.5 - 0.04*ii;
-	//			reposition_LCOT(step_length);
-	//			/*for (int jj = 0; jj < 20; ++jj)
-	//			{
-	//				reposition_particle(step_length);
-	//			}*/
-	//		}
-	//
-	//		split_count = 0; ne = mesh_->n_edges(); nv = mesh_->n_vertices();
-	//		t0 += clock() - start_time;
-	//		start_time = clock();
-	//
-	//		clock_t a0 = 0, a1 = 0, a2 = 0, a3 = 0; 
-	//		split_time = 0;
-	//		for( unsigned i=0; i < ne;)
-	//		{
-	//			clock_t rr = clock();
-	//			if (i % 10000 == 0) std::cout << i << "," << ne << std::endl;
-	//			Mesh::EdgeHandle eh = mesh_->edge_handle(i);
-	//			Mesh::HalfedgeHandle heh = mesh_->halfedge_handle(eh, 0);
-	//			Mesh::VertexHandle vh0_ = mesh_->from_vertex_handle(heh);
-	//			Mesh::VertexHandle vh1_ = mesh_->to_vertex_handle(heh);
-	//			OpenMesh::Vec6d& h0 = mesh_->data( vh0_).get_Hessian();
-	//			OpenMesh::Vec6d& h1 = mesh_->data( vh1_).get_Hessian();
-	//			H0(0,0) = h0[0]; H0(0,1) = h0[1]; H0(0,2) = h0[2];
-	//			H0(1,0) = h0[1]; H0(1,1) = h0[3]; H0(1,2) = h0[4];
-	//			H0(2,0) = h0[2]; H0(2,1) = h0[4]; H0(2,2) = h0[5];
-	//			H1(0,0) = h1[0]; H1(0,1) = h1[1]; H1(0,2) = h1[2];
-	//			H1(1,0) = h1[1]; H1(1,1) = h1[3]; H1(1,2) = h1[4];
-	//			H1(2,0) = h1[2]; H1(2,1) = h1[4]; H1(2,2) = h1[5];
-	//			H = 0.5 * (H0 + H1);
-	//			OpenMesh::Vec3d p0 = mesh_->point(vh0_);
-	//			OpenMesh::Vec3d p1 = mesh_->point(vh1_);
-	//			P0(0) = p0[0]; P0(1) = p0[1]; P0(2) = p0[2];
-	//			P1(0) = p1[0]; P1(1) = p1[1]; P1(2) = p1[2];
-	//			Eigen::JacobiSVD<Eigen::Matrix3d> svd(H, Eigen::ComputeFullU | Eigen::ComputeFullV );
-	//			U = svd.matrixU(); V = svd.matrixV(); sv = svd.singularValues(); 
-	//			diag_a(0,0) = std::sqrt(sv(0)); diag_a(1,1) = std::sqrt(sv(1)); diag_a(2,2) = std::sqrt(sv(2));
-	//			Q = U*diag_a*V.transpose();
-	//			P0 = Q*P0; P1 = Q*P1;
-	//			double edge_len = std::sqrt( (P0(0) - P1(0))*(P0(0) - P1(0)) + (P0(1) - P1(1))*(P0(1) - P1(1)) + (P0(2) - P1(2))*(P0(2) - P1(2)) );
-	//			t1 += clock() - start_time;
-	//			start_time = clock();
-	//
-	//			a0 += clock() - rr;
-	//
-	//			if(edge_len > ref_edge_len * a)
-	//			{
-	//#ifdef USE_FEATURE
-	//				bool is_boundary_edge = mesh_->data(eh).get_edgeflag();
-	//#else
-	//				bool is_boundary_edge = mesh_->is_boundary(eh);
-	//#endif // USE_FEATURE
-	//
-	//				OpenMesh::Vec3d p = 0.5*(p0+p1);
-	//				rr = clock();
-	//				find_nearst_point_on_reference_mesh(p, is_boundary_edge);
-	//				a1 += clock() - rr;
-	//				/*int r = mesh_->n_edges();
-	//				if (!split_one_edge(eh, p)) { ++i; if (mesh_->n_edges() > r) {std::cout << "wowwwf fdklsafj\n"; system("pause"); } continue;};*/
-	//				rr = clock();
-	//				if (!split_one_edge(eh, p)) { ++i; continue; }
-	//				a2 += clock() - rr;
-	//
-	//				rr = clock();
-	//				if(is_boundary_edge)//feature and not boundary
-	//				{
-	//					Mesh::VertexHandle vh_ = mesh_->vertex_handle( nv );
-	//					project_on_reference_edge_with_metric( vh_, mesh_->point(vh_) );
-	//				}
-	//				else
-	//				{
-	//					Mesh::VertexHandle vh_ = mesh_->vertex_handle( nv );
-	//					project_on_reference_mesh_with_metric( vh_, mesh_->point(vh_) );
-	//				}
-	//				a3 += clock() - rr;
-	//
-	//				nv = mesh_->n_vertices(); ne = mesh_->n_edges();
-	//				++split_count;
-	//			}
-	//			else
-	//			{
-	//				++i;
-	//			}
-	//			t2 += clock() - start_time;
-	//			start_time = clock();
-	//		}
-	//		std::cout << a0 << "," << a1 << "," << a2 << "," << a3 << std::endl;
-	//		std::cout << split_time << std::endl;
-	//
-	//		std::cout << split_count << ", split count\n";
-	//		if(split_count == 0) {no_split_collapse += 1;}
-	//		else {/*printf("Split 0 : %d\n", split_count);*/}
-	//		ne = mesh_->n_edges(); /*printf("Split Edges : %d\n", ne);*/
-	//		
-	//		flip_based_energy();
-	//		//flip_based_particle_energy();
-	//
-	//		if (ii > 10)
-	//		{
-	//			reposition_LCOT(0.1);
-	//			//reposition_particle(0.1);
-	//		}
-	//		else
-	//		{
-	//			reposition_LCOT(0.5);
-	//			/*for (int jj = 0; jj < 20; ++jj)
-	//			{
-	//				reposition_particle(0.2);
-	//			}*/
-	//		}
-	//
-	//		iter_num = 0;
-	//		t3 += clock() - start_time;
-	//		start_time = clock();
-	//		while( iter_num < 10 )
-	//		{
-	//			//std::cout << iter_num << std::endl;
-	//			collapse_count = 0; ne = mesh_->n_edges();
-	//			for( unsigned i=0; i < ne; )
-	//			{
-	//				if (i % 10000 == 0) std::cout << i << std::endl;
-	//				Mesh::EdgeHandle eh = mesh_->edge_handle(i);
-	//				Mesh::HalfedgeHandle heh = mesh_->halfedge_handle(eh, 0);
-	//				Mesh::VertexHandle vh0_ = mesh_->from_vertex_handle(heh);
-	//				Mesh::VertexHandle vh1_ = mesh_->to_vertex_handle(heh);
-	//				OpenMesh::Vec6d& h0 = mesh_->data( vh0_).get_Hessian();
-	//				OpenMesh::Vec6d& h1 = mesh_->data( vh1_).get_Hessian();
-	//				H0(0,0) = h0[0]; H0(0,1) = h0[1]; H0(0,2) = h0[2];
-	//				H0(1,0) = h0[1]; H0(1,1) = h0[3]; H0(1,2) = h0[4];
-	//				H0(2,0) = h0[2]; H0(2,1) = h0[4]; H0(2,2) = h0[5];
-	//				H1(0,0) = h1[0]; H1(0,1) = h1[1]; H1(0,2) = h1[2];
-	//				H1(1,0) = h1[1]; H1(1,1) = h1[3]; H1(1,2) = h1[4];
-	//				H1(2,0) = h1[2]; H1(2,1) = h1[4]; H1(2,2) = h1[5];
-	//				H = 0.5 * (H0 + H1);
-	//				OpenMesh::Vec3d p0 = mesh_->point(vh0_);
-	//				OpenMesh::Vec3d p1 = mesh_->point(vh1_);
-	//				P0(0) = p0[0]; P0(1) = p0[1]; P0(2) = p0[2];
-	//				P1(0) = p1[0]; P1(1) = p1[1]; P1(2) = p1[2];
-	//				Eigen::JacobiSVD<Eigen::Matrix3d> svd(H, Eigen::ComputeFullU | Eigen::ComputeFullV );
-	//				U = svd.matrixU(); V = svd.matrixV(); sv = svd.singularValues(); 
-	//				diag_a(0,0) = std::sqrt(sv(0)); diag_a(1,1) = std::sqrt(sv(1)); diag_a(2,2) = std::sqrt(sv(2));
-	//				Q = U*diag_a*V.transpose();
-	//				P0 = Q*P0; P1 = Q*P1;
-	//				double edge_len = std::sqrt( (P0(0) - P1(0))*(P0(0) - P1(0)) + (P0(1) - P1(1))*(P0(1) - P1(1)) + (P0(2) - P1(2))*(P0(2) - P1(2)) );
-	//				double temp_e = (p0 - p1).norm();
-	//				if(edge_len < ref_edge_len / a)
-	//				{
-	//#ifdef USE_FEATURE
-	//					if (!mesh_->data(eh).get_edgeflag())
-	//#else
-	//					if( !mesh_->is_boundary(eh) )
-	//#endif // USE_FEATURE
-	//					{
-	//#ifdef USE_FEATURE
-	//						if (mesh_->is_collapse_ok(heh) && !mesh_->data(vh0_).get_vertflag())
-	//#else
-	//						if(mesh_->is_collapse_ok(heh) && !mesh_->is_boundary(vh0_) ) //from vh0 to vh1
-	//#endif // USE_FEATURE
-	//						{
-	//#ifdef USE_FEATURE
-	//							if (!mesh_->data(vh1_).get_vertflag())
-	//#else
-	//							if( !mesh_->is_boundary(vh1_) )
-	//#endif // USE_FEATURE
-	//							{
-	//								mesh_->set_point(vh1_, 0.5*(p0+p1) );
-	//								project_on_reference_mesh_with_metric( vh1_, mesh_->point(vh1_) );
-	//							}
-	//							mesh_->collapse(heh); mesh_->garbage_collection();
-	//							ne = mesh_->n_edges(); ++collapse_count;
-	//						}
-	//#ifdef USE_FEATURE
-	//						else if (mesh_->is_collapse_ok(mesh_->opposite_halfedge_handle(heh)) && !mesh_->data(vh1_).get_vertflag())
-	//#else
-	//						else if(mesh_->is_collapse_ok( mesh_->opposite_halfedge_handle(heh)) && !mesh_->is_boundary(vh1_) )
-	//#endif // USE_FEATURE
-	//						{
-	//							heh = mesh_->opposite_halfedge_handle(heh);
-	//#ifdef USE_FEATURE
-	//							if (!mesh_->data(vh0_).get_vertflag())
-	//#else
-	//							if(!mesh_->is_boundary(vh0_) )
-	//#endif // USE_FEATURE
-	//							{
-	//								mesh_->set_point(vh0_, 0.5*(p0+p1) );
-	//								project_on_reference_mesh_with_metric( vh0_, mesh_->point(vh0_) );
-	//							}
-	//							mesh_->collapse(heh); mesh_->garbage_collection();
-	//
-	//							ne = mesh_->n_edges(); ++collapse_count;
-	//						}
-	//						else
-	//						{
-	//							++i;
-	//						}
-	//					}
-	//					else
-	//					{
-	//						if(mesh_->is_collapse_ok(heh) )
-	//						{
-	//							mesh_->set_point(vh1_, 0.5*(p0 + p1));
-	//							project_on_reference_edge_with_metric(vh1_, mesh_->point(vh1_));
-	//
-	//							mesh_->collapse(heh); mesh_->garbage_collection();
-	//							ne = mesh_->n_edges(); ++collapse_count;
-	//						}
-	//						else if(mesh_->is_collapse_ok( mesh_->opposite_halfedge_handle(heh)) )
-	//						{
-	//							heh = mesh_->opposite_halfedge_handle(heh);
-	//							mesh_->set_point(vh0_, 0.5*(p0 + p1));
-	//							project_on_reference_mesh_with_metric(vh0_, mesh_->point(vh0_));
-	//							mesh_->collapse(heh); mesh_->garbage_collection();
-	//							ne = mesh_->n_edges(); ++collapse_count;
-	//						}
-	//						else
-	//						{
-	//							++i;
-	//						}
-	//					}
-	//				}
-	//				else
-	//				{
-	//					++i;
-	//				}
-	//			}
-	//			std::cout << collapse_count << ", collapse cout\n";
-	//			if(collapse_count == 0) break;
-	//			else { /*printf("Collapse : %d : %d\n", iter_num, collapse_count);*/ }
-	//			++iter_num;
-	//		}
-	//		t4 += clock() - start_time;
-	//		start_time = clock();
-	//		ne = mesh_->n_edges(); /*printf("Collapse Edges : %d\n", ne);*/
-	//		if(iter_num == 0) no_split_collapse += 1;
-	//
-	//		if(no_split_collapse == 2) break;
-	//
-	//		std::cout << ii << " iter is OK " << std::endl;
-	//		each_iter_time.push_back(clock() - iter_start);
-	//	}
-	//	std::cout << t0 << std::endl;
-	//	std::cout << t1 << std::endl;
-	//	std::cout << t2 << std::endl;
-	//	std::cout << t3 << std::endl;
-	//	std::cout << t4 << std::endl;
-	//	std::cout << "each iter time:\n";
-	//	for (auto itr : each_iter_time) std::cout << itr << " ";
-	//	std::cout << std::endl;
-	//	auto tr = clock();
-	//#ifdef USE_FEWERITERATION
-	//	LCOT_Optimize(10, 1.0);
-	//	LCOT_Optimize(5, 0.25);
-	//#else
-	//	LCOT_Optimize(50, 1.0);
-	//	LCOT_Optimize(25, 0.25);
-	//#endif // USE_FEWERITERATION
-	//	std::cout << clock() - tr << std::endl;
-	//	std::cout << t0 + t1 + t2 + t3 + t4 + clock() - tr << std::endl;
-	//	calc_tri_quality();
-	//}
 
 	void AnisotropicMeshRemeshing::calc_tri_quality()
 	{
@@ -2030,40 +1732,6 @@ namespace CADMesher
 		//emit updateGL_Manual_signal();
 	}
 
-	//void anisotropic_meshing_interface::draw_for_this_part()
-	//{
-	//	if(draw_small_tri_ok && below_30_tri_angle.size() > 0)
-	//	{
-	//		draw_small_tri_below_th();
-	//	}
-	//}
-
-	//void anisotropic_meshing_interface::draw_small_tri_below_th()
-	//{
-	//	for(unsigned i =0;i<below_30_tri.size();++i)
-	//	{
-	//		if( below_30_tri_angle[i] < smallest_angle_th )
-	//		{
-	//			glColor3f( 1.0, 1.0, 0.0);
-	//			glPointSize(10);
-	//			glBegin(GL_POINTS);
-	//			for(Mesh::FaceVertexIter fv_it = mesh_->fv_iter(mesh_->face_handle(below_30_tri[i])); fv_it; ++fv_it)
-	//			{
-	//				glVertex3dv( mesh_->point(fv_it).data() );
-	//			}
-	//			glEnd();
-	//
-	//			glColor3f(1.0, 0.0, 0.0);
-	//			glBegin(GL_TRIANGLES);
-	//			for(Mesh::FaceVertexIter fv_it = mesh_->fv_iter(mesh_->face_handle(below_30_tri[i])); fv_it; ++fv_it)
-	//			{
-	//				glVertex3dv( mesh_->point(fv_it).data() );
-	//			}
-	//			glEnd();
-	//		}
-	//	}
-	//}
-
 	void AnisotropicMeshRemeshing::exp_mips_optimize(int iter_num, double area_angle_ratio, double energy_power)
 	{
 		int iter_count = 0;
@@ -2567,5 +2235,3 @@ namespace CADMesher
 		}
 	}
 }
-
-#endif
