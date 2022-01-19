@@ -400,7 +400,7 @@ namespace CADMesher
 
 		std::vector<double> K1, K2;
 		std::vector<OpenMesh::Vec3d> dir1, dir2;
-		compute_principal_curvature(&model_mesh, K1, K2, dir1, dir2);
+		compute_principal_curvature(&TriMesh(model_mesh), K1, K2, dir1, dir2);
 		for (int i = 0; i<K1.size();i++)
 		{
 			auto v = model_mesh.vertex_handle(i);

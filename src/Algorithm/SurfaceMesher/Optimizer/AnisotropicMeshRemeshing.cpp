@@ -12,7 +12,6 @@ namespace CADMesher
 		AABB_Segment_tree = NULL;
 		ref_mesh_ = NULL;
 		mesh_ = NULL;
-		draw_small_tri_ok = false;
 		smallest_angle_th = 1.0;
 	}
 
@@ -45,7 +44,7 @@ namespace CADMesher
 
 		std::vector<CGAL_double_3_Point> v_pos(ref_mesh_->n_vertices()); OpenMesh::Vec3d p;
 		unsigned nv = ref_mesh_->n_vertices();
-		for (Mesh::VertexIter v_it = ref_mesh_->vertices_begin(); v_it != ref_mesh_->vertices_end(); ++v_it)
+		for (TriMesh::VertexIter v_it = ref_mesh_->vertices_begin(); v_it != ref_mesh_->vertices_end(); ++v_it)
 		{
 			int vertex_id = v_it.handle().idx();
 			p = ref_mesh_->point(v_it);
@@ -53,9 +52,9 @@ namespace CADMesher
 		}
 
 		triangle_vectors.clear(); triangle_vectors.reserve(ref_mesh_->n_faces()); int fv_id[3];
-		for (Mesh::FaceIter f_it = ref_mesh_->faces_begin(); f_it != ref_mesh_->faces_end(); ++f_it)
+		for (TriMesh::FaceIter f_it = ref_mesh_->faces_begin(); f_it != ref_mesh_->faces_end(); ++f_it)
 		{
-			Mesh::FaceVertexIter fv_it = ref_mesh_->fv_iter(f_it);
+			TriMesh::FaceVertexIter fv_it = ref_mesh_->fv_iter(f_it);
 			fv_id[0] = fv_it.handle().idx(); ++fv_it;
 			fv_id[1] = fv_it.handle().idx(); ++fv_it;
 			fv_id[2] = fv_it.handle().idx();
@@ -71,7 +70,7 @@ namespace CADMesher
 		printf("Build AABB Tree for Mesh.\n");
 	}
 
-	void AnisotropicMeshRemeshing::project_on_reference_mesh_with_metric(Mesh::VertexHandle vh, OpenMesh::Vec3d& p)
+	void AnisotropicMeshRemeshing::project_on_reference_mesh_with_metric(TriMesh::VertexHandle vh, OpenMesh::Vec3d& p)
 	{
 		CGAL_AABB_Tree::Point_and_primitive_id point_primitive = AABB_tree->closest_point_and_primitive(CGAL_double_3_Point(p[0], p[1], p[2]));
 		CGAL_double_3_Point pos = point_primitive.first;
@@ -79,7 +78,7 @@ namespace CADMesher
 		unsigned face_id = std::distance(triangle_vectors.begin(), it);
 		OpenMesh::Vec3d p_ = OpenMesh::Vec3d(pos.x(), pos.y(), pos.z());
 		OpenMesh::Vec3d tp = mesh_->point(vh);
-		Mesh::VertexOHalfedgeIter voh_it = mesh_->voh_iter(vh);
+		TriMesh::VertexOHalfedgeIter voh_it = mesh_->voh_iter(vh);
 		OpenMesh::Vec3d tq = mesh_->point(mesh_->to_vertex_handle(voh_it));
 
 #ifdef USE_PROMOTION
@@ -102,12 +101,12 @@ namespace CADMesher
 		}
 		mesh_->set_point(vh, p_);
 
-		Mesh::ConstFaceVertexIter fv_it = ref_mesh_->cfv_iter(ref_mesh_->face_handle(face_id));
-		Mesh::Point p0 = ref_mesh_->point(fv_it.handle());
+		TriMesh::ConstFaceVertexIter fv_it = ref_mesh_->cfv_iter(ref_mesh_->face_handle(face_id));
+		TriMesh::Point p0 = ref_mesh_->point(fv_it.handle());
 		OpenMesh::Vec6d& h0 = ref_mesh_->data(fv_it).get_Hessian();
-		Mesh::Point p1 = ref_mesh_->point((++fv_it).handle());
+		TriMesh::Point p1 = ref_mesh_->point((++fv_it).handle());
 		OpenMesh::Vec6d& h1 = ref_mesh_->data(fv_it).get_Hessian();
-		Mesh::Point p2 = ref_mesh_->point((++fv_it).handle());
+		TriMesh::Point p2 = ref_mesh_->point((++fv_it).handle());
 		OpenMesh::Vec6d& h2 = ref_mesh_->data(fv_it).get_Hessian();
 
 		OpenMesh::Vec3d bc;
@@ -122,7 +121,7 @@ namespace CADMesher
 	{
 		if (ref_mesh_->n_edges() == 0) return;
 		std::vector<CGAL_double_3_Point> v_pos(ref_mesh_->n_vertices()); OpenMesh::Vec3d p;
-		for (Mesh::VertexIter v_it = ref_mesh_->vertices_begin(); v_it != ref_mesh_->vertices_end(); ++v_it)
+		for (TriMesh::VertexIter v_it = ref_mesh_->vertices_begin(); v_it != ref_mesh_->vertices_end(); ++v_it)
 		{
 			int vertex_id = v_it.handle().idx();
 			p = ref_mesh_->point(v_it);
@@ -131,7 +130,7 @@ namespace CADMesher
 
 		segment_vectors.clear(); segment_vectors.reserve(ref_mesh_->n_edges());
 		segment_edge_id.clear(); segment_edge_id.reserve(ref_mesh_->n_edges());
-		for (Mesh::EdgeIter e_it = ref_mesh_->edges_begin(); e_it != ref_mesh_->edges_end(); ++e_it)
+		for (TriMesh::EdgeIter e_it = ref_mesh_->edges_begin(); e_it != ref_mesh_->edges_end(); ++e_it)
 		{
 #ifdef USE_FEATURE
 			if (ref_mesh_->data(e_it).get_edgeflag())
@@ -139,7 +138,7 @@ namespace CADMesher
 			if (ref_mesh_->is_boundary(e_it))
 #endif // USE_FEATURE
 			{
-				Mesh::HalfedgeHandle heh = ref_mesh_->halfedge_handle(e_it, 0);
+				TriMesh::HalfedgeHandle heh = ref_mesh_->halfedge_handle(e_it, 0);
 				int v0 = ref_mesh_->from_vertex_handle(heh).idx();
 				int v1 = ref_mesh_->to_vertex_handle(heh).idx();
 				segment_vectors.push_back(CGAL_3_Segment(v_pos[v0], v_pos[v1]));
@@ -159,7 +158,7 @@ namespace CADMesher
 
 	}
 
-	void AnisotropicMeshRemeshing::project_on_reference_edge_with_metric(Mesh::VertexHandle vh, OpenMesh::Vec3d& p)
+	void AnisotropicMeshRemeshing::project_on_reference_edge_with_metric(TriMesh::VertexHandle vh, OpenMesh::Vec3d& p)
 	{
 		CGAL_AABB_Segment_Tree::Point_and_primitive_id point_primitive = AABB_Segment_tree->closest_point_and_primitive(CGAL_double_3_Point(p[0], p[1], p[2]));
 		CGAL_double_3_Point pos = point_primitive.first;
@@ -168,7 +167,7 @@ namespace CADMesher
 		unsigned edge_id = segment_edge_id[edge_vector_id];
 		OpenMesh::Vec3d p_ = OpenMesh::Vec3d(pos.x(), pos.y(), pos.z());
 		OpenMesh::Vec3d tp = mesh_->point(vh);
-		Mesh::VertexOHalfedgeIter voh_it = mesh_->voh_iter(vh);
+		TriMesh::VertexOHalfedgeIter voh_it = mesh_->voh_iter(vh);
 		OpenMesh::Vec3d tq = mesh_->point(mesh_->to_vertex_handle(voh_it));
 
 #ifdef USE_PROMOTION
@@ -190,13 +189,13 @@ namespace CADMesher
 		}
 		mesh_->set_point(vh, p_);
 
-		Mesh::EdgeHandle eh = ref_mesh_->edge_handle(edge_id);
-		Mesh::HalfedgeHandle heh = ref_mesh_->halfedge_handle(eh, 0);
-		Mesh::VertexHandle v0 = ref_mesh_->from_vertex_handle(heh);
-		Mesh::VertexHandle v1 = ref_mesh_->to_vertex_handle(heh);
-		Mesh::Point p0 = ref_mesh_->point(v0);
+		TriMesh::EdgeHandle eh = ref_mesh_->edge_handle(edge_id);
+		TriMesh::HalfedgeHandle heh = ref_mesh_->halfedge_handle(eh, 0);
+		TriMesh::VertexHandle v0 = ref_mesh_->from_vertex_handle(heh);
+		TriMesh::VertexHandle v1 = ref_mesh_->to_vertex_handle(heh);
+		TriMesh::Point p0 = ref_mesh_->point(v0);
 		OpenMesh::Vec6d& h0 = ref_mesh_->data(v0).get_Hessian();
-		Mesh::Point p1 = ref_mesh_->point(v1);
+		TriMesh::Point p1 = ref_mesh_->point(v1);
 		OpenMesh::Vec6d& h1 = ref_mesh_->data(v1).get_Hessian();
 
 		double len = (p0 - p1).norm();
@@ -246,7 +245,7 @@ namespace CADMesher
 		unsigned nv = mesh_->n_vertices(); OpenMesh::Vec3d p;
 		for (unsigned int i = 0; i < nv; ++i)
 		{
-			Mesh::VertexHandle vh = mesh_->vertex_handle(i);
+			TriMesh::VertexHandle vh = mesh_->vertex_handle(i);
 			p = mesh_->point(vh);
 
 #ifdef USE_FEATURE
@@ -269,7 +268,7 @@ namespace CADMesher
 		unsigned nv = mesh_->n_vertices();
 		for (unsigned int i = 0; i < nv; ++i)
 		{
-			Mesh::VertexHandle vh = mesh_->vertex_handle(i);
+			TriMesh::VertexHandle vh = mesh_->vertex_handle(i);
 #ifdef USE_FEATURE
 			if (mesh_->data(vh).get_vertflag())
 #else
@@ -285,7 +284,7 @@ namespace CADMesher
 		}
 	}
 
-	void AnisotropicMeshRemeshing::load_ref_mesh(Mesh* aniso_ref_mesh)
+	void AnisotropicMeshRemeshing::load_ref_mesh(TriMesh* aniso_ref_mesh)
 	{
 		if (ref_mesh_) delete ref_mesh_;
 		ref_mesh_ = aniso_ref_mesh;
@@ -305,7 +304,7 @@ namespace CADMesher
 		std::vector<Eigen::Matrix3d> vH(nv); OpenMesh::Vec6d h;
 		for (unsigned int i = 0; i < nv; ++i)
 		{
-			Mesh::VertexHandle vh = ref_mesh_->vertex_handle(i);
+			TriMesh::VertexHandle vh = ref_mesh_->vertex_handle(i);
 			double k1 = K1[i]; k1 = std::abs(k1) < 1.0e-4 ? 1.0e-4 : k1;
 			double k2 = K2[i]; k2 = std::abs(k2) < 1.0e-4 ? 1.0e-4 : k2;
 
@@ -324,14 +323,14 @@ namespace CADMesher
 			ref_mesh_->data(vh).set_Hessian(h);
 		}
 		std::vector<Eigen::Matrix3d> vH2(nv);
-		double ave_len = calc_mesh_ave_edge_length(ref_mesh_);
+		double ave_len = meshAverageLength(*ref_mesh_);
 		double alpha = 2.0 / (ave_len*ave_len);
 		for (unsigned ii = 0; ii < 0; ++ii)
 		{
-			for (Mesh::VertexIter v_it = ref_mesh_->vertices_begin(); v_it != ref_mesh_->vertices_end(); ++v_it)
+			for (TriMesh::VertexIter v_it = ref_mesh_->vertices_begin(); v_it != ref_mesh_->vertices_end(); ++v_it)
 			{
 				OpenMesh::Vec3d p = ref_mesh_->point(v_it); H = vH[v_it.handle().idx()]; double vv_num = 1.0;
-				for (Mesh::VertexVertexIter vv_it = ref_mesh_->vv_iter(v_it); vv_it; ++vv_it)
+				for (TriMesh::VertexVertexIter vv_it = ref_mesh_->vv_iter(v_it); vv_it; ++vv_it)
 				{
 					OpenMesh::Vec3d tp = ref_mesh_->point(vv_it);
 					double d = (tp - p).sqrnorm(); d = std::exp(-d * alpha);
@@ -362,10 +361,10 @@ namespace CADMesher
 		unsigned ne = mesh_->n_edges(); double sum_edge_len = 0.0;
 		for (unsigned i = 0; i < ne; ++i)
 		{
-			Mesh::EdgeHandle eh = mesh_->edge_handle(i);
-			Mesh::HalfedgeHandle heh = mesh_->halfedge_handle(eh, 0);
-			Mesh::VertexHandle vh0_ = mesh_->from_vertex_handle(heh);
-			Mesh::VertexHandle vh1_ = mesh_->to_vertex_handle(heh);
+			TriMesh::EdgeHandle eh = mesh_->edge_handle(i);
+			TriMesh::HalfedgeHandle heh = mesh_->halfedge_handle(eh, 0);
+			TriMesh::VertexHandle vh0_ = mesh_->from_vertex_handle(heh);
+			TriMesh::VertexHandle vh1_ = mesh_->to_vertex_handle(heh);
 			OpenMesh::Vec6d& h0 = mesh_->data(vh0_).get_Hessian();
 			OpenMesh::Vec6d& h1 = mesh_->data(vh1_).get_Hessian();
 			H0(0, 0) = h0[0]; H0(0, 1) = h0[1]; H0(0, 2) = h0[2];
@@ -392,30 +391,30 @@ namespace CADMesher
 		printf("Src mesh ave anisotropic edge length : %f\n", ref_mesh_ave_anisotropic_edge_length);
 	}
 
-	bool AnisotropicMeshRemeshing::split_one_edge(Mesh::EdgeHandle& eh, OpenMesh::Vec3d& p)
+	bool AnisotropicMeshRemeshing::split_one_edge(TriMesh::EdgeHandle& eh, OpenMesh::Vec3d& p)
 	{
-		Mesh::HalfedgeHandle heh0 = mesh_->halfedge_handle(eh, 0);
-		Mesh::HalfedgeHandle heh1 = mesh_->halfedge_handle(eh, 1);
-		Mesh::VertexHandle vh0 = mesh_->to_vertex_handle(heh0); OpenMesh::Vec3d p0 = mesh_->point(vh0);
-		Mesh::VertexHandle vh1 = mesh_->to_vertex_handle(heh1); OpenMesh::Vec3d p1 = mesh_->point(vh1);
+		TriMesh::HalfedgeHandle heh0 = mesh_->halfedge_handle(eh, 0);
+		TriMesh::HalfedgeHandle heh1 = mesh_->halfedge_handle(eh, 1);
+		TriMesh::VertexHandle vh0 = mesh_->to_vertex_handle(heh0); OpenMesh::Vec3d p0 = mesh_->point(vh0);
+		TriMesh::VertexHandle vh1 = mesh_->to_vertex_handle(heh1); OpenMesh::Vec3d p1 = mesh_->point(vh1);
 
 		//#ifdef USE_PROMOTION
 		//	if (((p0 + p1) / 2 - p).norm() > (p1 - p0).norm()) return false;
 		//#endif // USE_PROMOTION
 
-		std::vector<Mesh::VertexHandle> one_face(3);
+		std::vector<TriMesh::VertexHandle> one_face(3);
 		bool flag = mesh_->data(eh).get_edgeflag();
 		if (mesh_->is_boundary(eh))
 		{
-			if (Mesh::InvalidFaceHandle != mesh_->face_handle(heh0))
+			if (TriMesh::InvalidFaceHandle != mesh_->face_handle(heh0))
 			{
-				Mesh::VertexHandle vh2 = mesh_->to_vertex_handle(mesh_->next_halfedge_handle(heh0));
+				TriMesh::VertexHandle vh2 = mesh_->to_vertex_handle(mesh_->next_halfedge_handle(heh0));
 				OpenMesh::Vec3d p2 = mesh_->point(vh2);
 				OpenMesh::Vec3d n = OpenMesh::cross(p1 - p2, p0 - p2).normalize();
 				double a1 = OpenMesh::dot(n, OpenMesh::cross(p2 - p0, p - p0));
 				double a2 = OpenMesh::dot(n, OpenMesh::cross(p1 - p2, p - p2));
 				if (a1 < 1e-8 || a2 < 1e-8) return false;
-				Mesh::VertexHandle vh = mesh_->add_vertex(p);
+				TriMesh::VertexHandle vh = mesh_->add_vertex(p);
 				//mesh_->delete_edge(eh, false); //mesh_->garbage_collection();
 				//one_face[0] = vh0; one_face[1] = vh2; one_face[2] = vh; mesh_->add_face(one_face);
 				//one_face[0] = vh2; one_face[1] = vh1; one_face[2] = vh; mesh_->add_face(one_face);
@@ -428,13 +427,13 @@ namespace CADMesher
 			}
 			else
 			{
-				Mesh::VertexHandle vh3 = mesh_->to_vertex_handle(mesh_->next_halfedge_handle(heh1));
+				TriMesh::VertexHandle vh3 = mesh_->to_vertex_handle(mesh_->next_halfedge_handle(heh1));
 				OpenMesh::Vec3d p3 = mesh_->point(vh3);
 				OpenMesh::Vec3d n = OpenMesh::cross(p0 - p3, p1 - p3).normalize();
 				double a1 = OpenMesh::dot(n, OpenMesh::cross(p0 - p3, p - p3));
 				double a2 = OpenMesh::dot(n, OpenMesh::cross(p3 - p1, p - p1));
 				if (a1 < 1e-8 || a2 < 1e-8) return false;
-				Mesh::VertexHandle vh = mesh_->add_vertex(p);
+				TriMesh::VertexHandle vh = mesh_->add_vertex(p);
 				//mesh_->delete_edge(eh, false); //mesh_->garbage_collection();
 				//one_face[0] = vh3; one_face[1] = vh0; one_face[2] = vh; mesh_->add_face(one_face);
 				//one_face[0] = vh1; one_face[1] = vh3; one_face[2] = vh; mesh_->add_face(one_face);
@@ -448,16 +447,16 @@ namespace CADMesher
 		}
 		else
 		{
-			Mesh::VertexHandle vh2 = mesh_->to_vertex_handle(mesh_->next_halfedge_handle(heh0)); OpenMesh::Vec3d p2 = mesh_->point(vh2);
+			TriMesh::VertexHandle vh2 = mesh_->to_vertex_handle(mesh_->next_halfedge_handle(heh0)); OpenMesh::Vec3d p2 = mesh_->point(vh2);
 			OpenMesh::Vec3d n1 = OpenMesh::cross(p1 - p2, p0 - p2).normalize();
-			Mesh::VertexHandle vh3 = mesh_->to_vertex_handle(mesh_->next_halfedge_handle(heh1)); OpenMesh::Vec3d p3 = mesh_->point(vh3);
+			TriMesh::VertexHandle vh3 = mesh_->to_vertex_handle(mesh_->next_halfedge_handle(heh1)); OpenMesh::Vec3d p3 = mesh_->point(vh3);
 			OpenMesh::Vec3d n2 = OpenMesh::cross(p0 - p3, p1 - p3).normalize();
 			double a1 = OpenMesh::dot(n1, OpenMesh::cross(p2 - p0, p - p0));
 			double a2 = OpenMesh::dot(n1, OpenMesh::cross(p1 - p2, p - p2));
 			double a3 = OpenMesh::dot(n2, OpenMesh::cross(p0 - p3, p - p3));
 			double a4 = OpenMesh::dot(n2, OpenMesh::cross(p3 - p1, p - p1));
 			if (a1 < 1e-8 || a2 < 1e-8 || a3 < 1e-8 || a4 < 1e-8) return false;
-			Mesh::VertexHandle vh = mesh_->add_vertex(p);
+			TriMesh::VertexHandle vh = mesh_->add_vertex(p);
 			//mesh_->delete_edge(eh, false); //mesh_->garbage_collection();
 			//one_face[0] = vh0; one_face[1] = vh2; one_face[2] = vh; mesh_->add_face(one_face);
 			//one_face[0] = vh2; one_face[1] = vh1; one_face[2] = vh; mesh_->add_face(one_face);
@@ -501,10 +500,10 @@ namespace CADMesher
 			split_count = 0; ne = mesh_->n_edges(); nv = mesh_->n_vertices();
 			for (unsigned i = 0; i < ne; )
 			{
-				Mesh::EdgeHandle eh = mesh_->edge_handle(i);
-				Mesh::HalfedgeHandle heh = mesh_->halfedge_handle(eh, 0);
-				Mesh::VertexHandle vh0_ = mesh_->from_vertex_handle(heh);
-				Mesh::VertexHandle vh1_ = mesh_->to_vertex_handle(heh);
+				TriMesh::EdgeHandle eh = mesh_->edge_handle(i);
+				TriMesh::HalfedgeHandle heh = mesh_->halfedge_handle(eh, 0);
+				TriMesh::VertexHandle vh0_ = mesh_->from_vertex_handle(heh);
+				TriMesh::VertexHandle vh1_ = mesh_->to_vertex_handle(heh);
 				OpenMesh::Vec6d& h0 = mesh_->data(vh0_).get_Hessian();
 				OpenMesh::Vec6d& h1 = mesh_->data(vh1_).get_Hessian();
 				H0(0, 0) = h0[0]; H0(0, 1) = h0[1]; H0(0, 2) = h0[2];
@@ -532,12 +531,12 @@ namespace CADMesher
 					if (!split_one_edge(eh, p)) { ++i; continue; };
 					if (is_boundary_edge)//feature and not boundary
 					{
-						Mesh::VertexHandle vh_ = mesh_->vertex_handle(nv);
+						TriMesh::VertexHandle vh_ = mesh_->vertex_handle(nv);
 						project_on_reference_edge_with_metric(vh_, mesh_->point(vh_));
 					}
 					else
 					{
-						Mesh::VertexHandle vh_ = mesh_->vertex_handle(nv);
+						TriMesh::VertexHandle vh_ = mesh_->vertex_handle(nv);
 						project_on_reference_mesh_with_metric(vh_, mesh_->point(vh_));
 					}
 
@@ -565,10 +564,10 @@ namespace CADMesher
 				collapse_count = 0; ne = mesh_->n_edges();
 				for (unsigned i = 0; i < ne; )
 				{
-					Mesh::EdgeHandle eh = mesh_->edge_handle(i);
-					Mesh::HalfedgeHandle heh = mesh_->halfedge_handle(eh, 0);
-					Mesh::VertexHandle vh0_ = mesh_->from_vertex_handle(heh);
-					Mesh::VertexHandle vh1_ = mesh_->to_vertex_handle(heh);
+					TriMesh::EdgeHandle eh = mesh_->edge_handle(i);
+					TriMesh::HalfedgeHandle heh = mesh_->halfedge_handle(eh, 0);
+					TriMesh::VertexHandle vh0_ = mesh_->from_vertex_handle(heh);
+					TriMesh::VertexHandle vh1_ = mesh_->to_vertex_handle(heh);
 					OpenMesh::Vec6d& h0 = mesh_->data(vh0_).get_Hessian();
 					OpenMesh::Vec6d& h1 = mesh_->data(vh1_).get_Hessian();
 					H0(0, 0) = h0[0]; H0(0, 1) = h0[1]; H0(0, 2) = h0[2];
@@ -714,10 +713,10 @@ namespace CADMesher
 			{
 				if (i % 10000 == 0) std::cout << i << "," << mesh_->n_edges() << std::endl;
 				if (mesh_->n_edges() > ne*1.2) break;
-				Mesh::EdgeHandle eh = mesh_->edge_handle(i);
-				Mesh::HalfedgeHandle heh = mesh_->halfedge_handle(eh, 0);
-				Mesh::VertexHandle vh0_ = mesh_->from_vertex_handle(heh);
-				Mesh::VertexHandle vh1_ = mesh_->to_vertex_handle(heh);
+				TriMesh::EdgeHandle eh = mesh_->edge_handle(i);
+				TriMesh::HalfedgeHandle heh = mesh_->halfedge_handle(eh, 0);
+				TriMesh::VertexHandle vh0_ = mesh_->from_vertex_handle(heh);
+				TriMesh::VertexHandle vh1_ = mesh_->to_vertex_handle(heh);
 				OpenMesh::Vec6d& h0 = mesh_->data(vh0_).get_Hessian();
 				OpenMesh::Vec6d& h1 = mesh_->data(vh1_).get_Hessian();
 				H0(0, 0) = h0[0]; H0(0, 1) = h0[1]; H0(0, 2) = h0[2];
@@ -763,12 +762,12 @@ namespace CADMesher
 
 					if (is_boundary_edge)//feature and not boundary
 					{
-						Mesh::VertexHandle vh_ = mesh_->vertex_handle(nv);
+						TriMesh::VertexHandle vh_ = mesh_->vertex_handle(nv);
 						project_on_reference_edge_with_metric(vh_, mesh_->point(vh_));
 					}
 					else
 					{
-						Mesh::VertexHandle vh_ = mesh_->vertex_handle(nv);
+						TriMesh::VertexHandle vh_ = mesh_->vertex_handle(nv);
 						project_on_reference_mesh_with_metric(vh_, mesh_->point(vh_));
 					}
 
@@ -792,11 +791,11 @@ namespace CADMesher
 			for (auto te = mesh_->edges_sbegin(); te != mesh_->edges_end(); te++)
 			{
 				//if (i % 10000 == 0) std::cout << i << std::endl;
-				if (te->idx() % 10000 == 0) std::cout << te->idx() << std::endl;
-				Mesh::EdgeHandle eh = *te;
-				Mesh::HalfedgeHandle heh = mesh_->halfedge_handle(eh, 0);
-				Mesh::VertexHandle vh0_ = mesh_->from_vertex_handle(heh);
-				Mesh::VertexHandle vh1_ = mesh_->to_vertex_handle(heh);
+				/*if (te->idx() % 10000 == 0)*/ std::cout << te->idx() << std::endl;
+				TriMesh::EdgeHandle eh = *te;
+				TriMesh::HalfedgeHandle heh = mesh_->halfedge_handle(eh, 0);
+				TriMesh::VertexHandle vh0_ = mesh_->from_vertex_handle(heh);
+				TriMesh::VertexHandle vh1_ = mesh_->to_vertex_handle(heh);
 				OpenMesh::Vec6d& h0 = mesh_->data(vh0_).get_Hessian();
 				OpenMesh::Vec6d& h1 = mesh_->data(vh1_).get_Hessian();
 				H0(0, 0) = h0[0]; H0(0, 1) = h0[1]; H0(0, 2) = h0[2];
@@ -990,7 +989,7 @@ namespace CADMesher
 		if (mesh_->n_vertices() == 0) return;
 
 		std::vector<Eigen::Matrix3d> v_h(mesh_->n_vertices()); Eigen::Matrix3d H;
-		for (Mesh::VertexIter v_it = mesh_->vertices_begin(); v_it != mesh_->vertices_end(); ++v_it)
+		for (TriMesh::VertexIter v_it = mesh_->vertices_begin(); v_it != mesh_->vertices_end(); ++v_it)
 		{
 			int vertex_id = v_it.handle().idx();
 			OpenMesh::Vec6d& h = mesh_->data(v_it).get_Hessian();
@@ -1015,11 +1014,11 @@ namespace CADMesher
 		std::vector<double> transform_area(nf); std::vector<double> face_smalleset_angle(nf);
 		std::vector<double> radius_edge_ratio(nf, 0.0); OpenMesh::Vec3d c;
 		double smallest_radius_edge_ratio = 1e30; double largest_radius_edge_ratio = 0.0;
-		for (Mesh::FaceIter f_it = mesh_->faces_begin(); f_it != mesh_->faces_end(); ++f_it)
+		for (TriMesh::FaceIter f_it = mesh_->faces_begin(); f_it != mesh_->faces_end(); ++f_it)
 		{
 			int face_id = f_it->idx();
 			H.setZero();  int v_count = 0;
-			for (Mesh::FaceVertexIter fv_it = mesh_->fv_iter(f_it); fv_it; ++fv_it)
+			for (TriMesh::FaceVertexIter fv_it = mesh_->fv_iter(f_it); fv_it; ++fv_it)
 			{
 				int fv_id = fv_it.handle().idx();
 				H += v_h[fv_id] / 3.0;
@@ -1121,11 +1120,11 @@ namespace CADMesher
 		std::vector<double> edge_length(mesh_->n_edges());
 		double smallest_edge_length = 1e30; double largest_edge_length = 0.0; double avg_edge_length = 0.0;
 		int smallest_edge_id, largest_edge_id = -1;
-		for (Mesh::EdgeIter e_it = mesh_->edges_begin(); e_it != mesh_->edges_end(); ++e_it)
+		for (TriMesh::EdgeIter e_it = mesh_->edges_begin(); e_it != mesh_->edges_end(); ++e_it)
 		{
 			H.setZero(); int v_count = 0;
-			Mesh::HalfedgeHandle heh = mesh_->halfedge_handle(e_it.handle(), 0);
-			Mesh::VertexHandle vh = mesh_->from_vertex_handle(heh);
+			TriMesh::HalfedgeHandle heh = mesh_->halfedge_handle(e_it.handle(), 0);
+			TriMesh::VertexHandle vh = mesh_->from_vertex_handle(heh);
 			OpenMesh::Vec3d p_v = mesh_->point(vh);
 			H += v_h[vh.idx()] * 0.5;
 			vh = mesh_->to_vertex_handle(heh);
@@ -1211,12 +1210,12 @@ namespace CADMesher
 		mesh_->update_face_normals();
 		int nv = mesh_->n_vertices();
 		Eigen::Matrix3d H; Eigen::Matrix3d D; D.setZero();
-		Eigen::Matrix3d vH; Mesh::VertexHandle vh;
+		Eigen::Matrix3d vH; TriMesh::VertexHandle vh;
 		std::vector<OpenMesh::Vec6d> vM(nv);
 
 		for (unsigned i = 0; i < nv; ++i)
 		{
-			Mesh::VertexHandle vh = mesh_->vertex_handle(i);
+			TriMesh::VertexHandle vh = mesh_->vertex_handle(i);
 			vM[i] = mesh_->data(vh).get_Hessian();
 			//vM[i] = OpenMesh::Vec6d(1, 0, 0, 1, 0, 1);
 		}
@@ -1232,7 +1231,7 @@ namespace CADMesher
 		while (iter_count < 10)
 		{
 			int flip_count = 0;
-			for (Mesh::EdgeIter e_it = mesh_->edges_begin(); e_it != mesh_->edges_end(); ++e_it)
+			for (TriMesh::EdgeIter e_it = mesh_->edges_begin(); e_it != mesh_->edges_end(); ++e_it)
 			{
 #ifdef USE_FEATURE
 				if (mesh_->data(e_it).get_edgeflag() || !is_flip_ok_openmesh(e_it.handle(), *mesh_))
@@ -1310,14 +1309,14 @@ namespace CADMesher
 		std::vector<OpenMesh::Vec6d> vH(nv);
 		for (unsigned i = 0; i < nv; ++i)
 		{
-			Mesh::VertexHandle vh = mesh_->vertex_handle(i);
+			TriMesh::VertexHandle vh = mesh_->vertex_handle(i);
 			vH[i] = mesh_->data(vh).get_Hessian();
 		}
 		unsigned nf = mesh_->n_faces();
 		std::vector<OpenMesh::Vec6d> fH(nf); std::vector<double> face_area(nf); std::vector<OpenMesh::Vec3d> face_normal(nf);
 		for (unsigned i = 0; i < nf; ++i)
 		{
-			Mesh::FaceVertexIter fv_it = mesh_->fv_iter(mesh_->face_handle(i));
+			TriMesh::FaceVertexIter fv_it = mesh_->fv_iter(mesh_->face_handle(i));
 			OpenMesh::Vec3d v0 = mesh_->point(fv_it);
 			fH[i] = vH[fv_it.handle().idx()]; ++fv_it;
 			OpenMesh::Vec3d v1 = mesh_->point(fv_it);
@@ -1330,10 +1329,10 @@ namespace CADMesher
 		}
 
 		std::vector<local_frame> vertex_f(nv);
-		for (Mesh::VertexIter v_it = mesh_->vertices_begin(); v_it != mesh_->vertices_end(); ++v_it)
+		for (TriMesh::VertexIter v_it = mesh_->vertices_begin(); v_it != mesh_->vertices_end(); ++v_it)
 		{
 			int vertex_id = v_it.handle().idx(); OpenMesh::Vec3d n(0, 0, 0);
-			for (Mesh::VertexFaceIter vf_it = mesh_->vf_iter(v_it); vf_it; ++vf_it)
+			for (TriMesh::VertexFaceIter vf_it = mesh_->vf_iter(v_it); vf_it; ++vf_it)
 			{
 				int face_id = vf_it.handle().idx();
 				n += face_normal[face_id];
@@ -1347,7 +1346,7 @@ namespace CADMesher
 		Eigen::Matrix3d Trans, H_3D; Eigen::Matrix3d vertex_h;
 		double v_h1; double v_h2; double v_h3; double v_h4; double v_h5; double v_h6;
 		double lamda = 0.05;
-		for (Mesh::VertexIter v_it = mesh_->vertices_begin(); v_it != mesh_->vertices_end(); ++v_it)
+		for (TriMesh::VertexIter v_it = mesh_->vertices_begin(); v_it != mesh_->vertices_end(); ++v_it)
 		{
 			int vertex_id = v_it->idx(); p = mesh_->point(v_it);
 #ifdef USE_FEATURE
@@ -1365,18 +1364,18 @@ namespace CADMesher
 			double min_radius = 1.0e30;
 			double gx = 0.0; double gy = 0.0; double gz = 0.0; OpenMesh::Vec3d g;
 			v_h1 = v_h2 = v_h3 = v_h4 = v_h5 = v_h6 = 0.0;
-			for (Mesh::VertexOHalfedgeIter voh_it = mesh_->voh_iter(v_it); voh_it; ++voh_it)
+			for (TriMesh::VertexOHalfedgeIter voh_it = mesh_->voh_iter(v_it); voh_it; ++voh_it)
 			{
-				Mesh::VertexHandle vh = mesh_->to_vertex_handle(voh_it); tp = mesh_->point(vh);
+				TriMesh::VertexHandle vh = mesh_->to_vertex_handle(voh_it); tp = mesh_->point(vh);
 				double x2 = tp[0]; double y2 = tp[1]; double z2 = tp[2];
 				double mid_edge_len = (tp - p).norm() * 0.5;
 				if (mid_edge_len < min_radius) min_radius = mid_edge_len;
 
-				Mesh::FaceHandle fh = mesh_->face_handle(voh_it);
-				if (fh != Mesh::InvalidFaceHandle)
+				TriMesh::FaceHandle fh = mesh_->face_handle(voh_it);
+				if (fh != TriMesh::InvalidFaceHandle)
 				{
 					int face_id = fh.idx();
-					Mesh::HalfedgeHandle heh = mesh_->next_halfedge_handle(voh_it);
+					TriMesh::HalfedgeHandle heh = mesh_->next_halfedge_handle(voh_it);
 					vh = mesh_->to_vertex_handle(heh); tp = mesh_->point(vh);
 					double x3 = tp[0]; double y3 = tp[1]; double z3 = tp[2];
 					double h1 = fH[face_id][0]; double h2 = fH[face_id][1]; double h3 = fH[face_id][2];
@@ -1441,14 +1440,14 @@ namespace CADMesher
 		std::vector<OpenMesh::Vec6d> vH(nv);
 		for (unsigned i = 0; i < nv; ++i)
 		{
-			Mesh::VertexHandle vh = mesh_->vertex_handle(i);
+			TriMesh::VertexHandle vh = mesh_->vertex_handle(i);
 			vH[i] = mesh_->data(vh).get_Hessian();
 		}
 		unsigned nf = mesh_->n_faces();
 		std::vector<OpenMesh::Vec6d> fH(nf); std::vector<double> face_area(nf); std::vector<OpenMesh::Vec3d> face_normal(nf);
 		for (unsigned i = 0; i < nf; ++i)
 		{
-			Mesh::FaceVertexIter fv_it = mesh_->fv_iter(mesh_->face_handle(i));
+			TriMesh::FaceVertexIter fv_it = mesh_->fv_iter(mesh_->face_handle(i));
 			OpenMesh::Vec3d v0 = mesh_->point(fv_it);
 			fH[i] = vH[fv_it.handle().idx()]; ++fv_it;
 			OpenMesh::Vec3d v1 = mesh_->point(fv_it);
@@ -1461,10 +1460,10 @@ namespace CADMesher
 		}
 
 		std::vector<local_frame> vertex_f(nv);
-		for (Mesh::VertexIter v_it = mesh_->vertices_begin(); v_it != mesh_->vertices_end(); ++v_it)
+		for (TriMesh::VertexIter v_it = mesh_->vertices_begin(); v_it != mesh_->vertices_end(); ++v_it)
 		{
 			int vertex_id = v_it.handle().idx(); OpenMesh::Vec3d n(0, 0, 0);
-			for (Mesh::VertexFaceIter vf_it = mesh_->vf_iter(v_it); vf_it; ++vf_it)
+			for (TriMesh::VertexFaceIter vf_it = mesh_->vf_iter(v_it); vf_it; ++vf_it)
 			{
 				int face_id = vf_it.handle().idx();
 				n += face_normal[face_id];
@@ -1478,7 +1477,7 @@ namespace CADMesher
 		Eigen::Matrix3d Trans, H_3D; Eigen::Matrix3d vertex_h;
 		double v_h1; double v_h2; double v_h3; double v_h4; double v_h5; double v_h6;
 		double lamda = 0.05;
-		for (Mesh::VertexIter v_it = mesh_->vertices_begin(); v_it != mesh_->vertices_end(); ++v_it)
+		for (TriMesh::VertexIter v_it = mesh_->vertices_begin(); v_it != mesh_->vertices_end(); ++v_it)
 		{
 			int vertex_id = v_it->idx(); p = mesh_->point(v_it);
 			double x1 = p[0]; double y1 = p[1]; double z1 = p[2];
@@ -1486,18 +1485,18 @@ namespace CADMesher
 			double min_radius = 1.0e30;
 			double gx = 0.0; double gy = 0.0; double gz = 0.0; OpenMesh::Vec3d g;
 			v_h1 = v_h2 = v_h3 = v_h4 = v_h5 = v_h6 = 0.0;
-			for (Mesh::VertexOHalfedgeIter voh_it = mesh_->voh_iter(v_it); voh_it; ++voh_it)
+			for (TriMesh::VertexOHalfedgeIter voh_it = mesh_->voh_iter(v_it); voh_it; ++voh_it)
 			{
-				Mesh::VertexHandle vh = mesh_->to_vertex_handle(voh_it); tp = mesh_->point(vh);
+				TriMesh::VertexHandle vh = mesh_->to_vertex_handle(voh_it); tp = mesh_->point(vh);
 				double x2 = tp[0]; double y2 = tp[1]; double z2 = tp[2];
 				double mid_edge_len = (tp - p).norm() * 0.5;
 				if (mid_edge_len < min_radius) min_radius = mid_edge_len;
 
-				Mesh::FaceHandle fh = mesh_->face_handle(voh_it);
-				if (fh != Mesh::InvalidFaceHandle)
+				TriMesh::FaceHandle fh = mesh_->face_handle(voh_it);
+				if (fh != TriMesh::InvalidFaceHandle)
 				{
 					int face_id = fh.idx();
-					Mesh::HalfedgeHandle heh = mesh_->next_halfedge_handle(voh_it);
+					TriMesh::HalfedgeHandle heh = mesh_->next_halfedge_handle(voh_it);
 					vh = mesh_->to_vertex_handle(heh); tp = mesh_->point(vh);
 					double x3 = tp[0]; double y3 = tp[1]; double z3 = tp[2];
 					double h1 = fH[face_id][0]; double h2 = fH[face_id][1]; double h3 = fH[face_id][2];
@@ -1582,7 +1581,7 @@ namespace CADMesher
 		{
 			for (unsigned i = 0; i < nf; ++i)
 			{
-				Mesh::FaceVertexIter fv_it = mesh_->fv_iter(mesh_->face_handle(i));
+				TriMesh::FaceVertexIter fv_it = mesh_->fv_iter(mesh_->face_handle(i));
 				OpenMesh::Vec3d v0 = mesh_->point(fv_it);
 				++fv_it;
 				OpenMesh::Vec3d v1 = mesh_->point(fv_it);
@@ -1593,10 +1592,10 @@ namespace CADMesher
 				face_area[i] = face_normal[i].norm() * 0.5;
 			}
 
-			for (Mesh::VertexIter v_it = mesh_->vertices_begin(); v_it != mesh_->vertices_end(); ++v_it)
+			for (TriMesh::VertexIter v_it = mesh_->vertices_begin(); v_it != mesh_->vertices_end(); ++v_it)
 			{
 				int vertex_id = v_it.handle().idx(); OpenMesh::Vec3d n(0, 0, 0);
-				for (Mesh::VertexFaceIter vf_it = mesh_->vf_iter(v_it); vf_it; ++vf_it)
+				for (TriMesh::VertexFaceIter vf_it = mesh_->vf_iter(v_it); vf_it; ++vf_it)
 				{
 					int face_id = vf_it.handle().idx();
 					n += face_normal[face_id];
@@ -1605,7 +1604,7 @@ namespace CADMesher
 				vertex_f[vertex_id].find_e_x_y();
 			}
 
-			for (Mesh::VertexIter v_it = mesh_->vertices_begin(); v_it != mesh_->vertices_end(); ++v_it)
+			for (TriMesh::VertexIter v_it = mesh_->vertices_begin(); v_it != mesh_->vertices_end(); ++v_it)
 			{
 				int vertex_id = v_it->idx(); p = mesh_->point(v_it);
 
@@ -1614,18 +1613,18 @@ namespace CADMesher
 				double min_radius = 1.0e30;
 				double gx = 0.0; double gy = 0.0; double gz = 0.0; OpenMesh::Vec3d g;
 				v_h1 = v_h2 = v_h3 = v_h4 = v_h5 = v_h6 = 0.0;
-				for (Mesh::VertexOHalfedgeIter voh_it = mesh_->voh_iter(v_it); voh_it; ++voh_it)
+				for (TriMesh::VertexOHalfedgeIter voh_it = mesh_->voh_iter(v_it); voh_it; ++voh_it)
 				{
-					Mesh::VertexHandle vh = mesh_->to_vertex_handle(voh_it); tp = mesh_->point(vh);
+					TriMesh::VertexHandle vh = mesh_->to_vertex_handle(voh_it); tp = mesh_->point(vh);
 					double x2 = tp[0]; double y2 = tp[1]; double z2 = tp[2];
 					double mid_edge_len = (tp - p).norm() * 0.5;
 					if (mid_edge_len < min_radius) min_radius = mid_edge_len;
 
-					Mesh::FaceHandle fh = mesh_->face_handle(voh_it);
-					if (fh != Mesh::InvalidFaceHandle)
+					TriMesh::FaceHandle fh = mesh_->face_handle(voh_it);
+					if (fh != TriMesh::InvalidFaceHandle)
 					{
 						int face_id = fh.idx();
-						Mesh::HalfedgeHandle heh = mesh_->next_halfedge_handle(voh_it);
+						TriMesh::HalfedgeHandle heh = mesh_->next_halfedge_handle(voh_it);
 						vh = mesh_->to_vertex_handle(heh); tp = mesh_->point(vh);
 						double x3 = tp[0]; double y3 = tp[1]; double z3 = tp[2];
 						double h1 = 1; double h2 = 0; double h3 = 0;
@@ -1716,8 +1715,8 @@ namespace CADMesher
 		{
 			if (below_30_tri_angle[i] < smallest_angle_th)
 			{
-				Mesh::FaceHandle fh = mesh_->face_handle(below_30_tri[i]);
-				for (Mesh::FaceHalfedgeIter fhe_it = mesh_->fh_iter(fh); fhe_it; ++fhe_it)
+				TriMesh::FaceHandle fh = mesh_->face_handle(below_30_tri[i]);
+				for (TriMesh::FaceHalfedgeIter fhe_it = mesh_->fh_iter(fh); fhe_it; ++fhe_it)
 				{
 					if (mesh_->is_boundary(mesh_->edge_handle(fhe_it)))
 					{
@@ -1766,25 +1765,25 @@ namespace CADMesher
 		Eigen::Matrix3d T, vm, H3; Eigen::Matrix2d H2;
 		double omega = sqrt(3.0) / 3.0;
 		double fa = sqrt(3.0) / 2.0; double ifa = 1.0 / fa;
-		for (Mesh::VertexIter v_it = mesh_->vertices_begin(); v_it != mesh_->vertices_end(); ++v_it)
+		for (TriMesh::VertexIter v_it = mesh_->vertices_begin(); v_it != mesh_->vertices_end(); ++v_it)
 		{
 			int vertex_id = v_it->idx(); p = mesh_->point(v_it);
 			double x1 = p[0]; double y1 = p[1]; double z1 = p[2];
 
 			double min_radius = 1.0e30; double local_e = 0.0;
 			double gx = 0.0; double gy = 0.0; double gz = 0.0; OpenMesh::Vec3d g;
-			for (Mesh::VertexOHalfedgeIter voh_it = mesh_->voh_iter(v_it); voh_it; ++voh_it)
+			for (TriMesh::VertexOHalfedgeIter voh_it = mesh_->voh_iter(v_it); voh_it; ++voh_it)
 			{
-				Mesh::VertexHandle vh = mesh_->to_vertex_handle(voh_it); p1 = mesh_->point(vh);
+				TriMesh::VertexHandle vh = mesh_->to_vertex_handle(voh_it); p1 = mesh_->point(vh);
 				int v_id2 = vh.idx();
 				double x2 = p1[0]; double y2 = p1[1]; double z2 = p1[2];
 				double mid_edge_len = (p1 - p).norm() * 0.5;
 				if (mid_edge_len < min_radius) min_radius = mid_edge_len;
 
-				Mesh::FaceHandle fh = mesh_->face_handle(voh_it);
-				if (fh != Mesh::InvalidFaceHandle)
+				TriMesh::FaceHandle fh = mesh_->face_handle(voh_it);
+				if (fh != TriMesh::InvalidFaceHandle)
 				{
-					Mesh::HalfedgeHandle heh = mesh_->next_halfedge_handle(voh_it);
+					TriMesh::HalfedgeHandle heh = mesh_->next_halfedge_handle(voh_it);
 					vh = mesh_->to_vertex_handle(heh); p2 = mesh_->point(vh);
 					int v_id3 = vh.idx();
 					double x3 = p2[0]; double y3 = p2[1]; double z3 = p2[2];
@@ -1921,20 +1920,20 @@ namespace CADMesher
 		}
 	}
 
-	double AnisotropicMeshRemeshing::compute_exp_mips_area_energy(Mesh::VertexHandle vh, OpenMesh::Vec3d& np,
+	double AnisotropicMeshRemeshing::compute_exp_mips_area_energy(TriMesh::VertexHandle vh, OpenMesh::Vec3d& np,
 		const std::vector<OpenMesh::Vec6d>& vH, double area_angle_ratio, double energy_power)
 	{
 		int vertex_id = vh.idx(); Eigen::Matrix3d vm, H3, T; Eigen::Matrix2d H2;
 		double new_e = 0.0; double x1 = np[0]; double y1 = np[1]; double z1 = np[2];
 		double omega = sqrt(3.0) / 3.0; double fa = sqrt(3.0) / 2.0; double ifa = 1.0 / fa;
-		for (Mesh::VertexOHalfedgeIter voh_it = mesh_->voh_iter(vh); voh_it; ++voh_it)
+		for (TriMesh::VertexOHalfedgeIter voh_it = mesh_->voh_iter(vh); voh_it; ++voh_it)
 		{
-			Mesh::VertexHandle vh = mesh_->to_vertex_handle(voh_it); OpenMesh::Vec3d p1 = mesh_->point(vh);
+			TriMesh::VertexHandle vh = mesh_->to_vertex_handle(voh_it); OpenMesh::Vec3d p1 = mesh_->point(vh);
 			int v_id2 = vh.idx(); double x2 = p1[0]; double y2 = p1[1]; double z2 = p1[2];
-			Mesh::FaceHandle fh = mesh_->face_handle(voh_it);
-			if (fh != Mesh::InvalidFaceHandle)
+			TriMesh::FaceHandle fh = mesh_->face_handle(voh_it);
+			if (fh != TriMesh::InvalidFaceHandle)
 			{
-				Mesh::HalfedgeHandle heh = mesh_->next_halfedge_handle(voh_it);
+				TriMesh::HalfedgeHandle heh = mesh_->next_halfedge_handle(voh_it);
 				vh = mesh_->to_vertex_handle(heh); OpenMesh::Vec3d p2 = mesh_->point(vh);
 				int v_id3 = vh.idx();
 				double x3 = p2[0]; double y3 = p2[1]; double z3 = p2[2];
@@ -2025,14 +2024,14 @@ namespace CADMesher
 		std::vector<OpenMesh::Vec6d> vH(nv);
 		for (unsigned i = 0; i < nv; ++i)
 		{
-			Mesh::VertexHandle vh = mesh_->vertex_handle(i);
+			TriMesh::VertexHandle vh = mesh_->vertex_handle(i);
 			vH[i] = mesh_->data(vh).get_Hessian();
 		}
 		unsigned nf = mesh_->n_faces();
 		std::vector<double> face_area(nf); std::vector<OpenMesh::Vec3d> face_normal(nf);
 		for (unsigned i = 0; i < nf; ++i)
 		{
-			Mesh::FaceVertexIter fv_it = mesh_->fv_iter(mesh_->face_handle(i));
+			TriMesh::FaceVertexIter fv_it = mesh_->fv_iter(mesh_->face_handle(i));
 			OpenMesh::Vec3d v0 = mesh_->point(fv_it);
 			++fv_it;
 			OpenMesh::Vec3d v1 = mesh_->point(fv_it);
@@ -2046,18 +2045,18 @@ namespace CADMesher
 		std::vector<OpenMesh::Vec6d> eH(ne);
 		for (unsigned i = 0; i < ne; ++i)
 		{
-			Mesh::EdgeHandle eh = mesh_->edge_handle(i);
-			Mesh::HalfedgeHandle heh0 = mesh_->halfedge_handle(eh, 0);
+			TriMesh::EdgeHandle eh = mesh_->edge_handle(i);
+			TriMesh::HalfedgeHandle heh0 = mesh_->halfedge_handle(eh, 0);
 			eH[i] = vH[mesh_->to_vertex_handle(heh0).idx()];
 			eH[i] += vH[mesh_->from_vertex_handle(heh0).idx()];
 			eH[i] *= 0.5;
 		}
 
 		std::vector<local_frame> vertex_f(nv);
-		for (Mesh::VertexIter v_it = mesh_->vertices_begin(); v_it != mesh_->vertices_end(); ++v_it)
+		for (TriMesh::VertexIter v_it = mesh_->vertices_begin(); v_it != mesh_->vertices_end(); ++v_it)
 		{
 			int vertex_id = v_it.handle().idx(); OpenMesh::Vec3d n(0, 0, 0);
-			for (Mesh::VertexFaceIter vf_it = mesh_->vf_iter(v_it); vf_it; ++vf_it)
+			for (TriMesh::VertexFaceIter vf_it = mesh_->vf_iter(v_it); vf_it; ++vf_it)
 			{
 				int face_id = vf_it.handle().idx();
 				n += face_normal[face_id];
@@ -2071,7 +2070,7 @@ namespace CADMesher
 		Eigen::Matrix3d Trans, H_3D; Eigen::Matrix3d vertex_h;
 		double v_h1; double v_h2; double v_h3; double v_h4; double v_h5; double v_h6;
 		double lamda = 0.05;
-		for (Mesh::VertexIter v_it = mesh_->vertices_begin(); v_it != mesh_->vertices_end(); ++v_it)
+		for (TriMesh::VertexIter v_it = mesh_->vertices_begin(); v_it != mesh_->vertices_end(); ++v_it)
 		{
 			int vertex_id = v_it->idx(); p = mesh_->point(v_it);
 			/*if (mesh_->is_boundary(v_it))
@@ -2085,9 +2084,9 @@ namespace CADMesher
 			double min_radius = 1.0e30;
 			double gx = 0.0; double gy = 0.0; double gz = 0.0; OpenMesh::Vec3d g;
 			v_h1 = v_h2 = v_h3 = v_h4 = v_h5 = v_h6 = 0.0;
-			for (Mesh::VertexOHalfedgeIter voh_it = mesh_->voh_iter(v_it); voh_it; ++voh_it)
+			for (TriMesh::VertexOHalfedgeIter voh_it = mesh_->voh_iter(v_it); voh_it; ++voh_it)
 			{
-				Mesh::VertexHandle vh = mesh_->to_vertex_handle(voh_it); tp = mesh_->point(vh);
+				TriMesh::VertexHandle vh = mesh_->to_vertex_handle(voh_it); tp = mesh_->point(vh);
 				double x2 = tp[0]; double y2 = tp[1]; double z2 = tp[2];
 				double mid_edge_len = (tp - p).norm() * 0.5;
 				if (mid_edge_len < min_radius) min_radius = mid_edge_len;
@@ -2164,12 +2163,12 @@ namespace CADMesher
 		mesh_->update_face_normals();
 		int nv = mesh_->n_vertices();
 		Eigen::Matrix3d H; Eigen::Matrix3d D; D.setZero();
-		Eigen::Matrix3d vH; Mesh::VertexHandle vh;
+		Eigen::Matrix3d vH; TriMesh::VertexHandle vh;
 		std::vector<OpenMesh::Vec6d> vM(nv);
 
 		for (unsigned i = 0; i < nv; ++i)
 		{
-			Mesh::VertexHandle vh = mesh_->vertex_handle(i);
+			TriMesh::VertexHandle vh = mesh_->vertex_handle(i);
 			vM[i] = mesh_->data(vh).get_Hessian();
 		}
 
@@ -2184,7 +2183,7 @@ namespace CADMesher
 		while (iter_count < 10)
 		{
 			int flip_count = 0;
-			for (Mesh::EdgeIter e_it = mesh_->edges_begin(); e_it != mesh_->edges_end(); ++e_it)
+			for (TriMesh::EdgeIter e_it = mesh_->edges_begin(); e_it != mesh_->edges_end(); ++e_it)
 			{
 #ifdef USE_FEATURE
 				if (mesh_->data(e_it).get_edgeflag() || !is_flip_ok_openmesh(e_it.handle(), *mesh_))

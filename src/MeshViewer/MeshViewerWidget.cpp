@@ -920,17 +920,10 @@ void MeshViewerWidget::draw_IsotropicMesh()
 {
 	if (ifUpdateMesh)
 	{
-//#if 0
 		timeRecorder tr;
 		CADMesher::TriangleMeshRemeshing *tmr = new CADMesher::TriangleMeshRemeshing(&mesh);
 		tmr->run();
 		tr.out("Isotropic Remesing Time:");
-//#else
-//		initMeshStatusAndNormal(CADMesher::globalmodel.initial_trimesh);
-//		CADMesher::TriangleMeshRemeshing *tmr = new CADMesher::TriangleMeshRemeshing(&CADMesher::globalmodel.initial_trimesh);
-//		tmr->run();
-//		mesh = Mesh(CADMesher::globalmodel.initial_trimesh);
-//#endif
 		delete tmr;
 		ifUpdateMesh = false; 
 		
@@ -951,7 +944,8 @@ void MeshViewerWidget::draw_AnisotropicMesh()
 		/*timeRecorder tr;
 		CADMesher::AnisotropicMeshRemeshing *amr = new CADMesher::AnisotropicMeshRemeshing();
 		amr->SetMesh(&mesh);
-		amr->load_ref_mesh(&mesh);
+		Mesh m(mesh);
+		amr->load_ref_mesh(&m);
 		double tl = amr->get_ref_mesh_ave_anisotropic_edge_length();
 		dprint("anisotropic edge length:", tl);
 		amr->do_remeshing(tl, 1.5);
@@ -967,35 +961,6 @@ void MeshViewerWidget::draw_AnisotropicMesh()
 	}
 }
 
-/*<<<<<<< john
-void MeshViewerWidget::draw_feature()
-{
-	//glPointSize(8);
-	//glBegin(GL_POINTS);
-	//glColor3d(1.0, 0.0, 0.0);
-	//for (auto &tv : mesh.vertices())
-	//{
-	//	if (mesh.data(tv).curvatureflag)
-	//	{
-	//		glVertex3dv(mesh.point(tv).data());
-	//	}
-	//}
-	//glEnd();
-
-	glLineWidth(3);
-	glColor3d(1.0, 0.0, 0.0);
-	glBegin(GL_LINES);
-	for (auto &te : mesh.edges())
-	{
-		if (mesh.data(te).get_edgeflag())
-		{
-			glVertex3dv(mesh.point(te.v0()).data());
-			glVertex3dv(mesh.point(te.v1()).data());
-		}
-	}
-	glEnd();
-}
-=======*/
 #include "../src/Algorithm/CheckBoard/CheckBoardGenerator.h"
 
 //static bool flag = true;
