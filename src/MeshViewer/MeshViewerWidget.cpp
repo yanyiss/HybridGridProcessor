@@ -941,15 +941,16 @@ void MeshViewerWidget::draw_AnisotropicMesh()
 {
 	if (ifUpdateMesh)
 	{
-		/*timeRecorder tr;
+		timeRecorder tr;
 		CADMesher::AnisotropicMeshRemeshing *amr = new CADMesher::AnisotropicMeshRemeshing();
 		amr->SetMesh(&mesh);
-		Mesh m(mesh);
-		amr->load_ref_mesh(&m);
+		amr->load_ref_mesh();
 		double tl = amr->get_ref_mesh_ave_anisotropic_edge_length();
 		dprint("anisotropic edge length:", tl);
 		amr->do_remeshing(tl, 1.5);
 		tr.out("Anistropic Remeshing Time:");
+		delete amr;
+		ifUpdateMesh = false;
 
 		std::string cfn = CADFileName.toLatin1().data();
 		bool if_saveOK = OpenMesh::IO::write_mesh(mesh,
@@ -957,7 +958,7 @@ void MeshViewerWidget::draw_AnisotropicMesh()
 		if (if_saveOK)
 			dprint("The isotropic mesh has been saved in \"Anisotropic Mesh\" folder");
 		else
-			dprint("Save anisotropic mesh failed");*/
+			dprint("Save anisotropic mesh failed");
 	}
 }
 

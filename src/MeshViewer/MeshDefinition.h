@@ -239,7 +239,7 @@ void initMeshStatusAndNormal(T& m)
 template <typename T>
 bool isClosedMesh(T& mesh)
 {
-	for (auto tv : mesh.vertices())
+	for (auto &tv : mesh.vertices())
 	{
 		if (mesh.is_boundary(tv))
 			return false;
@@ -251,7 +251,7 @@ template <typename T>
 double meshAverageLength(T &mesh)
 {
 	double le = 0;
-	for (auto te : mesh.edges())
+	for (auto &te : mesh.edges())
 	{
 		le += mesh.calc_edge_length(te);
 	}

@@ -11,6 +11,7 @@
 
 namespace CADMesher
 {
+	class polyRemeshingHelper;
 	class TriangleMeshRemeshing
 	{
 	public:
@@ -28,6 +29,11 @@ namespace CADMesher
 		TriangleMeshRemeshing(const TriangleMeshRemeshing &tmr) = delete;
 		~TriangleMeshRemeshing() { 
 			if (aabbtree) { delete aabbtree; aabbtree = nullptr; } 
+			if (polymeshInput)
+			{
+				if (prh) { delete prh; prh = nullptr; }
+				if (mesh) { delete mesh; mesh = nullptr; }
+			}
 		}
 
 	public:
@@ -60,11 +66,26 @@ namespace CADMesher
 		explicit TriangleMeshRemeshing(PolyMesh *mesh_, double target_length = -1);//, polymeshInput(true)
 	private:
 		bool polymeshInput = false;
-		int boundaryNum;
-		PolyMesh *polymesh;
-	private:
-		void assembleMesh();
+		polyRemeshingHelper *prh = nullptr;
 #endif
 	};
+
+#ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
+	class polyRemeshingHelper
+	{
+	public:
+		polyRemeshingHelper() {};
+		~polyRemeshingHelper() {};
+
+	public:
+		void removePolygons(Mesh* m, TriMesh* tm);
+		void addPolygons(TriMesh* &tm);
+
+		int boundaryNum;
+	private:
+		Mesh polymesh;
+		Mesh *inputPolymesh = nullptr;
+	};
+#endif
 }
 

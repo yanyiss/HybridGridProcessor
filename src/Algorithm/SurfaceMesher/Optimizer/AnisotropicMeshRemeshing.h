@@ -5,7 +5,7 @@
 #include <OpenMesh/Core/IO/MeshIO.hh>
 #include "..\src\Dependency\Common\CommonDefinitions.h"
 #include "CGAL_Definition.h"
-#include "..\src\Algorithm\SurfaceMesher\Generator\basic_def.h"
+#include "..\src\Algorithm\SurfaceMesher\Optimizer\TriangleMeshRemeshing.h"
 namespace CADMesher
 {
 	class AnisotropicMeshRemeshing
@@ -21,7 +21,7 @@ namespace CADMesher
 		}
 		void reset_all_State();
 
-		void load_ref_mesh(TriMesh* aniso_ref_mesh);
+		void load_ref_mesh(TriMesh* aniso_ref_mesh = nullptr);
 		void sample_mesh_anisotropic_edge_length(double ref_edge_len = 1.0, double a = 1.5, bool add_flip = true);
 		void do_remeshing(double ref_edge_len = 1.0, double a = 1.5);
 		void build_AABB_tree_using_Ref();
@@ -78,10 +78,18 @@ namespace CADMesher
 
 
 #ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
+	public:
 		void SetMesh(Mesh *mesh)
 		{
 			reset_all_State();
+			polymeshInput = true;
+			mesh_ = new TriMesh();
+			prh = new polyRemeshingHelper();
+			prh->removePolygons(mesh, mesh_);
 		}
+	private:
+		polyRemeshingHelper* prh = nullptr;
+		bool polymeshInput = false;
 #endif
 	};
 }

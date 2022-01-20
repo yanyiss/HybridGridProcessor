@@ -24,6 +24,14 @@ namespace CADMesher
 		/*if(ref_mesh_)
 			delete ref_mesh_;
 		ref_mesh_ = NULL;*/
+
+#ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
+		if (polymeshInput)
+		{
+			if (mesh_) { delete mesh_; mesh_ = nullptr; }
+			if (prh) { delete prh; prh = nullptr; }
+		}
+#endif
 	}
 
 	void AnisotropicMeshRemeshing::reset_all_State()
@@ -287,7 +295,14 @@ namespace CADMesher
 	void AnisotropicMeshRemeshing::load_ref_mesh(TriMesh* aniso_ref_mesh)
 	{
 		if (ref_mesh_) delete ref_mesh_;
-		ref_mesh_ = aniso_ref_mesh;
+		if (aniso_ref_mesh)
+		{
+			ref_mesh_ = aniso_ref_mesh;
+		}
+		else
+		{
+			ref_mesh_ = new TriMesh(*mesh_);
+		}
 
 		ref_mesh_->request_vertex_status();
 		ref_mesh_->request_edge_status();
@@ -717,6 +732,15 @@ namespace CADMesher
 				TriMesh::HalfedgeHandle heh = mesh_->halfedge_handle(eh, 0);
 				TriMesh::VertexHandle vh0_ = mesh_->from_vertex_handle(heh);
 				TriMesh::VertexHandle vh1_ = mesh_->to_vertex_handle(heh);
+#ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
+				if (polymeshInput)
+				{
+					if (vh0_.idx() < prh->boundaryNum && vh1_.idx() < prh->boundaryNum)
+					{
+						continue;
+					}
+				}
+#endif
 				OpenMesh::Vec6d& h0 = mesh_->data(vh0_).get_Hessian();
 				OpenMesh::Vec6d& h1 = mesh_->data(vh1_).get_Hessian();
 				H0(0, 0) = h0[0]; H0(0, 1) = h0[1]; H0(0, 2) = h0[2];
@@ -791,11 +815,20 @@ namespace CADMesher
 			for (auto te = mesh_->edges_sbegin(); te != mesh_->edges_end(); te++)
 			{
 				//if (i % 10000 == 0) std::cout << i << std::endl;
-				/*if (te->idx() % 10000 == 0)*/ std::cout << te->idx() << std::endl;
+				if (te->idx() % 10000 == 0) std::cout << te->idx() << std::endl;
 				TriMesh::EdgeHandle eh = *te;
 				TriMesh::HalfedgeHandle heh = mesh_->halfedge_handle(eh, 0);
 				TriMesh::VertexHandle vh0_ = mesh_->from_vertex_handle(heh);
 				TriMesh::VertexHandle vh1_ = mesh_->to_vertex_handle(heh);
+#ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
+				if (polymeshInput)
+				{
+					if (vh0_.idx() < prh->boundaryNum)
+					{
+						continue;
+					}
+				}
+#endif
 				OpenMesh::Vec6d& h0 = mesh_->data(vh0_).get_Hessian();
 				OpenMesh::Vec6d& h1 = mesh_->data(vh1_).get_Hessian();
 				H0(0, 0) = h0[0]; H0(0, 1) = h0[1]; H0(0, 2) = h0[2];
@@ -982,6 +1015,13 @@ namespace CADMesher
 			std::cout << vertex_surface_index[67][i] << ",";*/
 			//MeshProjectToSurface(mesh_, vertex_surface_index, &globalmodel);
 		calc_tri_quality();
+
+#ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
+		if (polymeshInput)
+		{
+			prh->addPolygons(mesh_);
+		}
+#endif
 	}
 
 	void AnisotropicMeshRemeshing::calc_tri_quality()
