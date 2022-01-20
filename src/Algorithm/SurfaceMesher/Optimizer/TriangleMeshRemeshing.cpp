@@ -774,7 +774,7 @@ namespace CADMesher
 		initMeshStatusAndNormal(*tm);
 	}
 	
-	void polyRemeshingHelper::addPolygons(TriMesh* &tm)
+	void polyRemeshingHelper::addPolygons(TriMesh* tm)
 	{
 		*inputPolymesh = polymesh;//*inputPolymesh 可能在栈上
 

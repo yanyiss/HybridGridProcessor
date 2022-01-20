@@ -924,6 +924,7 @@ void MeshViewerWidget::draw_IsotropicMesh()
 		CADMesher::TriangleMeshRemeshing *tmr = new CADMesher::TriangleMeshRemeshing(&mesh);
 		tmr->run();
 		tr.out("Isotropic Remesing Time:");
+
 		delete tmr;
 		ifUpdateMesh = false; 
 		
@@ -949,6 +950,7 @@ void MeshViewerWidget::draw_AnisotropicMesh()
 		dprint("anisotropic edge length:", tl);
 		amr->do_remeshing(tl, 1.5);
 		tr.out("Anistropic Remeshing Time:");
+
 		delete amr;
 		ifUpdateMesh = false;
 

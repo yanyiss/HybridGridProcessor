@@ -79,7 +79,7 @@ namespace CADMesher
 
 	public:
 		void removePolygons(Mesh* m, TriMesh* tm);
-		void addPolygons(TriMesh* &tm);
+		void addPolygons(TriMesh* tm);
 
 		int boundaryNum;
 	private:
