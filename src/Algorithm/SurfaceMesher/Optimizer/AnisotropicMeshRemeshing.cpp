@@ -295,7 +295,7 @@ namespace CADMesher
 	void AnisotropicMeshRemeshing::load_ref_mesh(TriMesh* aniso_ref_mesh)
 	{
 		if (ref_mesh_) delete ref_mesh_;
-		if (aniso_ref_mesh)
+		if (aniso_ref_mesh && aniso_ref_mesh != mesh_)
 		{
 			ref_mesh_ = aniso_ref_mesh;
 		}
