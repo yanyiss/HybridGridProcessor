@@ -167,16 +167,13 @@ namespace CADMesher
 				{
 					auto &boundpos = edgeshape[edges[k]].parameters;
 					int cols = boundpos.cols() - 1;
-					//all_pnts.block(s, 0, rows, 2) = boundpos.block(0, 0, rows, 2);
 					all_pnts.block(0, s, 2, cols) = boundpos.block(0, 0, 2, cols);
 					s += cols;
 				}
 				pointsnumber = s;
 			}
-			//all_pnts.block(0, 1, all_pnts.rows(), 1) *= if_reverse;
 			all_pnts.block(1, 0, 1, all_pnts.cols()) *= if_reverse;
 			newall_pnts = Subdomain(all_pnts, bnd, pointsnumber);
-			//newall_pnts.block(0, 1, newall_pnts.rows(), 1) *= x_step / y_step;
 			newall_pnts.block(1, 0, 1, newall_pnts.cols()) *= x_step / y_step;
 			triangulate(newall_pnts, bnd, sqrt(3) * x_step * x_step / 4 * mu, aMesh);
 			for (auto v = aMesh.vertices_begin(); v != aMesh.vertices_end(); v++)
@@ -184,10 +181,11 @@ namespace CADMesher
 				auto p = aMesh.point(*v);
 				aMesh.set_point(*v, Mesh::Point{ p[0],p[1] / ra,0 });
 			}
-
 			TopLoc_Location loca;
 			opencascade::handle<Geom_Surface> geom_surface = BRep_Tool::Surface(faceshape[i].face, loca);
 			opencascade::handle<Standard_Type> type = geom_surface->DynamicType();
+			
+			std::vector<bool> curvature(pointsnumber, false);
 			if (type == STANDARD_TYPE(Geom_BSplineSurface))
 			{
 				BSplineSurface bsplinesurface;
@@ -225,15 +223,15 @@ namespace CADMesher
 				}
 				else
 					bsplinesurface = { geom_bsplinesurface->UDegree(), geom_bsplinesurface->VDegree(), u, v, cp };
-				Riemannremesh Remesh(bsplinesurface, aMesh);
+				Riemannremesh Remesh(&bsplinesurface, &aMesh);
 				Remesh.remesh();
-				aMesh = Remesh.mesh;
+				all_pnts.block(1, 0, 1, all_pnts.cols()) *= if_reverse;
+				Remesh.curvature_feature(all_pnts, curvature);
 			}
 			else
 			{
 				dprint( "this is not Bsplinesurface!" );
 			}
-
 			Mesh newmesh;
 			Mesh::VertexHandle vh1, vh2, vh3, vh4, vend3, vend4;
 			std::vector<Mesh::VertexHandle> facevhandle;
@@ -242,8 +240,9 @@ namespace CADMesher
 			//add boundary points
 			for (int j = 0; j < pointsnumber; j++)
 			{
-				newp = Mesh::Point(all_pnts(0, j), all_pnts(1, j)*if_reverse, 0);
-				newmesh.add_vertex(newp);
+				newp = Mesh::Point(all_pnts(0, j), all_pnts(1, j), 0);
+				vh1 = newmesh.add_vertex(newp);
+				newmesh.data(vh1).curvatureflag = curvature[j];
 			}
 
 			//add internal points
@@ -275,7 +274,6 @@ namespace CADMesher
 				facevhandle.clear();
 				count++;
 			}
-
 			//add internal faces
 			for (auto f : aMesh.faces())
 			{
@@ -288,18 +286,19 @@ namespace CADMesher
 				facevhandle.clear();
 			}
 
-			if (!OpenMesh::IO::write_mesh(newmesh, "one.obj"))
-			{
-				std::cerr << "fail";
-			}
 
-			//for (auto tv : newmesh.vertices())
+
+			for (auto tv : newmesh.vertices())
+			{
+				auto pos = newmesh.point(tv);
+				auto v = asurface->Value(pos[0], pos[1]);
+				newmesh.set_point(tv, Mesh::Point(v.X(), v.Y(), v.Z()));
+			}
+			//if (!OpenMesh::IO::write_mesh(newmesh, "one.obj"))
 			//{
-			//	auto pos = newmesh.point(tv);
-			//	auto v = asurface->Value(pos[0], pos[1]);
-			//	newmesh.set_point(tv, Mesh::Point(v.X(), v.Y(), v.Z()));
+			//	std::cerr << "fail";
 			//}
-			//Surface_PolyMeshes[i] = newmesh; 
+			Surface_PolyMeshes[i] = newmesh; 
 		}
 
 		dprint("Piecewise PolyMesh Done!");
@@ -314,12 +313,11 @@ namespace CADMesher
 
 		int cols;   //edges number
 		double step, avelen=0;
-		bool dire_global = true, dire;
+		bool dire;
 		std::vector<int>inflexion;
 
 		for (int i = 0; i < bnd.size(); i++)
 		{
-			if (i) dire_global = false;
 			cols = bnd[i].cols();
 			edge = Matrix2Xd::Zero(2, cols+1);
 			P = Matrix2Xi::Zero(2, cols + 1);
@@ -333,73 +331,257 @@ namespace CADMesher
 			}
 			edge.col(0) = edge.col(cols);
 			avelen /= cols;
-			step = avelen / 10;
+			step = avelen * 0.1;
 
 			//提取拐点并按角平分线设定步长
+			Matrix2Xd midAngle(2, cols+2);
 			std::vector<int> pntAngle(cols, 0);
 			for (int j = 1; j < cols + 1; j++)
 			{
 				p1 = edge.col(j - 1);
 				p2 = edge.col(j);
-				if (p1.norm() < 0.7*avelen && p2.norm() < 0.7*avelen) continue;
+				double length1 = p1.norm(), length2 = p2.norm();
 				p1.normalize();
 				p2.normalize();
 				if ((p2 - p1).norm() < 0.001)
 				{
 					p3 << -p1(1), p1(0);
-					p3 *= step;
-					pntAngle[j - 1] = 3.2;
+					midAngle.col(j) = p3;
+					pntAngle[j - 1] = PI;
+					if (length1 < 0.75*avelen || length2 < 0.75*avelen) continue;
 				}
 				else
 				{
 					double angle = acos(-p1(0)*p2(0) - p1(1)*p2(1));	
-					dire = !(dire_global ^ (p1(0)*p2(1) - p1(1)*p2(0) > 0));
+					dire = p1(0)*p2(1) - p1(1)*p2(0) > 0;
+					midAngle.col(j) = ((p2 - p1).normalized())* (dire ? 1 : -1);
 					if (!dire) angle = 2 * PI - angle;
-					pntAngle[j-1] = angle;
-					if (angle < 0.6) continue;
-					double step1 = step / std::max(sin(angle*0.5), 0.1);
-					p3 = step1 * ((p2 - p1).normalized())* (dire ? 1 : -1);
+					pntAngle[j - 1] = angle;
 				}
-				id1 = startid + j - 1;
-				newall_pnts.col(id1) = all_pnts.col(id1) + p3 ;
-				inflexion.push_back(id1);   //边界的拐点
+				inflexion.push_back(startid + j - 1);   //边界的拐点
 			}
-			//判断自交
-			std::vector<int>::iterator iter;
-			Matrix2d A1, A2;
+			midAngle.col(0) = midAngle.col(cols);
+			midAngle.col(cols+1) = midAngle.col(1);
 			for (int j = 0; j < inflexion.size(); j++)
 			{
-				if (j < inflexion.size() - 1)
+				id1 = inflexion[j]-startid;
+				p1 = (edge.col(id1)).normalized();
+				if (pntAngle[id1] < 1) p2 = midAngle.col(id1+1);//角比较小时，按自身角平分线
+				else p2 = ((midAngle.col(id1) + midAngle.col(id1 + 2))*0.5).normalized(); 
+				p2 *= step / std::max(std::sqrt(1 - std::pow(p1(0)*p2(0) + p1(1)*p2(1), 2.0)), 0.1);
+				newall_pnts.col(id1+ startid) = all_pnts.col(id1+startid) + p2;
+			}
+
+			//std::vector<int> pntAngle(cols, 0);
+			//for (int j = 1; j < cols + 1; j++)
+			//{
+			//	p1 = edge.col(j - 1);
+			//	p2 = edge.col(j);
+			//	if (p1.norm() < 0.7*avelen && p2.norm() < 0.7*avelen) continue;
+			//	p1.normalize();
+			//	p2.normalize();
+			//	if ((p2 - p1).norm() < 0.001)
+			//	{
+			//		p3 << -p1(1), p1(0);
+			//		p3 *= step;
+			//		pntAngle[j - 1] = 3.2;
+			//	}
+			//	else
+			//	{
+			//		double angle = acos(-p1(0)*p2(0) - p1(1)*p2(1));	
+			//		dire = p1(0)*p2(1) - p1(1)*p2(0) > 0;
+			//		if (!dire) angle = 2 * PI - angle;
+			//		pntAngle[j-1] = angle;
+			//		if (angle < 0.6) continue;
+			//		double step1 = step / std::max(sin(angle*0.5), 0.1);
+			//		p3 = step1 * ((p2 - p1).normalized())* (dire ? 1 : -1);
+			//	}
+			//	id1 = startid + j - 1;
+			//	newall_pnts.col(id1) = all_pnts.col(id1) + p3 ;
+			//	inflexion.push_back(id1);   //边界的拐点
+			//}
+			
+			//判断自交
+			std::vector<int>::iterator iter;
+			Matrix2d A1, A2, A3, A4;
+			bool global_intersect = true;
+			while (global_intersect)
+			{
+				global_intersect = false;
+
+				//角平分线自交
+				for (int j = 0; j < inflexion.size() - 1; j++)
 				{
 					id1 = inflexion[j];
-					id2 = inflexion[j + 1];
-				}
-				else
-				{
-					id1 = inflexion.front();
-					id2 = inflexion.back();
-				}
-				p1 = all_pnts.col(id2);
-				p2 = newall_pnts.col(id2);
-				p3 = all_pnts.col(id1);
-				p4 = newall_pnts.col(id1);
-				A2.col(0) = A1.col(0) = p2 - p1;
-				A1.col(1) = p3 - p1;
-				A2.col(1) = p4 - p1;
-				if (A1.determinant()*A2.determinant() < 0)   //两角平分线相交
-				{
-					if (pntAngle[id1 - startid] > pntAngle[id2 - startid])
+					p1 = all_pnts.col(id1);
+					p2 = newall_pnts.col(id1);
+					for (int k = j + 1; k < inflexion.size(); k++)
 					{
-						iter = std::find(inflexion.begin(), inflexion.end(), id1);
-						inflexion.erase(iter);
+						id2 = inflexion[k];
+						p3 = all_pnts.col(id2);
+						p4 = newall_pnts.col(id2);
+						bool intersect = true, modified = false;
+						while (intersect)
+						{
+							A2.col(0) = A1.col(0) = p4 - p3;
+							A1.col(1) = p1 - p3;
+							A2.col(1) = p2 - p3;
+							A4.col(0) = A3.col(0) = p2 - p1;
+							A3.col(1) = p3 - p1;
+							A4.col(1) = p4 - p1;
+							if (A1.determinant()*A2.determinant() < 0 && A3.determinant()*A4.determinant() < 0)
+							{
+								modified = true;
+								p2 = 0.75*p2 + 0.25*p1;
+								p4 = 0.75*p4 + 0.25*p3;
+							}
+							else intersect = false;
+						}
+						if (modified)
+						{
+							global_intersect = true;
+							newall_pnts.col(id1) = p2;
+							newall_pnts.col(id2) = p4;
+						}
 					}
-					else
+				}
+				Matrix2Xd p1_, p2_, p3_, p4_;
+
+				//角平分线与平行线自交				
+				for (int j = 0; j < inflexion.size(); j++)
+				{
+					id1 = inflexion[j];
+					p1 = newall_pnts.col(id1);
+					p1_ = all_pnts.col(id1);
+					for (int k = 0; k < inflexion.size(); k++)
 					{
-						iter = std::find(inflexion.begin(), inflexion.end(), id2);
-						inflexion.erase(iter);
+						if (k == j || k == j - 1) continue;
+						if (!j && k == inflexion.size() - 1) continue;
+						id2 = inflexion[k];
+						int id3 = (k < inflexion.size() - 1 ? inflexion[k + 1] : inflexion.front());
+						p2 = newall_pnts.col(id2);
+						p2_ = all_pnts.col(id2);
+						p3 = newall_pnts.col(id3);
+						p3_ = all_pnts.col(id3);
+						bool intersect = true, modified = false;
+						while (intersect)
+						{
+							A2.col(0) = A1.col(0) = p1 - p1_;
+							A1.col(1) = p2 - p1_;
+							A2.col(1) = p3 - p1_;
+							A4.col(0) = A3.col(0) = p2 - p3;
+							A3.col(1) = p1 - p3;
+							A4.col(1) = p1_ - p3;
+							if (A1.determinant()*A2.determinant() < 0 && A3.determinant()*A4.determinant() < 0)
+							{								
+								modified = true;
+								p1 = 0.75*p1 + 0.25*p1_;
+								p2 = 0.75*p2 + 0.25*p2_;
+								p3 = 0.75*p3 + 0.25*p3_;
+							}
+							else intersect = false;
+						}
+						if (modified)
+						{
+							global_intersect = true;
+							newall_pnts.col(id1) = p1;
+							newall_pnts.col(id2) = p2;
+							newall_pnts.col(id3) = p3;
+						}
+					}
+				}
+
+				//平行线与平行线自交
+				for (int j = 0; j < inflexion.size()-1; j++)
+				{
+					//可以考虑用容器指针
+					id1 = inflexion[j];
+					p1 = newall_pnts.col(id1);
+					p2 = newall_pnts.col(inflexion[j + 1]);
+					p1_ = all_pnts.col(id1);
+					p2_ = all_pnts.col(inflexion[j + 1]);
+					for (int k = j + 2; k < inflexion.size(); k++)
+					{
+						if (!j && k == inflexion.size() - 1) continue;
+						id2 = inflexion[k];
+						p3 = newall_pnts.col(id2);
+						p3_ = all_pnts.col(id2);
+						int id3 = (k < inflexion.size() - 1 ? inflexion[k+1] : inflexion.front());
+						p4 = newall_pnts.col(id3);
+						p4_ = all_pnts.col(id3);
+						bool intersect = true, modified = false;
+						while (intersect)
+						{
+							A2.col(0) = A1.col(0) = p2 - p1;
+							A1.col(1) = p3 - p1;
+							A2.col(1) = p4 - p1;
+							A4.col(0) = A3.col(0) = p4 - p3;
+							A3.col(1) = p1 - p3;
+							A4.col(1) = p2 - p3;
+							if (A1.determinant()*A2.determinant() < 0 && A3.determinant()*A4.determinant() < 0)
+							{
+								modified = true;
+								p1 = 0.75*p1 + 0.25*p1_;
+								p2 = 0.75*p2 + 0.25*p2_;
+								p3 = 0.75*p3 + 0.25*p3_;
+								p4 = 0.75*p4 + 0.25*p4_;
+							}
+							else intersect = false;
+						}
+						//可以考虑变量引用，就无需再赋值
+						if (modified)
+						{
+							global_intersect = true;
+							newall_pnts.col(id1) = p1;
+							newall_pnts.col(inflexion[j + 1]) = p2;
+							newall_pnts.col(id2) = p3;
+							newall_pnts.col(id3) = p4;
+						}
 					}
 				}
 			}
+
+			//for (int j = 0; j < inflexion.size(); j++)
+			//{
+			//	if (j < inflexion.size() - 1)
+			//	{
+			//		id1 = inflexion[j];
+			//		id2 = inflexion[j + 1];
+			//	}
+			//	else
+			//	{
+			//		id1 = inflexion.front();
+			//		id2 = inflexion.back();
+			//	}
+			//	p1 = all_pnts.col(id2);
+			//	p2 = newall_pnts.col(id2);
+			//	p3 = all_pnts.col(id1);
+			//	p4 = newall_pnts.col(id1);
+			//	A2.col(0) = A1.col(0) = p2 - p1;
+			//	A1.col(1) = p3 - p1;
+			//	A2.col(1) = p4 - p1;
+			//	if (A1.determinant()*A2.determinant() >= 0)  continue;
+			//	A4.col(0) = A3.col(0) = p4 - p3;
+			//	A3.col(1) = p1 - p3;
+			//	A4.col(1) = p2 - p3;
+			//	if (A3.determinant()*A4.determinant() >= 0)  continue;
+			//	if (pntAngle[id1 - startid] > pntAngle[id2 - startid])
+			//	{
+			//		iter = std::find(inflexion.begin(), inflexion.end(), id1);
+			//		inflexion.erase(iter);
+			//	}
+			//	else
+			//	{
+			//		iter = std::find(inflexion.begin(), inflexion.end(), id2);
+			//		inflexion.erase(iter);
+			//	}
+			//}
+			//for (int j = 0; j < inflexion.size(); j++)
+			//{
+			//	dprint("拐点", inflexion[j]);
+			//}
+			//Matrix2Xd p1_, p2_, p3_, p4_;
+			
 			//插值其余点
 			int n;
 			for (int j = 0; j < inflexion.size() - 1; j++)

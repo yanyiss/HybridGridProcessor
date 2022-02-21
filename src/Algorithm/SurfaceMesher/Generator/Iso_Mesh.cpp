@@ -8,7 +8,7 @@ namespace CADMesher
 	Iso_Mesh::Iso_Mesh(QString & fileName)
 	{
 		occ_reader = new OccReader(fileName);
-#if 1
+#if 0
 		occ_reader->Set_TriMesh();
 		MergeModel();
 		ResetFeature();
@@ -16,14 +16,14 @@ namespace CADMesher
 #else 
 		occ_reader->Set_PolyMesh();
 		MergeModel();
-		ResetFeature();
+		ResetFeature1();
 		Write_Obj(globalmodel.initial_polymesh);
 #endif
 	}
 
 	void Iso_Mesh::MergeModel()
 	{
-#if 1
+#if 0
 		TriMesh &model_mesh = globalmodel.initial_trimesh;
 		auto &surface_meshes = occ_reader->Surface_TriMeshes;
 #else
@@ -96,11 +96,14 @@ namespace CADMesher
 		{
 			auto &frac_mesh = surface_meshes[i];
 			vector<Mesh::VertexHandle> vhandle;
+			Mesh::VertexHandle vh;
 			vhandle.reserve(frac_mesh.n_vertices());
 			for (auto tv : frac_mesh.vertices())
 			{
 				auto v = frac_mesh.point(tv);
-				vhandle.push_back(model_mesh.add_vertex(Mesh::Point(v[0], v[1], v[2])));
+				vh = model_mesh.add_vertex(Mesh::Point(v[0], v[1], v[2]));
+				model_mesh.data(vh).curvatureflag = frac_mesh.data(tv).curvatureflag;
+				vhandle.push_back(vh);
 			}
 			for (auto tf : frac_mesh.faces())
 			{
@@ -144,7 +147,6 @@ namespace CADMesher
 			else
 				model_mesh.data(tv).set_vertflag(false);
 		}
-
 #if 1
 		for (int i = 0; i < edgeshape.size(); i++)
 		{
@@ -282,7 +284,7 @@ namespace CADMesher
 		Mesh::VertexHandle v1, v2, v3, v4;
 		Mesh::Point p1, p2, p3, p4;
 		std::vector<Mesh::VertexHandle> facevhandle;
-		int num = 2;
+		int num = 1;
 		for (auto te : model_mesh.edges()) {
 			if (!model_mesh.data(te).get_edgeflag()) continue;
 			auto he = model_mesh.opposite_halfedge_handle(model_mesh.next_halfedge_handle(model_mesh.next_halfedge_handle(te.h0())));
@@ -312,6 +314,7 @@ namespace CADMesher
 				//calculate the offset points, and push them into a vector named offsetpnt which is attributed for each edge
 				for (int i = 0; i < 2; i++)
 				{
+					if (i && model_mesh.is_boundary(te)) continue;
 					auto he = model_mesh.halfedge_handle(te, i);
 					auto ev = model_mesh.edge_handle(model_mesh.next_halfedge_handle(he));
 					v1 = model_mesh.to_vertex_handle(he);
@@ -366,9 +369,10 @@ namespace CADMesher
 		std::vector<OV> offsetvh1, offsetvh2;
 		for (auto e : model_mesh.edges())
 		{
-			if (!model_mesh.data(e).get_edgeflag()) continue;
+			if (!model_mesh.data(e).get_edgeflag()) continue;		
 			for (int i = 0; i < 2; i++)
 			{
+				if (i && model_mesh.is_boundary(e)) continue;
 				auto he = model_mesh.halfedge_handle(e, i);
 				v1 = model_mesh.from_vertex_handle(he);
 				v2 = model_mesh.to_vertex_handle(he);
@@ -398,27 +402,27 @@ namespace CADMesher
 			}
 		}
 
-		std::vector<double> K1, K2;
-		std::vector<OpenMesh::Vec3d> dir1, dir2;
-		compute_principal_curvature(&model_mesh, K1, K2, dir1, dir2);
-		for (int i = 0; i<K1.size();i++)
-		{
-			auto v = model_mesh.vertex_handle(i);
-			//if (model_mesh.data(v).get_vertflag()) continue;
-			double ave_K = std::accumulate(K1.begin(), K2.begin(), 0);
-			double k1 = std::max(std::abs(K1[i]), std::abs(K2[i]));
-			double k2 = std::min(std::abs(K1[i]), std::abs(K2[i]));
-			if (i == 40692 || i == 40693)
-			{
-				std::cout << k2 << '\t' << k1 << k2 / k1 << '\n';
-			}
-			if (k2 < 0.008) continue;
-			if (k2/k1 < 0.015)
-			{
-				//std::cout << k2 << '\t' << k1 << k2 / k1<<'\n';
-				model_mesh.data(v).curvatureflag = true;
-			}
-		}
+		//std::vector<double> K1, K2;
+		//std::vector<OpenMesh::Vec3d> dir1, dir2;
+		//compute_principal_curvature(&model_mesh, K1, K2, dir1, dir2);
+		//for (int i = 0; i<K1.size();i++)
+		//{
+		//	auto v = model_mesh.vertex_handle(i);
+		//	//if (model_mesh.data(v).get_vertflag()) continue;
+		//	double ave_K = std::accumulate(K1.begin(), K2.begin(), 0);
+		//	double k1 = std::max(std::abs(K1[i]), std::abs(K2[i]));
+		//	double k2 = std::min(std::abs(K1[i]), std::abs(K2[i]));
+		//	if (i == 40692 || i == 40693)
+		//	{
+		//		std::cout << k2 << '\t' << k1 << k2 / k1 << '\n';
+		//	}
+		//	if (k2 < 0.008) continue;
+		//	if (k2/k1 < 0.015)
+		//	{
+		//		//std::cout << k2 << '\t' << k1 << k2 / k1<<'\n';
+		//		model_mesh.data(v).curvatureflag = true;
+		//	}
+		//}
 
 		for (auto tv : model_mesh.vertices()) {
 			if (!model_mesh.data(tv).get_vertflag())

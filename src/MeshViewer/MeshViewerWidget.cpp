@@ -535,7 +535,8 @@ void MeshViewerWidget::draw_scene_mesh(int drawmode)
 		glDisable(GL_LIGHTING);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		draw_mesh_wireframe();
-		draw_feature();
+		//draw_feature();
+		draw_feature1();
 		//draw_meshpointset();
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		break;
@@ -967,35 +968,35 @@ void MeshViewerWidget::draw_AnisotropicMesh()
 	}
 }
 
-/*<<<<<<< john
-void MeshViewerWidget::draw_feature()
+//<<<<<<< john
+void MeshViewerWidget::draw_feature1()
 {
-	//glPointSize(8);
-	//glBegin(GL_POINTS);
-	//glColor3d(1.0, 0.0, 0.0);
-	//for (auto &tv : mesh.vertices())
-	//{
-	//	if (mesh.data(tv).curvatureflag)
-	//	{
-	//		glVertex3dv(mesh.point(tv).data());
-	//	}
-	//}
-	//glEnd();
-
-	glLineWidth(3);
+	glPointSize(8);
+	glBegin(GL_POINTS);
 	glColor3d(1.0, 0.0, 0.0);
-	glBegin(GL_LINES);
-	for (auto &te : mesh.edges())
+	for (auto &tv : mesh.vertices())
 	{
-		if (mesh.data(te).get_edgeflag())
+		if (mesh.data(tv).curvatureflag)
 		{
-			glVertex3dv(mesh.point(te.v0()).data());
-			glVertex3dv(mesh.point(te.v1()).data());
+			glVertex3dv(mesh.point(tv).data());
 		}
 	}
 	glEnd();
+
+	//glLineWidth(3);
+	//glColor3d(1.0, 0.0, 0.0);
+	//glBegin(GL_LINES);
+	//for (auto &te : mesh.edges())
+	//{
+	//	if (mesh.data(te).get_edgeflag())
+	//	{
+	//		glVertex3dv(mesh.point(te.v0()).data());
+	//		glVertex3dv(mesh.point(te.v1()).data());
+	//	}
+	//}
+	//glEnd();
 }
-=======*/
+//=======
 #include "../src/Algorithm/CheckBoard/CheckBoardGenerator.h"
 
 //static bool flag = true;
