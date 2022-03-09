@@ -145,9 +145,10 @@ namespace CADMesher
 				model_mesh.data(tv).set_vertflag(false);
 		}
 
-#if 1
+#if 0
 		for (int i = 0; i < edgeshape.size(); i++)
 		{
+			//dprint(i);
 			auto &edge0 = edgeshape[i];
 			if (edge0.if_merged || edge0.reversed_edge == -1) continue;
 			auto &edge1 = edgeshape[edgeshape[i].reversed_edge];
@@ -432,26 +433,5 @@ namespace CADMesher
 		dprint("Reset Feature Done!");
 	}
 
-#pragma region
-
-
-
-	void Iso_Mesh::Open_File(std::ofstream &file_writer)
-	{
-		try
-		{
-			std::fstream fout("step_to_obj.obj", std::ios::out | std::ios::trunc);
-		}
-		catch (std::exception& e)
-		{
-			dprint("error happened:", e.what());
-		}
-		file_writer.open("step_to_obj.obj");
-		if (file_writer.fail())
-		{
-			dprint("failed to open");
-			exit(1);
-		}
-	}
+	
 }
-#pragma endregion

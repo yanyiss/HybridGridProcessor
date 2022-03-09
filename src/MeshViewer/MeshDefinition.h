@@ -218,9 +218,9 @@ void compute_principal_curvature(TriMesh* mesh_,
 
 
 #pragma region functions by yanyisheshou at GCL
-double meshMinAngle(TriMesh &mesh);
+double meshMinAngle(const TriMesh &mesh);
 
-void printMeshQuality(TriMesh &mesh);
+void printMeshQuality(const TriMesh &mesh);
 
 template <typename T>
 void initMeshStatusAndNormal(T& m)

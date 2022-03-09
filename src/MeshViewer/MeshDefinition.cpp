@@ -407,7 +407,7 @@ void compute_principal_curvature(TriMesh* mesh_,
 
 #pragma region functions by yanyisheshou at GCL
 #include "..\src\Toolbox\dprinter\dprint.h"
-double meshMinAngle(TriMesh &mesh)
+double meshMinAngle(const TriMesh &mesh)
 {
 	double angle = 4;
 	for (auto th : mesh.halfedges())
@@ -418,7 +418,7 @@ double meshMinAngle(TriMesh &mesh)
 }
 
 //the definition of single triangle quality in trimesh is from paper: Automatic and High-quality Surface Mesh Generation for CAD Models(Section 5.1)
-void printMeshQuality(TriMesh &mesh)
+void printMeshQuality(const TriMesh &mesh)
 {
 	double c = 4 * std::sqrt(3);
 	double minAngle = 4, maxAngle = 0, avgAngle = 0;
