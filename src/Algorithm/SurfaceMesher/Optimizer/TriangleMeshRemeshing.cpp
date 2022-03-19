@@ -353,6 +353,7 @@ namespace CADMesher
 	TriangleMeshRemeshing::TriangleMeshRemeshing(PolyMesh *mesh_, double target_length)
 		:expected_length(target_length), polymeshInput(true)
 	{
+		initMeshStatusAndNormal(*mesh_);
 		polymesh = new Mesh();
 		polymesh->reserve(mesh_->n_vertices(), mesh_->n_edges(), mesh_->n_faces());
 

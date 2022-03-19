@@ -970,31 +970,34 @@ void MeshViewerWidget::draw_AnisotropicMesh()
 
 //<<<<<<< john
 void MeshViewerWidget::draw_feature1()
-{
-	glPointSize(8);
-	glBegin(GL_POINTS);
+{	
+	//»­C0ÌØÕ÷
+	glLineWidth(5);
 	glColor3d(1.0, 0.0, 0.0);
-	for (auto &tv : mesh.vertices())
+	glBegin(GL_LINES);
+	for (auto &te : mesh.edges())
 	{
-		if (mesh.data(tv).curvatureflag)
+		if (mesh.data(te).flag1)
 		{
-			glVertex3dv(mesh.point(tv).data());
+			glVertex3dv(mesh.point(te.v0()).data());
+			glVertex3dv(mesh.point(te.v1()).data());
 		}
 	}
 	glEnd();
 
-	//glLineWidth(3);
-	//glColor3d(1.0, 0.0, 0.0);
-	//glBegin(GL_LINES);
-	//for (auto &te : mesh.edges())
-	//{
-	//	if (mesh.data(te).get_edgeflag())
-	//	{
-	//		glVertex3dv(mesh.point(te.v0()).data());
-	//		glVertex3dv(mesh.point(te.v1()).data());
-	//	}
-	//}
-	//glEnd();
+	//»­ÇúÂÊÌØÕ÷
+	glLineWidth(5);
+	glColor3d(0.0, 1.0, 0.0);
+	glBegin(GL_LINES);
+	for (auto &te : mesh.edges())
+	{
+		if (mesh.data(te).flag2)
+		{
+			glVertex3dv(mesh.point(te.v0()).data());
+			glVertex3dv(mesh.point(te.v1()).data());
+		}
+	}
+	glEnd();
 }
 //=======
 #include "../src/Algorithm/CheckBoard/CheckBoardGenerator.h"

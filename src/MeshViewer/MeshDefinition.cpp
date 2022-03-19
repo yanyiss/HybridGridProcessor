@@ -1,6 +1,5 @@
 #include "MeshDefinition.h"
 #include <OpenMesh/Core/IO/MeshIO.hh>
-#include <Eigen/Dense>
 
 double calc_mesh_ave_edge_length(Mesh* mesh_)
 {

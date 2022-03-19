@@ -63,6 +63,8 @@ struct MeshTraits : public OpenMesh::DefaultTraits
 	public:
 		void set_edge_feature(bool b){is_feature = b;};
 		bool get_edge_feature(){return is_feature;};
+		bool flag1 = false;
+		bool flag2 = false;//ÇúÂÊÌØÕ÷
 		
 		void set_edge_weight(double w){ weight = w; };
 		double get_edge_weight(){ return weight; };
@@ -131,7 +133,6 @@ struct MeshTraits : public OpenMesh::DefaultTraits
 		void set_targetlength(double d) { targetlength = d; };
 		double get_targetlength() { return targetlength; };
 
-		bool curvatureflag = false;
 	};
 };
 

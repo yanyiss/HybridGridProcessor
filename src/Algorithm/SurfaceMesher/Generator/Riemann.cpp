@@ -55,7 +55,7 @@ void Riemannremesh::calulenth()
 	}
 	len /= count;
 	highlenth = 4 * len / 3;
-	lowlenth = 4 * len / 5;
+	lowlenth = 0.8 * len ;
 }
 
 void Riemannremesh::split()
@@ -187,7 +187,7 @@ void Riemannremesh::updatepoint()
 void Riemannremesh::remesh()
 {
 	calulenth();
-	for (int i = 0; i < 10; i++)
+	for (int i = 0; i < 5; i++)
 	{
 		split();
 		collapse();
@@ -209,35 +209,11 @@ void Riemannremesh::curvature_feature(Eigen::Matrix2Xd &all_pnts, std::vector<bo
 {
 	Point ru, rv, n;
 	Eigen::Matrix2d Weingarten, value;
-	//std::cout << uu.front() << '\t' << uu.back() << '\t' << vv.front() << '\t' << vv.back() << '\n';
 	for (int i = 0; i < all_pnts.cols(); i++)
 	{
 		double u =  all_pnts(0,i), v = all_pnts(1,i);
-		//std::cout << i<<": "<<u << '\t' << v << '\t';
-		if (u < uu.front()) 
-		{
-			u = uu.front();
-			//std::cout << "1" << std::endl;
-		}
-		else if (u > uu.back()) 
-		{
-			u = uu.back();
-			//std::cout << "2" << std::endl;
-		}
-		if (v < vv.front())
-		{
-			v = vv.front(); 
-			//std::cout << "3" << std::endl;
-		}
-		else if (v > vv.back())
-		{
-			v = vv.back();
-			//std::cout << "4" << std::endl;
-		}
-		//std::cout << u << '\t' << v << '\n';
 		ru = B->PartialDerivativeU(u, v);
 		rv = B->PartialDerivativeV(u, v);
-		//std::cout << i << '\t' << rv[0] << '\t' << rv[1] << '\t' << rv[2] << '\n';
 		double E = ru.dot(ru);
 		double F = ru.dot(rv);
 		double G = rv.dot(rv);
@@ -245,20 +221,15 @@ void Riemannremesh::curvature_feature(Eigen::Matrix2Xd &all_pnts, std::vector<bo
 		double L = (B->PartialDerivativeUU(u, v)).dot(n);
 		double M = (B->PartialDerivativeUV(u, v)).dot(n);
 		double N = (B->PartialDerivativeVV(u, v)).dot(n);
-		//std::cout <<i<< ":"<<E << '\t' << F << '\t' << G << '\t' << L << '\t' << M << '\t' << N << '\t'<<'\n';
 		Weingarten << L * G - M * F, M * E - L * F,
 			M * G - N * F, N * E - M * F;
-		//std::cout << Weingarten / (E*G - pow(F, 2)) << std::endl;
 		Eigen::EigenSolver<Eigen::Matrix2d> es(Weingarten);
 		value = (es.pseudoEigenvalueMatrix())/(E*G-pow(F,2));
-		//std::cout << value << std::endl;
 		double K1 = std::max(std::abs(value(0, 0)), std::abs(value(1, 1)));
 		double K2 = std::min(std::abs(value(0, 0)), std::abs(value(1, 1)));
-		//std::cout << i << '\t' << K1 << '\t' << K2 << std::endl<<std::endl;
-		//if (K2 < 0.0008) continue;
-		if (K2/K1 < 0.015)
+		if (K2 >= 0.001 && K2/K1 < 0.001)
 		{
-			curvature[i] = true;
+			curvature[i] = true;    
 		}
 	}
 }
