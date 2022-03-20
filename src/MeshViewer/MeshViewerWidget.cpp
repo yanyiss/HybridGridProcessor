@@ -942,6 +942,7 @@ void MeshViewerWidget::draw_IsotropicMesh()
 		else
 			dprint("Save isotropic mesh failed");
 	}
+
 }
 
 #include "../src/Algorithm/SurfaceMesher/Optimizer/AnisotropicMeshRemeshing.h"
@@ -971,7 +972,7 @@ void MeshViewerWidget::draw_AnisotropicMesh()
 //<<<<<<< john
 void MeshViewerWidget::draw_feature1()
 {	
-	//»­C0ÌØÕ÷
+	//Â»Â­C0ÃŒÃ˜Ã•Ã·
 	glLineWidth(5);
 	glColor3d(1.0, 0.0, 0.0);
 	glBegin(GL_LINES);
@@ -985,7 +986,7 @@ void MeshViewerWidget::draw_feature1()
 	}
 	glEnd();
 
-	//»­ÇúÂÊÌØÕ÷
+	//Â»Â­Ã‡ÃºÃ‚ÃŠÃŒÃ˜Ã•Ã·
 	glLineWidth(5);
 	glColor3d(0.0, 1.0, 0.0);
 	glBegin(GL_LINES);
