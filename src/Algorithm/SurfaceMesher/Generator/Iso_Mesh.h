@@ -47,6 +47,22 @@ namespace CADMesher
 			file_writer.close();
 			return "step_to_obj.obj"; 
 		}
-		void Open_File(std::ofstream &file_writer);
+		void Open_File(std::ofstream &file_writer)
+		{
+			try
+			{
+				std::fstream fout("step_to_obj.obj", std::ios::out | std::ios::trunc);
+			}
+			catch (std::exception& e)
+			{
+				dprint("error happened:", e.what());
+			}
+			file_writer.open("step_to_obj.obj");
+			if (file_writer.fail())
+			{
+				dprint("failed to open");
+				exit(1);
+			}
+		}
 	};
 }

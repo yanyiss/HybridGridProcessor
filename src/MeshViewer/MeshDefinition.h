@@ -139,16 +139,62 @@ typedef OpenMesh::TriMesh_ArrayKernelT<MeshTraits> TriMesh;
 typedef OpenMesh::PolyMesh_ArrayKernelT<MeshTraits> PolyMesh;
 typedef PolyMesh Mesh;
 
+template <typename T>
+bool is_flip_ok_openmesh(typename T::EdgeHandle& eh, T& mesh_)
+{
+	if (mesh_.is_boundary(eh)) return false;
+	typename T::HalfedgeHandle hh = mesh_.halfedge_handle(eh, 0);
+	typename T::HalfedgeHandle oh = mesh_.halfedge_handle(eh, 1);
+	typename T::VertexHandle ah = mesh_.to_vertex_handle(mesh_.next_halfedge_handle(hh));
+	typename T::VertexHandle bh = mesh_.to_vertex_handle(mesh_.next_halfedge_handle(oh));
+	if (ah == bh)  
+		return false;
+	for (typename T::ConstVertexVertexIter vvi = mesh_.vv_iter(ah); vvi; ++vvi)
+		if (vvi.handle() == bh)
+			return false;
+	return true;
+}
 
-double calc_mesh_ave_edge_length(Mesh* mesh_);
-
-bool is_flip_ok_openmesh(Mesh::EdgeHandle& eh, Mesh& mesh_);//just copy the code from openmesh
-bool flip_openmesh(Mesh::EdgeHandle& eh, Mesh& mesh_);
+template <typename T>
+bool flip_openmesh(typename T::EdgeHandle& eh, T& mesh_)
+{
+	if (!is_flip_ok_openmesh(eh, mesh_))
+		return false;
+	typename T::HalfedgeHandle a0 = mesh_.halfedge_handle(eh, 0);
+	typename T::HalfedgeHandle b0 = mesh_.halfedge_handle(eh, 1);
+	typename T::HalfedgeHandle a1 = mesh_.next_halfedge_handle(a0);
+	typename T::HalfedgeHandle a2 = mesh_.next_halfedge_handle(a1);
+	typename T::HalfedgeHandle b1 = mesh_.next_halfedge_handle(b0);
+	typename T::HalfedgeHandle b2 = mesh_.next_halfedge_handle(b1);
+	typename T::VertexHandle   va0 = mesh_.to_vertex_handle(a0);
+	typename T::VertexHandle   va1 = mesh_.to_vertex_handle(a1);
+	typename T::VertexHandle   vb0 = mesh_.to_vertex_handle(b0);
+	typename T::VertexHandle   vb1 = mesh_.to_vertex_handle(b1);
+	typename T::FaceHandle     fa = mesh_.face_handle(a0);
+	typename T::FaceHandle     fb = mesh_.face_handle(b0);
+	mesh_.set_vertex_handle(a0, va1);
+	mesh_.set_vertex_handle(b0, vb1);
+	mesh_.set_next_halfedge_handle(a0, a2);
+	mesh_.set_next_halfedge_handle(a2, b1);
+	mesh_.set_next_halfedge_handle(b1, a0);
+	mesh_.set_next_halfedge_handle(b0, b2);
+	mesh_.set_next_halfedge_handle(b2, a1);
+	mesh_.set_next_halfedge_handle(a1, b0);
+	mesh_.set_face_handle(a1, fb);
+	mesh_.set_face_handle(b1, fa);
+	mesh_.set_halfedge_handle(fa, a0);
+	mesh_.set_halfedge_handle(fb, b0);
+	if (mesh_.halfedge_handle(va0) == b0)
+		mesh_.set_halfedge_handle(va0, a1);
+	if (mesh_.halfedge_handle(vb0) == a0)
+		mesh_.set_halfedge_handle(vb0, b1);
+	return true;
+}
 
 bool check_in_triangle_face(const std::vector<OpenMesh::Vec3d>& tri, const OpenMesh::Vec3d& p);
 bool baryCoord( const OpenMesh::Vec3d& _p, const OpenMesh::Vec3d& _u, const OpenMesh::Vec3d& _v, const OpenMesh::Vec3d& _w, OpenMesh::Vec3d&_result );
 
-void compute_point_area(Mesh* mesh_, std::vector<std::map<int,double>>& cornerArea, std::vector<double>& pointArea , bool use_np = false);
+void compute_point_area(TriMesh* mesh_, std::vector<std::map<int,double>>& cornerArea, std::vector<double>& pointArea , bool use_np = false);
 
 void rot_coord_sys(const OpenMesh::Vec3d &old_u, const OpenMesh::Vec3d &old_v,
 				   const OpenMesh::Vec3d &new_norm,
@@ -166,15 +212,15 @@ void diagonalize_curv(const OpenMesh::Vec3d &old_u, const OpenMesh::Vec3d &old_v
 					  const OpenMesh::Vec3d &new_norm,
 					  OpenMesh::Vec3d &pdir1, OpenMesh::Vec3d &pdir2, double &vk1, double &vk2);
 
-void compute_principal_curvature(Mesh* mesh_, 
+void compute_principal_curvature(TriMesh* mesh_,
 								 std::vector<double>& K1, std::vector<double>& K2, 
 								 std::vector<OpenMesh::Vec3d>& dir1,std::vector<OpenMesh::Vec3d>& dir2);
 
 
 #pragma region functions by yanyisheshou at GCL
-double meshMinAngle(TriMesh &mesh);
+double meshMinAngle(const TriMesh &mesh);
 
-void printMeshQuality(TriMesh &mesh);
+void printMeshQuality(const TriMesh &mesh);
 
 template <typename T>
 void initMeshStatusAndNormal(T& m)
@@ -193,7 +239,7 @@ void initMeshStatusAndNormal(T& m)
 template <typename T>
 bool isClosedMesh(T& mesh)
 {
-	for (auto tv : mesh.vertices())
+	for (auto &tv : mesh.vertices())
 	{
 		if (mesh.is_boundary(tv))
 			return false;
@@ -205,7 +251,7 @@ template <typename T>
 double meshAverageLength(T &mesh)
 {
 	double le = 0;
-	for (auto te : mesh.edges())
+	for (auto &te : mesh.edges())
 	{
 		le += mesh.calc_edge_length(te);
 	}
