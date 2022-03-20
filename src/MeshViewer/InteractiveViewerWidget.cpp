@@ -653,7 +653,7 @@ void InteractiveViewerWidget::showDebugTest()
 
 		using namespace CADMesher;
 		int i = 0;
-		for (;i<allFileName.size();)
+		for (; i < allFileName.size();)
 		{
 			auto fileName = allFileName[i];
 			dprint("\n\n\nfile index:\t", i++, "\nfileName:\t", fileName);
@@ -702,3 +702,4 @@ void InteractiveViewerWidget::showDebugTest()
 	}
 #pragma endregion
 }
+

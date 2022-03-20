@@ -515,6 +515,7 @@ namespace CADMesher
 				TopoDS_Wire awire = TopoDS::Wire(wireExp.Current());
 				vector<int> edges;
 				edges.reserve(awire.NbChildren());
+				
 				for (TopExp_Explorer edgeExp(awire, TopAbs_EDGE); edgeExp.More(); edgeExp.Next())
 				{
 					auto &aedge = TopoDS::Edge(edgeExp.Current());
