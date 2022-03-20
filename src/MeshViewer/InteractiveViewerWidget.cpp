@@ -651,7 +651,7 @@ void InteractiveViewerWidget::showDebugTest()
 		getFiles(path, allFileName);
 
 		using namespace CADMesher;
-		int i = 0;
+		int i = 355;
 		for (; i < allFileName.size();)
 		{
 			auto fileName = allFileName[i];
@@ -659,12 +659,12 @@ void InteractiveViewerWidget::showDebugTest()
 			globalmodel.clear();
 			Iso_Mesh iso_mesh(QString::fromStdString(fileName));
 
-			TriMesh &m = globalmodel.initial_trimesh;
-			initMeshStatusAndNormal(m);
-			TriangleMeshRemeshing tmr(&m);
-			tmr.run();
+			//TriMesh &m = globalmodel.initial_trimesh;
+			//initMeshStatusAndNormal(m);
+			//TriangleMeshRemeshing tmr(&m);
+			//tmr.run();
 
-			double c = 4 * std::sqrt(3);
+			/*double c = 4 * std::sqrt(3);
 			double minAngle = 4, maxAngle = 0, avgAngle = 0;
 			double minQuality = 1, avgQuality = 0;
 			for (auto tf : m.faces())
@@ -689,7 +689,7 @@ void InteractiveViewerWidget::showDebugTest()
 			if (minAngle < 0.05)
 			{
 				system("pause");
-			}
+			}*/
 		}
 	}
 }

@@ -655,7 +655,7 @@ namespace CADMesher
 					{
 						continue;
 					}
-					if (!BRep_Tool::IsClosed(aedge))
+					/*if (!BRep_Tool::IsClosed(aedge))
 					{
 						gp_Pnt p0 = BRep_Tool::Pnt(TopExp::FirstVertex(aedge));
 						gp_Pnt p1 = BRep_Tool::Pnt(TopExp::LastVertex(aedge));
@@ -663,7 +663,7 @@ namespace CADMesher
 						{
 							continue;
 						}
-					}
+					}*/
 
 					edgeshape.emplace_back(edgeSize, aedge);
 					edgeshape[edgeSize].main_face = faceSize;
@@ -676,6 +676,27 @@ namespace CADMesher
 				}
 				if (!edges.empty())
 				{
+					//在大量测试模型时，发现有少量模型出现边并非完全逆时针排序，而是有“插队”现象，特此根据边的首尾节点坐标重新排序
+					auto getLocation = [](TopoDS_Edge &aedge, bool isLast)
+					{
+						if ((aedge.Orientation() == TopAbs_FORWARD) == isLast)
+							return BRep_Tool::Pnt(TopExp::LastVertex(aedge));
+						else
+							return BRep_Tool::Pnt(TopExp::FirstVertex(aedge));
+					};
+					for (int i = 0; i < edges.size() - 1; ++i)
+					{
+						if (getLocation(edgeshape[edges[i]].edge, true).IsEqual(getLocation(edgeshape[edges[i + 1]].edge, false), vertexThreshold))
+							continue;
+						for (int j = i + 2; j < edges.size(); ++j)
+						{
+							if (getLocation(edgeshape[edges[i]].edge, true).IsEqual(getLocation(edgeshape[edges[j]].edge, false), vertexThreshold))
+							{
+								std::swap(edges[i + 1], edges[j]);
+								continue;
+							}
+						}
+					}
 					faceshape[faceSize].wires.push_back(edges);
 				}
 			}

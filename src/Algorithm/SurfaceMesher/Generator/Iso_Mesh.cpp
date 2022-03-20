@@ -11,11 +11,11 @@ namespace CADMesher
 		occ_reader = new OccReader(fileName);
 #if 1
 		occ_reader->Set_TriMesh();
-		//occ_reader->Surface_delete();
+		occ_reader->Surface_delete();
 		MergeModel();
-		/*ResetFeature();
+		ResetFeature();
 		TriangleMeshRemeshing trm(&(globalmodel.initial_trimesh));
-		trm.run();*/
+		trm.run();
 		//Write_Obj(globalmodel.initial_trimesh);
 #else 
 		occ_reader->Set_PolyMesh();
@@ -344,7 +344,7 @@ namespace CADMesher
 			}
 		}
 
-		for (auto tv : model_mesh.vertices()) {
+		/*for (auto tv : model_mesh.vertices()) {
 			if (!model_mesh.data(tv).get_vertflag())
 				continue;
 			for (auto tve : model_mesh.ve_range(tv))
@@ -352,7 +352,7 @@ namespace CADMesher
 					goto goto20210605;
 			model_mesh.data(tv).set_vertflag(false);
 		goto20210605:;
-		}
+		}*/
 		dprint("Reset Feature Done!");
 	}
 
