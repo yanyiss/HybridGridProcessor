@@ -11,14 +11,13 @@
 
 namespace CADMesher
 {
-	class polyRemeshingHelper;
 	class TriangleMeshRemeshing
 	{
 	public:
 		explicit TriangleMeshRemeshing(TriMesh *mesh_, double target_length = -1)
 			:mesh(mesh_), expected_length(target_length)
 		{
-			if (expected_length <= 0)
+			if (expected_length < 0)
 			{
 				expected_length = meshAverageLength(*mesh);
 			}
@@ -29,17 +28,12 @@ namespace CADMesher
 		TriangleMeshRemeshing(const TriangleMeshRemeshing &tmr) = delete;
 		~TriangleMeshRemeshing() { 
 			if (aabbtree) { delete aabbtree; aabbtree = nullptr; } 
-			if (polymeshInput)
-			{
-				if (prh) { delete prh; prh = nullptr; }
-				if (mesh) { delete mesh; mesh = nullptr; }
-			}
 		}
 
 	public:
 		void run();
 
-	//private:
+	private:
 		//main step
 		void split();
 		void collapse();
@@ -66,26 +60,11 @@ namespace CADMesher
 		explicit TriangleMeshRemeshing(PolyMesh *mesh_, double target_length = -1);//, polymeshInput(true)
 	private:
 		bool polymeshInput = false;
-		polyRemeshingHelper *prh = nullptr;
-#endif
-	};
-
-#ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
-	class polyRemeshingHelper
-	{
-	public:
-		polyRemeshingHelper() {};
-		~polyRemeshingHelper() {};
-
-	public:
-		void removePolygons(Mesh* m, TriMesh* tm);
-		void addPolygons(TriMesh* tm);
-
 		int boundaryNum;
+		PolyMesh *polymesh;
 	private:
-		Mesh polymesh;
-		Mesh *inputPolymesh = nullptr;
-	};
+		void assembleMesh();
 #endif
+	};
 }
 

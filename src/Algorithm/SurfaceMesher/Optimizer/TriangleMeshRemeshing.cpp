@@ -8,7 +8,7 @@ namespace CADMesher
 			mesh->data(tv).set_targetlength(expected_length);
 
 		printMeshQuality(*mesh);
-		for (int i = 0; i < 1; i++)
+		for (int i = 0; i < 20; i++)
 		{
 			dprint("\niteration times:", i + 1);
 			split();
@@ -29,7 +29,7 @@ namespace CADMesher
 #ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
 		if (polymeshInput)
 		{
-			prh->addPolygons(mesh);
+			assembleMesh();
 		}
 #endif
 	}
@@ -38,12 +38,9 @@ namespace CADMesher
 	{
 		for (auto te : mesh->edges()) {
 #ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
-			if (polymeshInput)
+			if (polymeshInput && te.v0().idx() < boundaryNum && te.v1().idx() < boundaryNum)
 			{
-				if (te.v0().idx() < prh->boundaryNum && te.v1().idx() < prh->boundaryNum)
-				{
-					continue;
-				}
+				continue;
 			}
 #endif
 			//dprint(te.idx());
@@ -78,12 +75,9 @@ namespace CADMesher
 				continue;
 			}
 #ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
-			if (polymeshInput)
+			if (polymeshInput && the.from().idx() < boundaryNum)
 			{
-				if (the.from().idx() < prh->boundaryNum)
-				{
-					continue;
-				}
+				continue;
 			}
 #endif
 			OV fromvert = mesh->from_vertex_handle(the);
@@ -352,14 +346,6 @@ namespace CADMesher
 			area += a;
 			sum += a*mesh->point(mesh->to_vertex_handle(tvoh));
 		}
-		if (area < epsilonerror)
-		{
-			for (auto tvoh : mesh->voh_range(v))
-			{
-				sum += mesh->point(mesh->to_vertex_handle(tvoh));
-			}
-			return sum / mesh->valence(v);
-		}
 		return sum / area;
 	}
 
@@ -367,159 +353,160 @@ namespace CADMesher
 	TriangleMeshRemeshing::TriangleMeshRemeshing(PolyMesh *mesh_, double target_length)
 		:expected_length(target_length), polymeshInput(true)
 	{
-		prh = new polyRemeshingHelper();
-		mesh = new TriMesh();
-		prh->removePolygons(mesh_, mesh);
+		polymesh = new Mesh();
+		polymesh->reserve(mesh_->n_vertices(), mesh_->n_edges(), mesh_->n_faces());
 
-		//polymesh = new Mesh();
-		//polymesh->reserve(mesh_->n_vertices(), mesh_->n_edges(), mesh_->n_faces());
-		//enum vertexType { tri, poly, mixed };
-		//OpenMesh::VPropHandleT<int> idMap;
-		//OpenMesh::VPropHandleT<vertexType> typeMap;
-		//mesh_->add_property(idMap);
-		//mesh_->add_property(typeMap);
-		//int i = 0, j = 0, k = 0;
-		//{
-		//	bool allTri = true, allPoly = true;
-		//	int triangleNum = 0;
-		//	for (auto &tv : mesh_->vertices())
-		//	{
-		//		allTri = allPoly = true;
-		//		for (auto &tvf : mesh_->vf_range(tv))
-		//		{
-		//			if (tvf.valence() == 3)
-		//			{
-		//				allPoly = false;
-		//				++triangleNum;
-		//			}
-		//			else
-		//			{
-		//				allTri = false;
-		//			}
-		//		}
-		//		if (allTri)
-		//		{
-		//			mesh_->property(idMap, tv) = i++;
-		//			mesh_->property(typeMap, tv) = tri;
-		//		}
-		//		else if (allPoly)
-		//		{
-		//			mesh_->property(idMap, tv) = j++;
-		//			mesh_->property(typeMap, tv) = poly;
-		//		}
-		//		else
-		//		{
-		//			mesh_->property(idMap, tv) = k++;
-		//			mesh_->property(typeMap, tv) = mixed;
-		//		}
-		//	}
-		//	triangleNum /= 3;
-		//	for (auto &tv : mesh_->vertices())
-		//	{
-		//		if (mesh_->property(typeMap, tv) != mixed)
-		//		{
-		//			mesh_->property(idMap, tv) += k;
-		//		}
-		//	}
-		//	mesh = new TriMesh();
-		//	mesh->reserve(i + k, i + k + triangleNum, triangleNum);//V+F-E=2-2g-b  =>  E~=V+F
-		//}
-		//for (auto &tv : mesh_->vertices())
-		//{
-		//	if (mesh_->property(typeMap, tv) == mixed)
-		//	{
-		//		auto &av = mesh->add_vertex(mesh_->point(tv));
-		//		auto &pav = polymesh->add_vertex(mesh_->point(tv));
-		//		if (mesh_->data(tv).get_vertflag())
-		//		{
-		//			mesh->data(av).set_vertflag(true);
-		//			polymesh->data(pav).set_vertflag(true);
-		//		}
-		//	}
-		//}
-		//for (auto &tv : mesh_->vertices())
-		//{
-		//	switch (mesh_->property(typeMap, tv))
-		//	{
-		//	case tri:
-		//	{
-		//		auto &av = mesh->add_vertex(mesh_->point(tv));
-		//		if (mesh_->data(tv).get_vertflag())
-		//		{
-		//			mesh->data(av).set_vertflag(true);
-		//		}
-		//		break;
-		//	}
-		//	case poly:
-		//	{
-		//		auto &av = polymesh->add_vertex(mesh_->point(tv));
-		//		if (mesh_->data(tv).get_vertflag())
-		//		{
-		//			polymesh->data(av).set_vertflag(true);
-		//		}
-		//		break;
-		//	}
-		//	default:
-		//		break;
-		//	}
-		//}
-		//int id[4];
-		//int ii = 0;
-		//for (auto &tf : mesh_->faces())
-		//{
-		//	ii = 0;
-		//	if (tf.valence() == 3)
-		//	{
-		//		for (auto &tfv : mesh_->fv_range(tf))
-		//		{
-		//			id[ii++] = mesh_->property(idMap, tfv);
-		//		}
-		//		mesh->add_face(mesh->vertex_handle(id[0]), mesh->vertex_handle(id[1]), mesh->vertex_handle(id[2]));
-		//	}
-		//	else
-		//	{
-		//		for (auto &tfv : mesh_->fv_range(tf))
-		//		{
-		//			id[ii++] = mesh_->property(idMap, tfv);
-		//		}
-		//		polymesh->add_face(polymesh->vertex_handle(id[0]), polymesh->vertex_handle(id[1]),
-		//			polymesh->vertex_handle(id[2]), polymesh->vertex_handle(id[3]));
-		//	}
-		//}
-		//for (auto &te : mesh_->edges())
-		//{
-		//	if (mesh_->data(te).get_edgeflag())
-		//	{
-		//		vertexType vt0 = mesh_->property(typeMap, te.v0());
-		//		vertexType vt1 = mesh_->property(typeMap, te.v1()); 
-		//		auto th = mesh_->find_halfedge(mesh_->vertex_handle(mesh_->property(idMap, te.v0())),
-		//			mesh_->vertex_handle(mesh_->property(idMap, te.v0())));
-		//		if (vt0 == tri || vt1 == tri)
-		//		{
-		//			mesh->data(mesh->edge_handle(mesh->find_halfedge(mesh->vertex_handle(mesh_->property(idMap, te.v0())),
-		//				mesh->vertex_handle(mesh_->property(idMap, te.v1()))))).set_edgeflag(true);
-		//		}
-		//		else if (vt0 == poly || vt1 == poly)
-		//		{
-		//			polymesh->data(polymesh->edge_handle(polymesh->find_halfedge(polymesh->vertex_handle(mesh_->property(idMap, te.v0())),
-		//				polymesh->vertex_handle(mesh_->property(idMap, te.v1()))))).set_edgeflag(true);
-		//		}
-		//		else
-		//		{
-		//			mesh->data(mesh->edge_handle(mesh->find_halfedge(mesh->vertex_handle(mesh_->property(idMap, te.v0())),
-		//				mesh->vertex_handle(mesh_->property(idMap, te.v1()))))).set_edgeflag(true);
-		//			polymesh->data(polymesh->edge_handle(polymesh->find_halfedge(polymesh->vertex_handle(mesh_->property(idMap, te.v0())),
-		//				polymesh->vertex_handle(mesh_->property(idMap, te.v1()))))).set_edgeflag(true);
-		//		}
-		//	}
-		//}
-		//boundaryNum = k;
-		//mesh_->remove_property(idMap);
-		//mesh_->remove_property(typeMap);
-		//*mesh_ = *polymesh;
-		//delete polymesh;
-		//polymesh = mesh_;
-		//initMeshStatusAndNormal(*mesh);
+		enum vertexType { tri, poly, mixed };
+		OpenMesh::VPropHandleT<int> idMap;
+		OpenMesh::VPropHandleT<vertexType> typeMap;
+		mesh_->add_property(idMap);
+		mesh_->add_property(typeMap);
+		int i = 0, j = 0, k = 0;
+		{
+			bool allTri = true, allPoly = true;
+			int triangleNum = 0;
+			for (auto &tv : mesh_->vertices())
+			{
+				allTri = allPoly = true;
+				for (auto &tvf : mesh_->vf_range(tv))
+				{
+					if (tvf.valence() == 3)
+					{
+						allPoly = false;
+						++triangleNum;
+					}
+					else
+					{
+						allTri = false;
+					}
+				}
+				if (allTri)
+				{
+					mesh_->property(idMap, tv) = i++;
+					mesh_->property(typeMap, tv) = tri;
+				}
+				else if (allPoly)
+				{
+					mesh_->property(idMap, tv) = j++;
+					mesh_->property(typeMap, tv) = poly;
+				}
+				else
+				{
+					mesh_->property(idMap, tv) = k++;
+					mesh_->property(typeMap, tv) = mixed;
+				}
+			}
+			triangleNum /= 3;
+			for (auto &tv : mesh_->vertices())
+			{
+				if (mesh_->property(typeMap, tv) != mixed)
+				{
+					mesh_->property(idMap, tv) += k;
+				}
+			}
+			mesh = new TriMesh();
+			mesh->reserve(i + k, i + k + triangleNum, triangleNum);//V+F-E=2-2g-b  =>  E~=V+F
+		}
+
+		for (auto &tv : mesh_->vertices())
+		{
+			if (mesh_->property(typeMap, tv) == mixed)
+			{
+				auto &av = mesh->add_vertex(mesh_->point(tv));
+				auto &pav = polymesh->add_vertex(mesh_->point(tv));
+				if (mesh_->data(tv).get_vertflag())
+				{
+					mesh->data(av).set_vertflag(true);
+					polymesh->data(pav).set_vertflag(true);
+				}
+			}
+		}
+		for (auto &tv : mesh_->vertices())
+		{
+			switch (mesh_->property(typeMap, tv))
+			{
+			case tri:
+			{
+				auto &av = mesh->add_vertex(mesh_->point(tv));
+				if (mesh_->data(tv).get_vertflag())
+				{
+					mesh->data(av).set_vertflag(true);
+				}
+				break;
+			}
+			case poly:
+			{
+				auto &av = polymesh->add_vertex(mesh_->point(tv));
+				if (mesh_->data(tv).get_vertflag())
+				{
+					polymesh->data(av).set_vertflag(true);
+				}
+				break;
+			}
+			default:
+				break;
+			}
+		}
+
+		int id[4];
+		int ii = 0;
+		for (auto &tf : mesh_->faces())
+		{
+			ii = 0;
+			if (tf.valence() == 3)
+			{
+				for (auto &tfv : mesh_->fv_range(tf))
+				{
+					id[ii++] = mesh_->property(idMap, tfv);
+				}
+				mesh->add_face(mesh->vertex_handle(id[0]), mesh->vertex_handle(id[1]), mesh->vertex_handle(id[2]));
+			}
+			else
+			{
+				for (auto &tfv : mesh_->fv_range(tf))
+				{
+					id[ii++] = mesh_->property(idMap, tfv);
+				}
+				polymesh->add_face(polymesh->vertex_handle(id[0]), polymesh->vertex_handle(id[1]),
+					polymesh->vertex_handle(id[2]), polymesh->vertex_handle(id[3]));
+			}
+		}
+		for (auto &te : mesh_->edges())
+		{
+			if (mesh_->data(te).get_edgeflag())
+			{
+				vertexType vt0 = mesh_->property(typeMap, te.v0());
+				vertexType vt1 = mesh_->property(typeMap, te.v1()); 
+				auto th = mesh_->find_halfedge(mesh_->vertex_handle(mesh_->property(idMap, te.v0())),
+					mesh_->vertex_handle(mesh_->property(idMap, te.v0())));
+				if (vt0 == tri || vt1 == tri)
+				{
+					mesh->data(mesh->edge_handle(mesh->find_halfedge(mesh->vertex_handle(mesh_->property(idMap, te.v0())),
+						mesh->vertex_handle(mesh_->property(idMap, te.v1()))))).set_edgeflag(true);
+				}
+				else if (vt0 == poly || vt1 == poly)
+				{
+					polymesh->data(polymesh->edge_handle(polymesh->find_halfedge(polymesh->vertex_handle(mesh_->property(idMap, te.v0())),
+						polymesh->vertex_handle(mesh_->property(idMap, te.v1()))))).set_edgeflag(true);
+				}
+				else
+				{
+					mesh->data(mesh->edge_handle(mesh->find_halfedge(mesh->vertex_handle(mesh_->property(idMap, te.v0())),
+						mesh->vertex_handle(mesh_->property(idMap, te.v1()))))).set_edgeflag(true);
+					polymesh->data(polymesh->edge_handle(polymesh->find_halfedge(polymesh->vertex_handle(mesh_->property(idMap, te.v0())),
+						polymesh->vertex_handle(mesh_->property(idMap, te.v1()))))).set_edgeflag(true);
+				}
+			}
+		}
+		boundaryNum = k;
+		mesh_->remove_property(idMap);
+		mesh_->remove_property(typeMap);
+
+		*mesh_ = *polymesh;
+		delete polymesh;
+		polymesh = mesh_;
+		initMeshStatusAndNormal(*mesh);
+
 		//*polymesh = Mesh(*mesh);
 
 		if (expected_length < 0)
@@ -530,7 +517,8 @@ namespace CADMesher
 		low = 0.8*expected_length;
 		aabbtree = new ClosestPointSearch::AABBTree(*mesh);
 	}
-	/*void TriangleMeshRemeshing::assembleMesh()
+
+	void TriangleMeshRemeshing::assembleMesh()
 	{
 #if 1
 		int nv = polymesh->n_vertices();
@@ -572,7 +560,9 @@ namespace CADMesher
 
 		delete mesh;
 		mesh = nullptr;
-	}*/
+	}
+#endif
+
 	/*bool TriangleMeshRemeshing::split_one_edge(Mesh::EdgeHandle& eh, OpenMesh::Vec3d& p)
 	{
 		Mesh::HalfedgeHandle heh0 = mesh->halfedge_handle(eh, 0);
@@ -631,195 +621,4 @@ namespace CADMesher
 		}
 		return true;
 	}*/
-	void polyRemeshingHelper::removePolygons(Mesh* m, TriMesh* tm)
-	{
-		inputPolymesh = m;
-		polymesh.reserve(m->n_vertices(), m->n_edges(), m->n_faces());
-
-		enum vertexType { tri, poly, mixed };
-		OpenMesh::VPropHandleT<int> idMap;
-		OpenMesh::VPropHandleT<vertexType> typeMap;
-		m->add_property(idMap);
-		m->add_property(typeMap);
-		int i = 0, j = 0, k = 0;
-		{
-			bool allTri = true, allPoly = true;
-			int triangleNum = 0;
-			for (auto &tv : m->vertices())
-			{
-				allTri = allPoly = true;
-				for (auto &tvf : m->vf_range(tv))
-				{
-					if (tvf.valence() == 3)
-					{
-						allPoly = false;
-						++triangleNum;
-					}
-					else
-					{
-						allTri = false;
-					}
-				}
-				if (allTri)
-				{
-					m->property(idMap, tv) = i++;
-					m->property(typeMap, tv) = tri;
-				}
-				else if (allPoly)
-				{
-					m->property(idMap, tv) = j++;
-					m->property(typeMap, tv) = poly;
-				}
-				else
-				{
-					m->property(idMap, tv) = k++;
-					m->property(typeMap, tv) = mixed;
-				}
-			}
-			triangleNum /= 3;
-			for (auto &tv : m->vertices())
-			{
-				if (m->property(typeMap, tv) != mixed)
-				{
-					m->property(idMap, tv) += k;
-				}
-			}
-			tm->reserve(i + k, i + k + triangleNum, triangleNum);//V+F-E=2-2g-b  =>  E~=V+F
-		}
-
-		for (auto &tv : m->vertices())
-		{
-			if (m->property(typeMap, tv) == mixed)
-			{
-				auto &av = tm->add_vertex(m->point(tv));
-				auto &pav = polymesh.add_vertex(m->point(tv));
-				if (m->data(tv).get_vertflag())
-				{
-					tm->data(av).set_vertflag(true);
-					polymesh.data(pav).set_vertflag(true);
-				}
-			}
-		}
-		for (auto &tv : m->vertices())
-		{
-			switch (m->property(typeMap, tv))
-			{
-			case tri:
-			{
-				auto &av = tm->add_vertex(m->point(tv));
-				if (m->data(tv).get_vertflag())
-				{
-					tm->data(av).set_vertflag(true);
-				}
-				break;
-			}
-			case poly:
-			{
-				auto &av = polymesh.add_vertex(m->point(tv));
-				if (m->data(tv).get_vertflag())
-				{
-					polymesh.data(av).set_vertflag(true);
-				}
-				break;
-			}
-			default:
-				break;
-			}
-		}
-
-		int id[4];
-		int ii = 0;
-		for (auto &tf : m->faces())
-		{
-			ii = 0;
-			if (tf.valence() == 3)
-			{
-				for (auto &tfv : m->fv_range(tf))
-				{
-					id[ii++] = m->property(idMap, tfv);
-				}
-				tm->add_face(tm->vertex_handle(id[0]), tm->vertex_handle(id[1]), tm->vertex_handle(id[2]));
-			}
-			else
-			{
-				for (auto &tfv : m->fv_range(tf))
-				{
-					id[ii++] = m->property(idMap, tfv);
-				}
-				polymesh.add_face(polymesh.vertex_handle(id[0]), polymesh.vertex_handle(id[1]),
-					polymesh.vertex_handle(id[2]), polymesh.vertex_handle(id[3]));
-			}
-		}
-		for (auto &te : m->edges())
-		{
-			if (m->data(te).get_edgeflag())
-			{
-				vertexType vt0 = m->property(typeMap, te.v0());
-				vertexType vt1 = m->property(typeMap, te.v1());
-				if (vt0 == tri || vt1 == tri)
-				{
-					tm->data(tm->edge_handle(tm->find_halfedge(tm->vertex_handle(m->property(idMap, te.v0())),
-						tm->vertex_handle(m->property(idMap, te.v1()))))).set_edgeflag(true);
-				}
-				else if (vt0 == poly || vt1 == poly)
-				{
-					polymesh.data(polymesh.edge_handle(polymesh.find_halfedge(polymesh.vertex_handle(m->property(idMap, te.v0())),
-						polymesh.vertex_handle(m->property(idMap, te.v1()))))).set_edgeflag(true);
-				}
-				else
-				{
-					tm->data(tm->edge_handle(tm->find_halfedge(tm->vertex_handle(m->property(idMap, te.v0())),
-						tm->vertex_handle(m->property(idMap, te.v1()))))).set_edgeflag(true);
-					polymesh.data(polymesh.edge_handle(polymesh.find_halfedge(polymesh.vertex_handle(m->property(idMap, te.v0())),
-						polymesh.vertex_handle(m->property(idMap, te.v1()))))).set_edgeflag(true);
-				}
-			}
-		}
-		boundaryNum = k;
-		m->remove_property(idMap);
-		m->remove_property(typeMap);
-		
-		initMeshStatusAndNormal(*tm);
-	}
-	
-	void polyRemeshingHelper::addPolygons(TriMesh* tm)
-	{
-		*inputPolymesh = polymesh;//*inputPolymesh 可能在栈上
-
-		int nv = inputPolymesh->n_vertices() - boundaryNum;
-		auto vItr = tm->vertices_begin();
-		for (int i = 0; i < boundaryNum; ++i, ++vItr);
-		for (; vItr != tm->vertices_end(); ++vItr)
-		{
-			auto &av = inputPolymesh->add_vertex(tm->point(*vItr));
-			if (tm->data(*vItr).get_vertflag())
-			{
-				inputPolymesh->data(av).set_vertflag(true);
-			}
-		}
-
-		int id[3];
-		int ii = 0;
-		for (auto &tf : tm->faces())
-		{
-			ii = 0;
-			for (auto &tfv : tm->fv_range(tf))
-			{
-				id[ii++] = tfv.idx() < boundaryNum ? tfv.idx() : (tfv.idx() + nv);
-			}
-			inputPolymesh->add_face(inputPolymesh->vertex_handle(id[0]), inputPolymesh->vertex_handle(id[1]), inputPolymesh->vertex_handle(id[2]));
-		}
-		for (auto &te : tm->edges())
-		{
-			if (tm->data(te).get_edgeflag())
-			{
-				inputPolymesh->data(inputPolymesh->edge_handle(inputPolymesh->find_halfedge(
-					inputPolymesh->vertex_handle(te.v0().idx() < boundaryNum ? te.v0().idx() : te.v0().idx() + nv),
-					inputPolymesh->vertex_handle(te.v1().idx() < boundaryNum ? te.v1().idx() : te.v1().idx() + nv)))).set_edgeflag(true);
-			}
-		}
-
-		initMeshStatusAndNormal(*inputPolymesh);
-	}
 }
-#endif
