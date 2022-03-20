@@ -35,6 +35,10 @@ namespace CADMesher
 
 			ComputeFaceAndEdge();
 			Discrete_Edge();
+			Face_type();
+			Trim_Edge();
+			C0_Feature();
+			curvature_feature();
 		}
 		OccReader(const OccReader& or) = delete;
 		~OccReader() {
@@ -53,6 +57,11 @@ namespace CADMesher
 
 		void ComputeFaceAndEdge();
 		void Discrete_Edge();
+		void Face_type();
+		void Trim_Edge();
+		void C0_Feature();
+		void curvature_feature();
+		void Surface_delete();
 		void Set_TriMesh();
 		void Set_PolyMesh();
 		Matrix2Xd Subdomain(Matrix2Xd &all_pnts, vector<Matrix2Xi> &bnd, int &pointsnumber);
