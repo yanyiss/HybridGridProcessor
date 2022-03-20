@@ -535,7 +535,8 @@ void MeshViewerWidget::draw_scene_mesh(int drawmode)
 		glDisable(GL_LIGHTING);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		draw_mesh_wireframe();
-		draw_feature();
+		//draw_feature();
+		draw_feature1();
 		//draw_meshpointset();
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		break;
@@ -918,14 +919,19 @@ void MeshViewerWidget::draw_feature()
 #include "../src/Algorithm/SurfaceMesher/Optimizer/TriangleMeshRemeshing.h"
 void MeshViewerWidget::draw_IsotropicMesh()
 {
-#if 1
 	if (ifUpdateMesh)
 	{
+//#if 0
 		timeRecorder tr;
 		CADMesher::TriangleMeshRemeshing *tmr = new CADMesher::TriangleMeshRemeshing(&mesh);
 		tmr->run();
 		tr.out("Isotropic Remesing Time:");
-
+//#else
+//		initMeshStatusAndNormal(CADMesher::globalmodel.initial_trimesh);
+//		CADMesher::TriangleMeshRemeshing *tmr = new CADMesher::TriangleMeshRemeshing(&CADMesher::globalmodel.initial_trimesh);
+//		tmr->run();
+//		mesh = Mesh(CADMesher::globalmodel.initial_trimesh);
+//#endif
 		delete tmr;
 		ifUpdateMesh = false; 
 		
@@ -936,36 +942,7 @@ void MeshViewerWidget::draw_IsotropicMesh()
 		else
 			dprint("Save isotropic mesh failed");
 	}
-#else
-	static CADMesher::TriangleMeshRemeshing *tmr = new CADMesher::TriangleMeshRemeshing(&mesh);
-	if (ifUpdateMesh)
-	{
-		double t = meshAverageLength(mesh);
-		for (auto tv : mesh.vertices())
-			mesh.data(tv).set_targetlength(t);
-		ifUpdateMesh = false;
-	}
-	static int map = 0;
-	switch (map%4)
-	{
-	case 0:
-		tmr->split();
-		break;
-	case 1:
-		tmr->collapse();
-		break;
-	case 2:
-		tmr->equalize_valence();
-		break;
-	case 3:
-		tmr->tangential_relaxation();
-		break;
-	default:
-		break;
-	}
-	++map;
-	updateGL();
-#endif
+
 }
 
 #include "../src/Algorithm/SurfaceMesher/Optimizer/AnisotropicMeshRemeshing.h"
@@ -973,17 +950,14 @@ void MeshViewerWidget::draw_AnisotropicMesh()
 {
 	if (ifUpdateMesh)
 	{
-		timeRecorder tr;
+		/*timeRecorder tr;
 		CADMesher::AnisotropicMeshRemeshing *amr = new CADMesher::AnisotropicMeshRemeshing();
 		amr->SetMesh(&mesh);
-		amr->load_ref_mesh();
+		amr->load_ref_mesh(&mesh);
 		double tl = amr->get_ref_mesh_ave_anisotropic_edge_length();
 		dprint("anisotropic edge length:", tl);
 		amr->do_remeshing(tl, 1.5);
 		tr.out("Anistropic Remeshing Time:");
-
-		delete amr;
-		ifUpdateMesh = false;
 
 		std::string cfn = CADFileName.toLatin1().data();
 		bool if_saveOK = OpenMesh::IO::write_mesh(mesh,
@@ -991,10 +965,42 @@ void MeshViewerWidget::draw_AnisotropicMesh()
 		if (if_saveOK)
 			dprint("The isotropic mesh has been saved in \"Anisotropic Mesh\" folder");
 		else
-			dprint("Save anisotropic mesh failed");
+			dprint("Save anisotropic mesh failed");*/
 	}
 }
 
+//<<<<<<< john
+void MeshViewerWidget::draw_feature1()
+{	
+	//»­C0ÌØÕ÷
+	glLineWidth(5);
+	glColor3d(1.0, 0.0, 0.0);
+	glBegin(GL_LINES);
+	for (auto &te : mesh.edges())
+	{
+		if (mesh.data(te).flag1)
+		{
+			glVertex3dv(mesh.point(te.v0()).data());
+			glVertex3dv(mesh.point(te.v1()).data());
+		}
+	}
+	glEnd();
+
+	//»­ÇúÂÊÌØÕ÷
+	glLineWidth(5);
+	glColor3d(0.0, 1.0, 0.0);
+	glBegin(GL_LINES);
+	for (auto &te : mesh.edges())
+	{
+		if (mesh.data(te).flag2)
+		{
+			glVertex3dv(mesh.point(te.v0()).data());
+			glVertex3dv(mesh.point(te.v1()).data());
+		}
+	}
+	glEnd();
+}
+//=======
 #include "../src/Algorithm/CheckBoard/CheckBoardGenerator.h"
 
 //static bool flag = true;

@@ -635,14 +635,11 @@ void InteractiveViewerWidget::showAnisotropicMesh()
 
 }
 
-#include "..\src\Toolbox\filesOperator.h"
-#include "..\src\Algorithm\SurfaceMesher\Generator\Iso_Mesh.h"
-#include "..\src\Algorithm\SurfaceMesher\Optimizer\TriangleMeshRemeshing.h"
 void InteractiveViewerWidget::showDebugTest()
 {
 #pragma region step files test
 	{
-		//²âÊÔstepÎÄ¼þÉú³ÉÐ§¹û
+		//ï¿½ï¿½ï¿½ï¿½stepï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½Ð§ï¿½ï¿½
 		std::vector<std::string> allFileName;
 #if 0
 		std::string path = "..\\model\\CAD\\step files lib";
@@ -693,13 +690,5 @@ void InteractiveViewerWidget::showDebugTest()
 			}
 		}
 
-		//MeshViewer->SetCADFileName(fileName);
-		//CADMesher::globalmodel.clear();
-		//CADMesher::Iso_Mesh iso_mesh(fileName);
-		//open_mesh_gui(Mesh(CADMesher::globalmodel.initial_trimesh));
-
-
-	}
-#pragma endregion
 }
 

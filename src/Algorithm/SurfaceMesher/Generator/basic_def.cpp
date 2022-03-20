@@ -2,17 +2,7 @@
 #include "basic_def.h"
 
 #include "..\src\Dependency\BSpline\TestClosestPoint.h"
-#include <BRep_Tool.hxx>
-#include <Geom_Plane.hxx>
-#include <Geom_CylindricalSurface.hxx>
-#include <Geom_ConicalSurface.hxx>
-#include <Geom_SphericalSurface.hxx>
-#include <Geom_ToroidalSurface.hxx>
-#include <Geom_BezierSurface.hxx>
-#include <Geom_BSplineSurface.hxx>
-#include <Geom_SurfaceOfRevolution.hxx>
-#include <Geom_SurfaceOfLinearExtrusion.hxx>
-#include <Geom_OffsetSurface.hxx>
+
 #include <ctime>
 
 namespace CADMesher
