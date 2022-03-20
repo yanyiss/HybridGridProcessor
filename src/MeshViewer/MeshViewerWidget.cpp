@@ -918,6 +918,7 @@ void MeshViewerWidget::draw_feature()
 #include "../src/Algorithm/SurfaceMesher/Optimizer/TriangleMeshRemeshing.h"
 void MeshViewerWidget::draw_IsotropicMesh()
 {
+#if 1
 	if (ifUpdateMesh)
 	{
 		timeRecorder tr;
@@ -935,6 +936,36 @@ void MeshViewerWidget::draw_IsotropicMesh()
 		else
 			dprint("Save isotropic mesh failed");
 	}
+#else
+	static CADMesher::TriangleMeshRemeshing *tmr = new CADMesher::TriangleMeshRemeshing(&mesh);
+	if (ifUpdateMesh)
+	{
+		double t = meshAverageLength(mesh);
+		for (auto tv : mesh.vertices())
+			mesh.data(tv).set_targetlength(t);
+		ifUpdateMesh = false;
+	}
+	static int map = 0;
+	switch (map%4)
+	{
+	case 0:
+		tmr->split();
+		break;
+	case 1:
+		tmr->collapse();
+		break;
+	case 2:
+		tmr->equalize_valence();
+		break;
+	case 3:
+		tmr->tangential_relaxation();
+		break;
+	default:
+		break;
+	}
+	++map;
+	updateGL();
+#endif
 }
 
 #include "../src/Algorithm/SurfaceMesher/Optimizer/AnisotropicMeshRemeshing.h"

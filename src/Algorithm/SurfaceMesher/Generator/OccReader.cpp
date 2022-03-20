@@ -10,9 +10,11 @@ namespace CADMesher
 		Surface_TriMeshes.resize(faceshape.size());
 		for (int i = 0; i < faceshape.size(); i++)
 		{
-			//dprint(i);
-			/*if (i != 61)
-				continue;*/
+#if 0
+			dprint(i);
+			if (i != 197)
+				continue;
+#endif
 			TriMesh &aMesh = Surface_TriMeshes[i];
 			auto &wires = faceshape[i].wires;
 			if (wires.empty())
@@ -68,7 +70,7 @@ namespace CADMesher
 			int s = 0;
 			double if_reverse = aface.Orientation() ? -1.0 : 1.0;
 
-			double ra = x_step / y_step * if_reverse;
+			double ra = y_step < epsilonerror ? 1 : x_step / y_step * if_reverse;
 
 			for (int j = 0; j < wires.size(); j++)
 			{
@@ -79,16 +81,34 @@ namespace CADMesher
 					int cols = boundpos.cols() - 1;
 					all_pnts.block(0, s, 2, cols) = boundpos.block(0, 0, 2, cols);
 					s += cols;
-					/*dprint("edge: ", k);
+#if 0
+					dprint("edge: ", k);
 					for (int ss = 0; ss < boundpos.cols(); ss++)
 					{
 						dprint(boundpos(0, ss), boundpos(1, ss));
-					}*/
+					}
+#endif
 				}
 				pointsnumber = s;
 			}
 
 			all_pnts.block(1, 0, 1, all_pnts.cols()) *= ra;
+
+#if 0
+				for (int ss = 0; ss < all_pnts.cols(); ++ss)
+				{
+					dprint(all_pnts(0, ss), all_pnts(1, ss));
+				}
+			dprint("hfdsj");
+			for (int ss = 0; ss < bnd.size(); ss++)
+			{
+				dprint("ss", ss);
+				for (int tt = 0; tt < bnd[ss].cols(); tt++)
+				{
+					dprint(bnd[ss](0, tt), bnd[ss](1, tt));
+				}
+		}
+#endif
 			triangulate(all_pnts, bnd, sqrt(3) * x_step * x_step / 4 * mu, aMesh);
 #if 1
 			for (auto tv : aMesh.vertices())
@@ -553,7 +573,7 @@ namespace CADMesher
 		auto edgeEnd = edgeshape.end();
 		for (auto aedge = edgeshape.begin(); aedge != edgeEnd; ++aedge)
 		{
-			if (aedge->secondary_face = -1)
+			if (aedge->secondary_face == -1)
 			{
 				for (auto redge = aedge + 1; redge != edgeEnd; ++redge)
 				{

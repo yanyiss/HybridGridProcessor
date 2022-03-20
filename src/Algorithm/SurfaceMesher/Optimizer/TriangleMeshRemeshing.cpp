@@ -8,7 +8,7 @@ namespace CADMesher
 			mesh->data(tv).set_targetlength(expected_length);
 
 		printMeshQuality(*mesh);
-		for (int i = 0; i < 20; i++)
+		for (int i = 0; i < 1; i++)
 		{
 			dprint("\niteration times:", i + 1);
 			split();
@@ -351,6 +351,14 @@ namespace CADMesher
 			double a = mesh->calc_face_area(mesh->face_handle(tvoh)) + mesh->calc_face_area(mesh->opposite_face_handle(tvoh));
 			area += a;
 			sum += a*mesh->point(mesh->to_vertex_handle(tvoh));
+		}
+		if (area < epsilonerror)
+		{
+			for (auto tvoh : mesh->voh_range(v))
+			{
+				sum += mesh->point(mesh->to_vertex_handle(tvoh));
+			}
+			return sum / mesh->valence(v);
 		}
 		return sum / area;
 	}
