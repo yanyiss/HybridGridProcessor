@@ -1,6 +1,101 @@
 #include "MeshDefinition.h"
 #include <OpenMesh/Core/IO/MeshIO.hh>
-#include <Eigen/Dense>
+
+double calc_mesh_ave_edge_length(Mesh* mesh_)
+{
+	double ave_len = 0.0; int ne = mesh_->n_edges();
+	for(Mesh::EdgeIter e_it = mesh_->edges_begin(); e_it != mesh_->edges_end(); ++e_it)
+	{
+		Mesh::HalfedgeHandle heh = mesh_->halfedge_handle(e_it, 0);
+		ave_len += (mesh_->point(mesh_->from_vertex_handle(heh)) - mesh_->point(mesh_->to_vertex_handle(heh)) ).norm();
+	}
+
+	ave_len /= ne; double s = 1.0 / ave_len;
+
+	/*for(Mesh::VertexIter v_it = mesh_->vertices_begin(); v_it != mesh_->vertices_end(); ++v_it)
+	{
+		OpenMesh::Vec3d p = mesh_->point(v_it);
+		mesh_->set_point(v_it, p*s);
+	}*/
+
+	return (ave_len);
+}
+
+bool is_flip_ok_openmesh(Mesh::EdgeHandle& eh, Mesh& mesh_)
+{
+	// boundary edges cannot be flipped
+	if ( mesh_.is_boundary(eh) ) return false;
+
+	Mesh::HalfedgeHandle hh = mesh_.halfedge_handle(eh, 0);
+	Mesh::HalfedgeHandle oh = mesh_.halfedge_handle(eh, 1);
+
+	// check if the flipped edge is already present
+	// in the mesh
+
+	Mesh::VertexHandle ah = mesh_.to_vertex_handle(mesh_.next_halfedge_handle(hh));
+	Mesh::VertexHandle bh = mesh_.to_vertex_handle(mesh_.next_halfedge_handle(oh));
+
+	if(ah == bh)   // this is generally a bad sign !!!
+		return false;
+
+	for (Mesh::ConstVertexVertexIter vvi = mesh_.vv_iter(ah); vvi; ++vvi)
+		if( vvi.handle() == bh )
+			return false;
+
+	return true;
+}
+
+bool flip_openmesh(Mesh::EdgeHandle& eh, Mesh& mesh_)
+{
+	// CAUTION : Flipping a halfedge may result in
+	// a non-manifold mesh, hence check for yourself
+	// whether this operation is allowed or not!
+	if( !is_flip_ok_openmesh(eh, mesh_) )
+		return false;//let's make it sure it is actually checked
+	//assert( is_flip_ok_openmesh(eh, mesh_ ) );
+
+	Mesh::HalfedgeHandle a0 = mesh_.halfedge_handle(eh, 0);
+	Mesh::HalfedgeHandle b0 = mesh_.halfedge_handle(eh, 1);
+
+	Mesh::HalfedgeHandle a1 = mesh_.next_halfedge_handle(a0);
+	Mesh::HalfedgeHandle a2 = mesh_.next_halfedge_handle(a1);
+
+	Mesh::HalfedgeHandle b1 = mesh_.next_halfedge_handle(b0);
+	Mesh::HalfedgeHandle b2 = mesh_.next_halfedge_handle(b1);
+
+	Mesh::VertexHandle   va0 = mesh_.to_vertex_handle(a0);
+	Mesh::VertexHandle   va1 = mesh_.to_vertex_handle(a1);
+
+	Mesh::VertexHandle   vb0 = mesh_.to_vertex_handle(b0);
+	Mesh::VertexHandle   vb1 = mesh_.to_vertex_handle(b1);
+
+	Mesh::FaceHandle     fa  = mesh_.face_handle(a0);
+	Mesh::FaceHandle     fb  = mesh_.face_handle(b0);
+
+	mesh_.set_vertex_handle(a0, va1);
+	mesh_.set_vertex_handle(b0, vb1);
+
+	mesh_.set_next_halfedge_handle(a0, a2);
+	mesh_.set_next_halfedge_handle(a2, b1);
+	mesh_.set_next_halfedge_handle(b1, a0);
+
+	mesh_.set_next_halfedge_handle(b0, b2);
+	mesh_.set_next_halfedge_handle(b2, a1);
+	mesh_.set_next_halfedge_handle(a1, b0);
+
+	mesh_.set_face_handle(a1, fb);
+	mesh_.set_face_handle(b1, fa);
+
+	mesh_.set_halfedge_handle(fa, a0);
+	mesh_.set_halfedge_handle(fb, b0);
+
+	if(mesh_.halfedge_handle(va0) == b0)
+		mesh_.set_halfedge_handle(va0, a1);
+	if(mesh_.halfedge_handle(vb0) == a0)
+		mesh_.set_halfedge_handle(vb0, b1);
+
+	return true;
+}
 
 bool check_in_triangle_face(const std::vector<OpenMesh::Vec3d>& tri, const OpenMesh::Vec3d& p)
 {
@@ -23,10 +118,10 @@ bool check_in_triangle_face(const std::vector<OpenMesh::Vec3d>& tri, const OpenM
 
 bool baryCoord( const OpenMesh::Vec3d& _p, const OpenMesh::Vec3d& _u, const OpenMesh::Vec3d& _v, const OpenMesh::Vec3d& _w, OpenMesh::Vec3d&_result )
 {
-	TriMesh::Point  vu = _v - _u, wu = _w - _u, pu = _p - _u;
+	Mesh::Point  vu = _v - _u, wu = _w - _u, pu = _p - _u;
 
 	// find largest absolute coodinate of normal
-	TriMesh::Scalar nx = vu[1]*wu[2] - vu[2]*wu[1],
+	Mesh::Scalar nx = vu[1]*wu[2] - vu[2]*wu[1],
 		ny = vu[2]*wu[0] - vu[0]*wu[2],
 		nz = vu[0]*wu[1] - vu[1]*wu[0],
 		ax = fabs(nx),
@@ -94,15 +189,15 @@ bool baryCoord( const OpenMesh::Vec3d& _p, const OpenMesh::Vec3d& _u, const Open
 	return true;
 }
 
-void compute_point_area(TriMesh* mesh_, std::vector<std::map<int,double>>& cornerArea, std::vector<double>& pointArea, bool use_np)
+void compute_point_area(Mesh* mesh_, std::vector<std::map<int,double>>& cornerArea, std::vector<double>& pointArea, bool use_np)
 {
 	pointArea.resize(mesh_->n_vertices(),0.0);
 	cornerArea.resize(mesh_->n_faces());
 
-	TriMesh::FaceIter f_it = mesh_->faces_begin();
+	Mesh::FaceIter f_it = mesh_->faces_begin();
 	int temp_face_index = 0;
-	TriMesh::FaceHalfedgeIter fhe_it;
-	TriMesh::Point e[3];
+	Mesh::FaceHalfedgeIter fhe_it;
+	Mesh::Point e[3];
 	int v[3];
 
 	//#pragma omp parallel for
@@ -247,7 +342,7 @@ void diagonalize_curv(const OpenMesh::Vec3d &old_u, const OpenMesh::Vec3d &old_v
 	pdir2 = OpenMesh::cross( new_norm , pdir1);
 }
 
-void compute_principal_curvature(TriMesh* mesh_,
+void compute_principal_curvature(Mesh* mesh_, 
 								 std::vector<double>& K1, std::vector<double>& K2, 
 								 std::vector<OpenMesh::Vec3d>& dir1,std::vector<OpenMesh::Vec3d>& dir2)
 {
@@ -259,11 +354,11 @@ void compute_principal_curvature(TriMesh* mesh_,
 	}
 	int nv = mesh_->n_vertices();
 	int nf = mesh_->n_faces();
-	TriMesh::FaceIter f_it;
+	Mesh::FaceIter f_it;
 
 	//compute vertex normal
 	std::vector<OpenMesh::Vec3d> vertex_normal(nv,OpenMesh::Vec3d(0.0,0.0,0.0));
-	TriMesh::FaceVertexIter fv_it;
+	Mesh::FaceVertexIter fv_it;
 	OpenMesh::Vec3d v[3];
 	int v_index[3];
 	for(f_it = mesh_->faces_begin();f_it != mesh_->faces_end(); ++f_it)
@@ -294,7 +389,7 @@ void compute_principal_curvature(TriMesh* mesh_,
 	dir2.clear(); dir2.resize(nv,OpenMesh::Vec3d(0,0,0));
 	std::vector<double> k12(nv,0.0);
 
-	TriMesh::FaceHalfedgeIter fhe_it;
+	Mesh::FaceHalfedgeIter fhe_it;
 	for(f_it = mesh_->faces_begin();f_it != mesh_->faces_end(); ++f_it)
 	{
 		fhe_it = mesh_->fh_iter(f_it);
@@ -306,7 +401,7 @@ void compute_principal_curvature(TriMesh* mesh_,
 		}
 	}
 
-	TriMesh::VertexIter v_it;
+	Mesh::VertexIter v_it;
 	int vertex_id; OpenMesh::Vec3d vn;
 	for(v_it = mesh_->vertices_begin();v_it != mesh_->vertices_end(); ++v_it)
 	{
@@ -325,7 +420,7 @@ void compute_principal_curvature(TriMesh* mesh_,
 	compute_point_area(mesh_, cornerArea, pointArea);
 
 	OpenMesh::Vec3d ev[3]; 
-	TriMesh::HalfedgeHandle heh; TriMesh::HalfedgeHandle temp_heh;
+	Mesh::HalfedgeHandle heh; Mesh::HalfedgeHandle temp_heh; 
 	OpenMesh::Vec3d t; OpenMesh::Vec3d n;OpenMesh::Vec3d b;
 	for(f_it = mesh_->faces_begin();f_it != mesh_->faces_end(); ++f_it)
 	{
@@ -407,7 +502,7 @@ void compute_principal_curvature(TriMesh* mesh_,
 
 #pragma region functions by yanyisheshou at GCL
 #include "..\src\Toolbox\dprinter\dprint.h"
-double meshMinAngle(const TriMesh &mesh)
+double meshMinAngle(TriMesh &mesh)
 {
 	double angle = 4;
 	for (auto th : mesh.halfedges())
@@ -418,7 +513,7 @@ double meshMinAngle(const TriMesh &mesh)
 }
 
 //the definition of single triangle quality in trimesh is from paper: Automatic and High-quality Surface Mesh Generation for CAD Models(Section 5.1)
-void printMeshQuality(const TriMesh &mesh)
+void printMeshQuality(TriMesh &mesh)
 {
 	double c = 4 * std::sqrt(3);
 	double minAngle = 4, maxAngle = 0, avgAngle = 0;

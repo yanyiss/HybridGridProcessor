@@ -60,7 +60,6 @@ public:
 		int n = controlpoints[0].size() - 1;
 		int ru = FindSpan(m, u_degree, u, u_knots);
 		int rv = FindSpan(n, v_degree, v, v_knots);
-
 		std::vector<std::vector<T>> d(u_degree + 1, std::vector<T>(v_degree + 1));
 		for (int i = 0; i <= u_degree; i++)	// P_(i,j)^0
 		{
@@ -69,7 +68,7 @@ public:
 				d[i][j] = controlpoints[i + ru - u_degree][j + rv - v_degree];
 			}
 		}
-
+		auto pq = d[u_degree][v_degree];
 		for (int j = 0; j <= v_degree; j++)	// DeBoor in u direction
 		{
 			for (int k = 1; k <= u_degree; k++)
@@ -104,7 +103,6 @@ public:
 		if (v < v_knots.front() || v > v_knots.back()) return T();
 		int m = controlpoints.size() - 1;
 		int n = controlpoints[0].size() - 1;
-
 		std::vector<std::vector<T>> d(controlpoints);
 		for (int a = 1; a <= k; a++)
 		{

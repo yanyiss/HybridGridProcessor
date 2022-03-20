@@ -74,6 +74,7 @@ private:
 	void draw_AnisotropicMesh();//see definition of diagonal mesh in paper: Checkerboard Patterns with Black Rectangles
 
 	void draw_feature();
+	void draw_feature1();
 	std::string file;
 protected:
 	QString CADFileName;

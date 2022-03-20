@@ -9,7 +9,7 @@ std::ostream& operator << (std::ostream& os, const Eigen::MatrixXd &m);
 
 template <class T>
 std::ostream& operator << (std::ostream& os, const std::vector<T> &v) {
-	for (auto &itr : v) os << itr << " ";
+	for (auto itr : v) os << itr << " ";
 	return os;
 }
 

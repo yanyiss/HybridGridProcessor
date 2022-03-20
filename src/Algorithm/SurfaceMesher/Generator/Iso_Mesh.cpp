@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include<algorithm>
+#include "..\src\Algorithm\SurfaceMesher\Optimizer\TriangleMeshRemeshing.h"
 
 namespace CADMesher
 {
@@ -10,14 +11,20 @@ namespace CADMesher
 		occ_reader = new OccReader(fileName);
 #if 1
 		occ_reader->Set_TriMesh();
+		occ_reader->Surface_delete();
 		MergeModel();
 		ResetFeature();
-		Write_Obj(globalmodel.initial_trimesh);
+		TriangleMeshRemeshing trm(&(globalmodel.initial_trimesh));
+		trm.run();
+		//Write_Obj(globalmodel.initial_trimesh);
 #else 
 		occ_reader->Set_PolyMesh();
+		occ_reader->Surface_delete();
 		MergeModel();
 		ResetFeature1();
-		Write_Obj(globalmodel.initial_polymesh);
+		TriangleMeshRemeshing trm(&(globalmodel.initial_polymesh));
+		trm.run();
+		//Write_Obj(globalmodel.initial_polymesh);
 #endif
 	}
 
@@ -83,7 +90,6 @@ namespace CADMesher
 			}
 		}
 		dprint("Split Edges Done!");
-
 		vector<unsigned> &triangle_surface_index = globalmodel.triangle_surface_index;
 		int pointsnum = 0;
 		for (auto &frac_mesh : surface_meshes)
@@ -92,15 +98,19 @@ namespace CADMesher
 		}
 		triangle_surface_index.reserve(pointsnum);
 		pointsnum = 0;
+		int id = 0;
 		for (int i = 0; i < surface_meshes.size(); i++)
 		{
 			auto &frac_mesh = surface_meshes[i];
 			vector<Mesh::VertexHandle> vhandle;
+			Mesh::VertexHandle vh;
 			vhandle.reserve(frac_mesh.n_vertices());
 			for (auto tv : frac_mesh.vertices())
 			{
 				auto v = frac_mesh.point(tv);
-				vhandle.push_back(model_mesh.add_vertex(Mesh::Point(v[0], v[1], v[2])));
+				vh = model_mesh.add_vertex(Mesh::Point(v[0], v[1], v[2]));
+				//model_mesh.data(vh).curvatureflag = frac_mesh.data(tv).curvatureflag;
+				vhandle.push_back(vh);
 			}
 			for (auto tf : frac_mesh.faces())
 			{
@@ -114,6 +124,14 @@ namespace CADMesher
 				model_mesh.add_face(pos);
 				triangle_surface_index.push_back(i);
 			}
+
+			for (int j = 0; j < frac_mesh.n_edges(); j++)
+			{
+				model_mesh.data(model_mesh.edge_handle(j + id)).flag1 = frac_mesh.data(frac_mesh.edge_handle(j)).flag1;
+				model_mesh.data(model_mesh.edge_handle(j + id)).flag2 = frac_mesh.data(frac_mesh.edge_handle(j)).flag2;
+			}
+			id = model_mesh.n_edges();
+
 			auto &wires = faceshape[i].wires;
 			for (auto &edges : wires)
 			{
@@ -137,18 +155,16 @@ namespace CADMesher
 			else
 				model_mesh.data(te).set_edgeflag(false);
 		}
-		for (auto tv : model_mesh.vertices())
-		{
-			if (model_mesh.is_boundary(tv))
-				model_mesh.data(tv).set_vertflag(true);
-			else
-				model_mesh.data(tv).set_vertflag(false);
-		}
-
+		//for (auto tv : model_mesh.vertices())
+		//{
+		//	if (model_mesh.is_boundary(tv))
+		//		model_mesh.data(tv).set_vertflag(true);
+		//	else
+		//		model_mesh.data(tv).set_vertflag(false);
+		//}
 #if 1
 		for (int i = 0; i < edgeshape.size(); i++)
 		{
-			//dprint(i);
 			auto &edge0 = edgeshape[i];
 			if (edge0.if_merged || edge0.reversed_edge == -1) continue;
 			auto &edge1 = edgeshape[edgeshape[i].reversed_edge];
@@ -180,24 +196,45 @@ namespace CADMesher
 			}
 			if (m0 != n1)
 			{
-				vector<OV> fv;
+				vector<OV> fv, fv1, fv2;
 				for (auto fe : model_mesh.voh_range(model_mesh.vertex_handle(m0))) {
 					if (model_mesh.data(model_mesh.edge_handle(fe)).get_edgeflag())
 						fv.push_back(model_mesh.to_vertex_handle(fe));
+					if (model_mesh.data(model_mesh.edge_handle(fe)).flag1)
+						fv1.push_back(model_mesh.to_vertex_handle(fe));
+					if (model_mesh.data(model_mesh.edge_handle(fe)).flag2)
+						fv2.push_back(model_mesh.to_vertex_handle(fe));
 				}
 				model_mesh.collapse(model_mesh.find_halfedge(model_mesh.vertex_handle(m0), model_mesh.vertex_handle(n1)));
 				for (OV v : fv) {
 					auto fe = model_mesh.find_halfedge(v, model_mesh.vertex_handle(n1));
 					if (fe.is_valid())
 						model_mesh.data(model_mesh.edge_handle(fe)).set_edgeflag(true);
+						
+				}
+				for (OV v : fv1) {
+					auto fe = model_mesh.find_halfedge(v, model_mesh.vertex_handle(n1));
+					if (fe.is_valid())
+						model_mesh.data(model_mesh.edge_handle(fe)).flag1 = true;
+
+				}
+				for (OV v : fv2) {
+					auto fe = model_mesh.find_halfedge(v, model_mesh.vertex_handle(n1));
+					if (fe.is_valid())
+						model_mesh.data(model_mesh.edge_handle(fe)).flag2 = true;
+
 				}
 			}
 			if (m1 != n0)
 			{
-				vector<OV> fv;
+				vector<OV> fv, fv1, fv2;
 				for (auto fe : model_mesh.voh_range(model_mesh.vertex_handle(m1))) {
 					if (model_mesh.data(model_mesh.edge_handle(fe)).get_edgeflag())
 						fv.push_back(model_mesh.to_vertex_handle(fe));
+					if (model_mesh.data(model_mesh.edge_handle(fe)).flag1)
+						fv1.push_back(model_mesh.to_vertex_handle(fe));
+					if (model_mesh.data(model_mesh.edge_handle(fe)).flag2)
+						fv2.push_back(model_mesh.to_vertex_handle(fe));
 				}
 				model_mesh.collapse(model_mesh.find_halfedge(model_mesh.vertex_handle(m1), model_mesh.vertex_handle(n0)));
 				for (OV v : fv) {
@@ -205,19 +242,43 @@ namespace CADMesher
 					if (fe.is_valid())
 						model_mesh.data(model_mesh.edge_handle(fe)).set_edgeflag(true);
 				}
+				for (OV v : fv1) {
+					auto fe = model_mesh.find_halfedge(v, model_mesh.vertex_handle(n0));
+					if (fe.is_valid())
+						model_mesh.data(model_mesh.edge_handle(fe)).flag1 = true;
+				}
+				for (OV v : fv2) {
+					auto fe = model_mesh.find_halfedge(v, model_mesh.vertex_handle(n0));
+					if (fe.is_valid())
+						model_mesh.data(model_mesh.edge_handle(fe)).flag2 = true;
+				}
 			}
 			for (int j = 1; j < length - 1; j++)
 			{
-				vector<OV> fv;
+				vector<OV> fv, fv1, fv2;
 				for (auto fe : model_mesh.voh_range(model_mesh.vertex_handle(m0 + j))) {
 					if (model_mesh.data(model_mesh.edge_handle(fe)).get_edgeflag())
 						fv.push_back(model_mesh.to_vertex_handle(fe));
+					if (model_mesh.data(model_mesh.edge_handle(fe)).flag1)
+						fv1.push_back(model_mesh.to_vertex_handle(fe));
+					if (model_mesh.data(model_mesh.edge_handle(fe)).flag2)
+						fv2.push_back(model_mesh.to_vertex_handle(fe));
 				}
 				model_mesh.collapse(model_mesh.find_halfedge(model_mesh.vertex_handle(m0 + j), model_mesh.vertex_handle(m1 + length - j - 1)));
 				for (OV v : fv) {
 					auto fe = model_mesh.find_halfedge(v, model_mesh.vertex_handle(m1 + length - j - 1));
 					if (fe.is_valid())
 						model_mesh.data(model_mesh.edge_handle(fe)).set_edgeflag(true);
+				}
+				for (OV v : fv1) {
+					auto fe = model_mesh.find_halfedge(v, model_mesh.vertex_handle(m1 + length - j - 1));
+					if (fe.is_valid())
+						model_mesh.data(model_mesh.edge_handle(fe)).flag1 = true;
+				}
+				for (OV v : fv2) {
+					auto fe = model_mesh.find_halfedge(v, model_mesh.vertex_handle(m1 + length - j - 1));
+					if (fe.is_valid())
+						model_mesh.data(model_mesh.edge_handle(fe)).flag2 = true;
 				}
 			}
 		}
@@ -254,6 +315,14 @@ namespace CADMesher
 	void Iso_Mesh::ResetFeature()
 	{
 		TriMesh &model_mesh = globalmodel.initial_trimesh;
+
+#if 1  //����ʽ��������
+		for (auto te : model_mesh.edges())
+		{
+			if (!model_mesh.data(te).get_edgeflag()) continue;
+			if (!model_mesh.data(te).flag1 && !model_mesh.is_boundary(te)) model_mesh.data(te).set_edgeflag(false);
+		}
+#else   //����ϼ�������
 		for (auto te : model_mesh.edges()) {
 			if (!model_mesh.data(te).get_edgeflag()) continue;
 			auto n0 = model_mesh.calc_face_normal(model_mesh.face_handle(te.h0()));
@@ -265,6 +334,16 @@ namespace CADMesher
 				model_mesh.data(te.v1()).set_vertflag(true);
 			}
 		}
+#endif
+		for (auto tv : model_mesh.vertices())
+		{
+			for (auto tve : model_mesh.ve_range(tv))
+			{
+				if (model_mesh.data(tve).get_edgeflag() || model_mesh.data(tve).flag2)
+					model_mesh.data(tv).set_vertflag(true);
+			}
+		}
+
 		for (auto tv : model_mesh.vertices()) {
 			if (!model_mesh.data(tv).get_vertflag())
 				continue;
@@ -283,36 +362,16 @@ namespace CADMesher
 		Mesh::VertexHandle v1, v2, v3, v4;
 		Mesh::Point p1, p2, p3, p4;
 		std::vector<Mesh::VertexHandle> facevhandle;
-		int num = 2;
+		int num = 3;
 		for (auto te : model_mesh.edges()) {
 			if (!model_mesh.data(te).get_edgeflag()) continue;
-			auto he = model_mesh.opposite_halfedge_handle(model_mesh.next_halfedge_handle(model_mesh.next_halfedge_handle(te.h0())));
-			auto n0 = model_mesh.calc_face_normal(model_mesh.face_handle(he));
-			he = model_mesh.opposite_halfedge_handle(model_mesh.next_halfedge_handle(model_mesh.next_halfedge_handle(te.h1())));
-			auto n1 = model_mesh.calc_face_normal(model_mesh.face_handle(he));
-			if (n0.dot(n1) > 0.85 && !model_mesh.is_boundary(te))
+			if (model_mesh.data(te).flag2)
 			{
 				model_mesh.data(te).set_edgeflag(false);
-				//divided non-feature quad into two triangles
-				for (int i = 0; i < 2; i++)
-				{
-					auto he = model_mesh.halfedge_handle(te, i);
-					v1 = model_mesh.from_vertex_handle(he);
-					v2 = model_mesh.to_vertex_handle(he);
-					v3 = model_mesh.to_vertex_handle(model_mesh.next_halfedge_handle(he));
-					v4 = model_mesh.from_vertex_handle(model_mesh.prev_halfedge_handle(he));
-					model_mesh.delete_face(model_mesh.face_handle(he));
-					facevhandle = { v1, v2, v3 };
-					model_mesh.add_face(facevhandle);
-					facevhandle = { v3, v4, v1 };
-					model_mesh.add_face(facevhandle);
-				}
-			}				
-			else 
-			{
 				//calculate the offset points, and push them into a vector named offsetpnt which is attributed for each edge
 				for (int i = 0; i < 2; i++)
 				{
+					if (i && model_mesh.is_boundary(te)) continue;
 					auto he = model_mesh.halfedge_handle(te, i);
 					auto ev = model_mesh.edge_handle(model_mesh.next_halfedge_handle(he));
 					v1 = model_mesh.to_vertex_handle(he);
@@ -331,25 +390,41 @@ namespace CADMesher
 							p1 = model_mesh.point(v1);
 							p2 = model_mesh.point(v2);
 							model_mesh.data(ev).offsetflag = true;
-							model_mesh.data(ev.v0()).set_vertflag(true);
-							model_mesh.data(ev.v1()).set_vertflag(true);
+							//model_mesh.data(ev.v0()).set_vertflag(true);
+							//model_mesh.data(ev.v1()).set_vertflag(true);
 							auto dire = (p2 - p1) / (pow(2, num + 1) - 1);
 							for (int k = 0; k < num; k++)
 							{
 								offsetpnt.push_back(p1 + (pow(2, k + 1) - 1)*dire);
 							}
-						}						
+						}
 						if (j) break;
 						v1 = v4;
 						v2 = v3;
 						ev = model_mesh.edge_handle(model_mesh.prev_halfedge_handle(he));
 					}
 				}
+				continue;
+			}
+			if (!model_mesh.data(te).flag1 && !model_mesh.is_boundary(te)) model_mesh.data(te).set_edgeflag(false);
+
+			//divided non-feature quad into two triangles
+			for (int i = 0; i < 2; i++)
+			{
+				if (i && model_mesh.is_boundary(te)) continue;
+				auto he = model_mesh.halfedge_handle(te, i);
+				v1 = model_mesh.from_vertex_handle(he);
+				v2 = model_mesh.to_vertex_handle(he);
+				v3 = model_mesh.to_vertex_handle(model_mesh.next_halfedge_handle(he));
+				v4 = model_mesh.from_vertex_handle(model_mesh.prev_halfedge_handle(he));
+				model_mesh.delete_face(model_mesh.face_handle(he));
+				facevhandle = { v1, v2, v3 };
+				model_mesh.add_face(facevhandle);
+				facevhandle = { v3, v4, v1 };
+				model_mesh.add_face(facevhandle);
 			}
 		}
 		model_mesh.garbage_collection();
-
-		// global remesh
 
 		//add offsets point, and push their VertexHandle into a vector named offsetvh which is attributed for each edge
 		for (auto e : model_mesh.edges())
@@ -359,17 +434,19 @@ namespace CADMesher
 			{
 				v1 = model_mesh.add_vertex(model_mesh.data(e).offsetpnt[i - 1]);
 				auto p3 = model_mesh.point(v1);
-				model_mesh.data(v1).set_vertflag(true);
+				//model_mesh.data(v1).set_vertflag(true);
 				model_mesh.data(e).offsetvh[i] = v1;
 			}
 		}
+
 		//add more offsets. 
 		std::vector<OV> offsetvh1, offsetvh2;
 		for (auto e : model_mesh.edges())
 		{
-			if (!model_mesh.data(e).get_edgeflag()) continue;
+			if (!model_mesh.data(e).flag2) continue;		
 			for (int i = 0; i < 2; i++)
 			{
+				if (i && model_mesh.is_boundary(e)) continue;
 				auto he = model_mesh.halfedge_handle(e, i);
 				v1 = model_mesh.from_vertex_handle(he);
 				v2 = model_mesh.to_vertex_handle(he);
@@ -382,7 +459,7 @@ namespace CADMesher
 					v4 = offsetvh2[j];
 					facevhandle = { v1, v2, v3, v4 };
 					auto fh = model_mesh.add_face(facevhandle);
-					model_mesh.data(fh).set_faceflag(true);
+					//model_mesh.data(fh).set_faceflag(true);
 					v1 = v4;
 					v2 = v3;
 				}
@@ -390,48 +467,56 @@ namespace CADMesher
 		}
 		model_mesh.garbage_collection();
 
-		for (auto f : model_mesh.faces())
-		{
-			if (!model_mesh.data(f).get_faceflag()) continue;
-			for (auto fe : model_mesh.fe_range(f))
-			{
-				model_mesh.data(fe).set_edgeflag(true);
-			}
-		}
+		//for (auto f : model_mesh.faces())
+		//{
+		//	if (!model_mesh.data(f).get_faceflag()) continue;
+		//	for (auto fe : model_mesh.fe_range(f))
+		//	{
+		//		model_mesh.data(fe).set_edgeflag(true);
+		//	}
+		//}
 
-		std::vector<double> K1, K2;
-		std::vector<OpenMesh::Vec3d> dir1, dir2;
-		compute_principal_curvature(&TriMesh(model_mesh), K1, K2, dir1, dir2);
-		for (int i = 0; i<K1.size();i++)
+		for (auto tv : model_mesh.vertices())
 		{
-			auto v = model_mesh.vertex_handle(i);
-			//if (model_mesh.data(v).get_vertflag()) continue;
-			double ave_K = std::accumulate(K1.begin(), K2.begin(), 0);
-			double k1 = std::max(std::abs(K1[i]), std::abs(K2[i]));
-			double k2 = std::min(std::abs(K1[i]), std::abs(K2[i]));
-			if (i == 40692 || i == 40693)
-			{
-				std::cout << k2 << '\t' << k1 << k2 / k1 << '\n';
-			}
-			if (k2 < 0.008) continue;
-			if (k2/k1 < 0.015)
-			{
-				//std::cout << k2 << '\t' << k1 << k2 / k1<<'\n';
-				model_mesh.data(v).curvatureflag = true;
-			}
-		}
-
-		for (auto tv : model_mesh.vertices()) {
-			if (!model_mesh.data(tv).get_vertflag())
-				continue;
 			for (auto tve : model_mesh.ve_range(tv))
-				if (model_mesh.data(tve).get_edgeflag())
-					goto goto20210605;
-			model_mesh.data(tv).set_vertflag(false);
-		goto20210605:;
+			{
+				if (model_mesh.data(tve).get_edgeflag() || model_mesh.data(tve).flag2)
+					model_mesh.data(tv).set_vertflag(true);
+			}				
 		}
+
+		//for (auto tv : model_mesh.vertices()) {
+		//	if (!model_mesh.data(tv).get_vertflag())
+		//		continue;
+		//	for (auto tve : model_mesh.ve_range(tv))
+		//		if (model_mesh.data(tve).get_edgeflag())
+		//			goto goto20210605;
+		//	model_mesh.data(tv).set_vertflag(false);
+		//goto20210605:;
+		//}
 		dprint("Reset Feature Done!");
 	}
 
-	
+#pragma region
+
+
+
+	void Iso_Mesh::Open_File(std::ofstream &file_writer)
+	{
+		try
+		{
+			std::fstream fout("step_to_obj.obj", std::ios::out | std::ios::trunc);
+		}
+		catch (std::exception& e)
+		{
+			dprint("error happened:", e.what());
+		}
+		file_writer.open("step_to_obj.obj");
+		if (file_writer.fail())
+		{
+			dprint("failed to open");
+			exit(1);
+		}
+	}
 }
+#pragma endregion

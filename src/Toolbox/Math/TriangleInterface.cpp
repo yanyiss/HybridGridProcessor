@@ -129,12 +129,10 @@ void triangulate(const Eigen::Matrix2Xd &all_pts, const std::vector<Eigen::Matri
 	sum = 0;
 	for (auto itr = E.begin(); itr != E.end(); itr++)
 	{
-		//std::cout << "jfdk" << std::endl;
 		for (size_t i = 0; i < (*itr).cols(); i++)
 		{
 			in.segmentlist[2 * sum] = (*itr)(0, i);
 			in.segmentlist[2 * sum + 1] = (*itr)(1, i);
-			//std::cout << in.segmentlist[2 * sum] << "," << in.segmentlist[2 * sum + 1] << std::endl;
 			sum++;
 		}
 	}
@@ -179,7 +177,6 @@ void triangulate(const Eigen::Matrix2Xd &all_pts, const std::vector<Eigen::Matri
 		in.holelist[2 * itertimes] = interior_point(0);
 		in.holelist[2 * itertimes + 1] = interior_point(1);
 		itertimes++;
-		//std::cout << "inter" << interior_point << std::endl;
 	}
 
 	in.numberofregions = 0;

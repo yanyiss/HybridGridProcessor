@@ -117,6 +117,7 @@ Point BSplineSurface::PartialDerivativeV(const double u, const double v)const
 	if (v_degree < 1) return Point(0.0, 0.0, 0.0);
 	if (isRational)
 	{
+		//std::cout << "hh" << std::endl;
 		int m = GetNumOfCtrlptsU() - 1;
 		int n = GetNumOfCtrlptsV() - 1;
 		std::vector<std::vector<Point4>> Pw_ctrlpts(m + 1, std::vector<Point4>(n + 1));
@@ -128,7 +129,9 @@ Point BSplineSurface::PartialDerivativeV(const double u, const double v)const
 			}
 		}
 		auto Pw = DeBoor(Pw_ctrlpts, u, v);
+		//std::cout << Pw << std::endl;
 		auto Aw_v = Derivative(Pw_ctrlpts, u, v, 0, 1);
+		//std::cout << Aw_v << std::endl;
 		double W_v = Aw_v(3);
 		Point A_v = Aw_v.head(3);
 		double W = Pw(3);

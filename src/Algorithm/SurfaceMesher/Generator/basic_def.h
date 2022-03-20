@@ -2,12 +2,22 @@
 
 #include <TopoDS_Face.hxx>
 #include <TopoDS_Edge.hxx>
-#include <vector>
-#include <Eigen/Dense>
+#include <BRep_Tool.hxx>
+#include <Geom_Plane.hxx>
+#include <Geom_CylindricalSurface.hxx>
+#include <Geom_ConicalSurface.hxx>
+#include <Geom_SphericalSurface.hxx>
+#include <Geom_ToroidalSurface.hxx>
+#include <Geom_BezierSurface.hxx>
+#include <Geom_BSplineSurface.hxx>
+#include <Geom_SurfaceOfRevolution.hxx>
+#include <Geom_SurfaceOfLinearExtrusion.hxx>
+#include <Geom_OffsetSurface.hxx>
 
 #include "..\src\MeshViewer\MeshDefinition.h"
 #include "..\src\Dependency\CPS\CPS_AABBTree.h"
 #include "..\src\Toolbox\dprinter\dprint.h"
+#include"src\Dependency\BSpline\BSplineSurface.h"
 
 namespace CADMesher 
 {
@@ -15,13 +25,13 @@ namespace CADMesher
 #define epsilonerror 1.1e-15
 	using namespace Eigen;
 	using std::vector;
-
 	
 	struct ShapeFace
 	{
 		int id;
 		TopoDS_Face face;
 		vector<vector<int>> wires;
+		BSplineSurface *Surface;
 		ShapeFace(int id_, TopoDS_Face face_)
 		{
 			id = id_;
@@ -34,6 +44,9 @@ namespace CADMesher
 		int id;
 		bool if_merged;
 		bool if_splitted;
+		bool if_trimmed; 
+		bool if_C0;
+		bool if_curvature;
 		TopoDS_Edge edge;
 		int main_face;
 		int secondary_face;
@@ -52,6 +65,9 @@ namespace CADMesher
 			edge = edge_;
 			if_merged = false;
 			if_splitted = false;
+			if_trimmed = true;
+			if_curvature = true;
+			if_C0 = false;
 			next_reversed_edge = -1;
 			main_face = -1;
 			secondary_face = -1;
