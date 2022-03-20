@@ -346,6 +346,14 @@ namespace CADMesher
 			area += a;
 			sum += a*mesh->point(mesh->to_vertex_handle(tvoh));
 		}
+		if (area < epsilonerror)
+		{
+			for (auto tvoh : mesh->voh_range(v))
+			{
+				sum += mesh->point(mesh->to_vertex_handle(tvoh));
+			}
+			return sum / mesh->valence(v);
+		}
 		return sum / area;
 	}
 
@@ -510,7 +518,7 @@ namespace CADMesher
 
 		//*polymesh = Mesh(*mesh);
 
-		if (expected_length < 0)
+		if (expected_length <= 0)
 		{
 			expected_length = meshAverageLength(*mesh);
 		}

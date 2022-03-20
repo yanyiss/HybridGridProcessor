@@ -66,7 +66,7 @@ namespace CADMesher
 			int s = 0;
 			double if_reverse = aface.Orientation() ? -1.0 : 1.0;
 
-			double ra = x_step / y_step * if_reverse;
+			double ra = y_step < epsilonerror ? 1 : x_step / y_step * if_reverse;
 
 			for (int j = 0; j < wires.size(); j++)
 			{
@@ -209,7 +209,7 @@ namespace CADMesher
 			pointsnumber = 0;
 			int s = 0;
 			double if_reverse = aface.Orientation() ? -1.0 : 1.0;
-			double ra = x_step / y_step * if_reverse;
+			double ra = y_step < epsilonerror ? 1 : x_step / y_step * if_reverse;
 			for (int j = 0; j < wires.size(); j++)
 			{
 				auto &edges = wires[j];
