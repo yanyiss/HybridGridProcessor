@@ -316,13 +316,13 @@ namespace CADMesher
 	{
 		TriMesh &model_mesh = globalmodel.initial_trimesh;
 
-#if 1  //½âÎöÊ½¼ÆËãÌØÕ÷
+#if 1  //ï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		for (auto te : model_mesh.edges())
 		{
 			if (!model_mesh.data(te).get_edgeflag()) continue;
 			if (!model_mesh.data(te).flag1 && !model_mesh.is_boundary(te)) model_mesh.data(te).set_edgeflag(false);
 		}
-#else   //Íø¸ñÉÏ¼ÆËã¶şÃæ½Ç
+#else   //ï¿½ï¿½ï¿½ï¿½Ï¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		for (auto te : model_mesh.edges()) {
 			if (!model_mesh.data(te).get_edgeflag()) continue;
 			auto n0 = model_mesh.calc_face_normal(model_mesh.face_handle(te.h0()));
