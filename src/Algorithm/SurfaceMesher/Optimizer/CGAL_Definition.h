@@ -1,12 +1,13 @@
 #ifndef CGAL_DEFINITION_H
 #define CGAL_DEFINITION_H
-//#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-//#include <CGAL/Polygon_2.h>
-//#include <CGAL/Polygon_2_algorithms.h>
+#if 0
+#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
+#include <CGAL/Polygon_2.h>
+#include <CGAL/Polygon_2_algorithms.h>
 
-//typedef CGAL::Exact_predicates_inexact_constructions_kernel CGAL_Inexact_Kernal;
-//typedef CGAL_Inexact_Kernal::Point_2 CGAL_2_Point;
-//typedef CGAL::Polygon_2<CGAL_Inexact_Kernal> CGAL_2_Polygon;
+typedef CGAL::Exact_predicates_inexact_constructions_kernel CGAL_Inexact_Kernal;
+typedef CGAL_Inexact_Kernal::Point_2 CGAL_2_Point;
+typedef CGAL::Polygon_2<CGAL_Inexact_Kernal> CGAL_2_Polygon;
 
 #include <CGAL/Simple_cartesian.h>
 #include <CGAL/AABB_tree.h>
@@ -28,4 +29,5 @@ typedef std::vector<CGAL_3_Segment>::iterator CGAL_Segment_Iterator;
 typedef CGAL::AABB_segment_primitive<CGAL_Simple_Cartesian_Kernal, CGAL_Segment_Iterator> CGAL_AABB_Segment_Primitive;
 typedef CGAL::AABB_traits<CGAL_Simple_Cartesian_Kernal, CGAL_AABB_Segment_Primitive> CGAL_AABB_Segment_traits;
 typedef CGAL::AABB_tree<CGAL_AABB_Segment_traits> CGAL_AABB_Segment_Tree;
+#endif
 #endif

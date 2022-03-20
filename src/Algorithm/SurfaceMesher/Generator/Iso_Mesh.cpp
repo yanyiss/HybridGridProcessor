@@ -148,7 +148,6 @@ namespace CADMesher
 #if 1
 		for (int i = 0; i < edgeshape.size(); i++)
 		{
-			//dprint(i);
 			auto &edge0 = edgeshape[i];
 			if (edge0.if_merged || edge0.reversed_edge == -1) continue;
 			auto &edge1 = edgeshape[edgeshape[i].reversed_edge];
@@ -401,7 +400,7 @@ namespace CADMesher
 
 		std::vector<double> K1, K2;
 		std::vector<OpenMesh::Vec3d> dir1, dir2;
-		compute_principal_curvature(&TriMesh(model_mesh), K1, K2, dir1, dir2);
+		compute_principal_curvature(&model_mesh, K1, K2, dir1, dir2);
 		for (int i = 0; i<K1.size();i++)
 		{
 			auto v = model_mesh.vertex_handle(i);
@@ -433,5 +432,26 @@ namespace CADMesher
 		dprint("Reset Feature Done!");
 	}
 
-	
+#pragma region
+
+
+
+	void Iso_Mesh::Open_File(std::ofstream &file_writer)
+	{
+		try
+		{
+			std::fstream fout("step_to_obj.obj", std::ios::out | std::ios::trunc);
+		}
+		catch (std::exception& e)
+		{
+			dprint("error happened:", e.what());
+		}
+		file_writer.open("step_to_obj.obj");
+		if (file_writer.fail())
+		{
+			dprint("failed to open");
+			exit(1);
+		}
+	}
 }
+#pragma endregion

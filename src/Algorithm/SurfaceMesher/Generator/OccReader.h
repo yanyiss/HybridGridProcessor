@@ -13,7 +13,7 @@ namespace CADMesher
 			std::string filetype;
 			if (fileName.endsWith(".stp") || fileName.endsWith(".STP") || fileName.endsWith(".STEP")) {
 				reader = new STEPControl_Reader();
-				dprint("CAD model from STEP file");
+				dprint("CAD odel from STEP file");
 				filetype = "STEP";
 			}
 			else if (fileName.endsWith(".igs") || fileName.endsWith(".IGS") || fileName.endsWith(".IGES")) {
@@ -57,7 +57,7 @@ namespace CADMesher
 		void Set_PolyMesh();
 		Matrix2Xd Subdomain(Matrix2Xd &all_pnts, vector<Matrix2Xi> &bnd, int &pointsnumber);
 	private:
-		double initialRate = 0.008;
+		double initialRate = 0.003;
 		double degeneratedRate = 0.01;
 	};
 }

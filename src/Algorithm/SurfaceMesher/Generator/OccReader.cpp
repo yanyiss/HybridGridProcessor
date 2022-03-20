@@ -10,11 +10,7 @@ namespace CADMesher
 		Surface_TriMeshes.resize(faceshape.size());
 		for (int i = 0; i < faceshape.size(); i++)
 		{
-#if 0
-			dprint(i);
-			if (i != 197)
-				continue;
-#endif
+			//dprint(i);
 			TriMesh &aMesh = Surface_TriMeshes[i];
 			auto &wires = faceshape[i].wires;
 			if (wires.empty())
@@ -70,7 +66,7 @@ namespace CADMesher
 			int s = 0;
 			double if_reverse = aface.Orientation() ? -1.0 : 1.0;
 
-			double ra = y_step < epsilonerror ? 1 : x_step / y_step * if_reverse;
+			double ra = x_step / y_step * if_reverse;
 
 			for (int j = 0; j < wires.size(); j++)
 			{
@@ -81,43 +77,18 @@ namespace CADMesher
 					int cols = boundpos.cols() - 1;
 					all_pnts.block(0, s, 2, cols) = boundpos.block(0, 0, 2, cols);
 					s += cols;
-#if 0
-					dprint("edge: ", k);
-					for (int ss = 0; ss < boundpos.cols(); ss++)
-					{
-						dprint(boundpos(0, ss), boundpos(1, ss));
-					}
-#endif
 				}
 				pointsnumber = s;
 			}
 
 			all_pnts.block(1, 0, 1, all_pnts.cols()) *= ra;
-
-#if 0
-				for (int ss = 0; ss < all_pnts.cols(); ++ss)
-				{
-					dprint(all_pnts(0, ss), all_pnts(1, ss));
-				}
-			dprint("hfdsj");
-			for (int ss = 0; ss < bnd.size(); ss++)
-			{
-				dprint("ss", ss);
-				for (int tt = 0; tt < bnd[ss].cols(); tt++)
-				{
-					dprint(bnd[ss](0, tt), bnd[ss](1, tt));
-				}
-		}
-#endif
 			triangulate(all_pnts, bnd, sqrt(3) * x_step * x_step / 4 * mu, aMesh);
-#if 1
 			for (auto tv : aMesh.vertices())
 			{
 				auto pos = aMesh.point(tv);
 				auto v = asurface->Value(pos[0], pos[1] / ra);
 				aMesh.set_point(tv, TriMesh::Point(v.X(), v.Y(), v.Z()));
 			}
-#endif
 		}
 		dprint("Piecewise TriMesh Done!");
 	}
@@ -522,7 +493,7 @@ namespace CADMesher
 					{
 						continue;
 					}
-					/*if (!BRep_Tool::IsClosed(aedge))
+					if (!BRep_Tool::IsClosed(aedge))
 					{
 						gp_Pnt p0 = BRep_Tool::Pnt(TopExp::FirstVertex(aedge));
 						gp_Pnt p1 = BRep_Tool::Pnt(TopExp::LastVertex(aedge));
@@ -530,7 +501,7 @@ namespace CADMesher
 						{
 							continue;
 						}
-					}*/
+					}
 
 					edgeshape.emplace_back(edgeSize, aedge);
 					edgeshape[edgeSize].main_face = faceSize;
@@ -543,27 +514,6 @@ namespace CADMesher
 				}
 				if (!edges.empty())
 				{
-					//在大量测试模型时，发现有少量模型出现边并非完全逆时针排序，而是有“插队”现象，特此根据边的首尾节点坐标重新排序
-					auto getLocation = [](TopoDS_Edge &aedge, bool isLast)
-					{
-						if ((aedge.Orientation() == TopAbs_FORWARD) == isLast)
-							return BRep_Tool::Pnt(TopExp::LastVertex(aedge));
-						else
-							return BRep_Tool::Pnt(TopExp::FirstVertex(aedge));
-					};
-					for (int i = 0; i < edges.size() - 1; ++i)
-					{
-						if (getLocation(edgeshape[edges[i]].edge, true).IsEqual(getLocation(edgeshape[edges[i + 1]].edge, false), vertexThreshold))
-							continue;
-						for (int j = i + 2; j < edges.size(); ++j)
-						{
-							if (getLocation(edgeshape[edges[i]].edge, true).IsEqual(getLocation(edgeshape[edges[j]].edge, false), vertexThreshold))
-							{
-								std::swap(edges[i + 1], edges[j]);
-								continue;
-							}
-						}
-					}
 					faceshape[faceSize].wires.push_back(edges);
 				}
 			}
@@ -573,7 +523,7 @@ namespace CADMesher
 		auto edgeEnd = edgeshape.end();
 		for (auto aedge = edgeshape.begin(); aedge != edgeEnd; ++aedge)
 		{
-			if (aedge->secondary_face == -1)
+			if (aedge->secondary_face = -1)
 			{
 				for (auto redge = aedge + 1; redge != edgeEnd; ++redge)
 				{
