@@ -651,7 +651,7 @@ void InteractiveViewerWidget::showDebugTest()
 		getFiles(path, allFileName);
 
 		using namespace CADMesher;
-		int i = 355;
+		int i = 354;
 		for (; i < allFileName.size();)
 		{
 			auto fileName = allFileName[i];

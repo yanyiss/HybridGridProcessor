@@ -8,10 +8,9 @@ namespace CADMesher
 		vector<ShapeEdge> &edgeshape = globalmodel.edgeshape;
 
 		Surface_TriMeshes.resize(faceshape.size());
-
 		for (int i = 0; i < faceshape.size(); i++)
 		{
-			//dprint(i);
+			//if (i != 10) continue;
 			TriMesh &aMesh = Surface_TriMeshes[i];
 			auto &wires = faceshape[i].wires;
 			if (wires.empty())
@@ -76,19 +75,33 @@ namespace CADMesher
 					auto &boundpos = edgeshape[edges[k]].parameters;
 					int cols = boundpos.cols() - 1;
 					all_pnts.block(0, s, 2, cols) = boundpos.block(0, 0, 2, cols);
+#if 0
+					dprint();
+					dprint(k);
+					for (int pp = 0; pp < boundpos.cols(); ++pp)
+					{
+						dprintwithprecision(15, boundpos(0, pp), boundpos(1, pp));
+					}
+#endif
 					s += cols;
 				}
 				pointsnumber = s;
 			}
-
+			/*for (int pp = 0; pp < all_pnts.cols(); ++pp)
+			{
+				dprintwithprecision(15, pp, all_pnts(0, pp), all_pnts(1, pp));
+			}
+			all_pnts(0, 871) -= 1e-10;*/
 			all_pnts.block(1, 0, 1, all_pnts.cols()) *= ra;
 			triangulate(all_pnts, bnd, sqrt(3) * x_step * x_step / 4 * mu, aMesh);
 
+			double ra_inv = 1.0 / ra;
 			for (auto tv : aMesh.vertices())
 			{
 				auto pos = aMesh.point(tv);
-				auto v = asurface->Value(pos[0], pos[1] / ra);
+				auto v = asurface->Value(pos[0], pos[1] * ra_inv);
 				aMesh.set_point(tv, TriMesh::Point(v.X(), v.Y(), v.Z()));
+				//aMesh.set_point(tv, TriMesh::Point(pos[0], pos[1] * ra_inv, 0));
 			}
 			//if (!OpenMesh::IO::write_mesh(aMesh, "two.obj"))
 			//{
@@ -676,21 +689,21 @@ namespace CADMesher
 				}
 				if (!edges.empty())
 				{
-					//在大量测试模型时，发现有少量模型出现边并非完全逆时针排序，而是有“插队”现象，特此根据边的首尾节点坐标重新排序
-					auto getLocation = [](TopoDS_Edge &aedge, bool isLast)
+					//在大量测试模型时，发现有少量模型出现边并非完全逆时针排序，而是有“插队”现象，特此根据边的首尾节点重新排序
+					auto getVertex = [&](TopoDS_Edge &aedge, bool isLast)
 					{
 						if ((aedge.Orientation() == TopAbs_FORWARD) == isLast)
-							return BRep_Tool::Pnt(TopExp::LastVertex(aedge));
+							return TopExp::LastVertex(aedge);
 						else
-							return BRep_Tool::Pnt(TopExp::FirstVertex(aedge));
+							return TopExp::FirstVertex(aedge);
 					};
 					for (int i = 0; i < edges.size() - 1; ++i)
 					{
-						if (getLocation(edgeshape[edges[i]].edge, true).IsEqual(getLocation(edgeshape[edges[i + 1]].edge, false), vertexThreshold))
+						if (getVertex(edgeshape[edges[i]].edge, true).IsSame(getVertex(edgeshape[edges[i + 1]].edge, false)))
 							continue;
 						for (int j = i + 2; j < edges.size(); ++j)
 						{
-							if (getLocation(edgeshape[edges[i]].edge, true).IsEqual(getLocation(edgeshape[edges[j]].edge, false), vertexThreshold))
+							if (getVertex(edgeshape[edges[i]].edge, true).IsSame(getVertex(edgeshape[edges[j]].edge, false)))
 							{
 								std::swap(edges[i + 1], edges[j]);
 								continue;
@@ -738,6 +751,8 @@ namespace CADMesher
 
 		for(auto edge = edgeshape.begin(); edge != edgeshape.end(); ++edge)
 		{
+			/*static int ti = 0;
+			dprint(ti++);*/
 			auto &aedge = edge->edge;
 			auto &mainface = faceshape[edge->main_face].face;
 			TopLoc_Location loc;
