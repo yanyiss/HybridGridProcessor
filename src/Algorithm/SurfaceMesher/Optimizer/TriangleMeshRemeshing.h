@@ -17,7 +17,7 @@ namespace CADMesher
 		explicit TriangleMeshRemeshing(TriMesh *mesh_, double target_length = -1)
 			:mesh(mesh_), expected_length(target_length)
 		{
-			if (expected_length < 0)
+			if (expected_length <= 0)
 			{
 				expected_length = meshAverageLength(*mesh);
 			}

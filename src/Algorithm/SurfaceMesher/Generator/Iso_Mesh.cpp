@@ -344,7 +344,7 @@ namespace CADMesher
 			}
 		}
 
-		for (auto tv : model_mesh.vertices()) {
+		/*for (auto tv : model_mesh.vertices()) {
 			if (!model_mesh.data(tv).get_vertflag())
 				continue;
 			for (auto tve : model_mesh.ve_range(tv))
@@ -352,7 +352,7 @@ namespace CADMesher
 					goto goto20210605;
 			model_mesh.data(tv).set_vertflag(false);
 		goto20210605:;
-		}
+		}*/
 		dprint("Reset Feature Done!");
 	}
 
