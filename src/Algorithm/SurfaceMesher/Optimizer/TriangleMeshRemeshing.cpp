@@ -8,7 +8,7 @@ namespace CADMesher
 			mesh->data(tv).set_targetlength(expected_length);
 
 		printMeshQuality(*mesh);
-		for (int i = 0; i < 20; i++)
+		for (int i = 0; i < 30; i++)
 		{
 			dprint("\niteration times:", i + 1);
 			split();
@@ -17,7 +17,7 @@ namespace CADMesher
 			if (i > 10 && meshMinAngle(*mesh) < lowerAngleBound)
 			{
 				adjustTargetLength();
-				processAngle();
+				//processAngle();
 			}
 			tangential_relaxation();
 			dprint("mesh vertices number:", mesh->n_vertices());
@@ -44,26 +44,37 @@ namespace CADMesher
 			}
 #endif
 			//dprint(te.idx());
-			double t0 = mesh->data(te.v0()).get_targetlength();
-			double t1 = mesh->data(te.v1()).get_targetlength();
-			if (mesh->calc_edge_length(te) < 4.0 / 3.0 * std::min(t0, t1) || te.is_boundary())
+			SOV vert[2] = { te.v0(), te.v1() };
+			double t0 = mesh->data(vert[0]).get_targetlength();
+			double t1 = mesh->data(vert[1]).get_targetlength();
+			if (mesh->calc_edge_length(te) < 1.333 * std::min(t0, t1) || te.is_boundary())
 				continue;
 			OV newvert = mesh->add_vertex(mesh->calc_edge_midpoint(te));
 			mesh->data(newvert).set_targetlength(0.5*(t0 + t1));
-			bool flag = mesh->data(te).get_edgeflag();
-			std::pair<OV, OV> vert(te.v0(), te.v1()); 
+			//bool flag = mesh->data(te).get_edgeflag();
+			bool flag1 = mesh->data(te).flag1;
+			bool flag2 = mesh->data(te).flag2;
 			mesh->split_edge(te, newvert);
 
-			if (flag) {
+			if (flag1)
+			{
 				mesh->data(newvert).set_vertflag(true);
-				mesh->data(mesh->edge_handle(mesh->find_halfedge(vert.first, newvert))).set_edgeflag(true);
-				mesh->data(mesh->edge_handle(mesh->find_halfedge(vert.second, newvert))).set_edgeflag(true);
-				continue;
+				mesh->data(mesh->edge_handle(mesh->find_halfedge(vert[0], newvert))).flag1 = true;
+				mesh->data(mesh->edge_handle(mesh->find_halfedge(vert[1], newvert))).flag1 = true;
 			}
-			mesh->set_point(newvert, aabbtree->closest_point(GravityPos(newvert)));
+			else if (flag2)
+			{
+				mesh->data(newvert).set_vertflag(true);
+				mesh->data(mesh->edge_handle(mesh->find_halfedge(vert[0], newvert))).flag2 = true;
+				mesh->data(mesh->edge_handle(mesh->find_halfedge(vert[1], newvert))).flag2 = true;
+			}
+			else
+			{
+				mesh->set_point(newvert, aabbtree->closest_point(GravityPos(newvert)));
+			}
 		}
 		mesh->garbage_collection();
-		mesh->update_normals();
+		//mesh->update_normals();
 		dprint("split done");
 	}
 
@@ -87,18 +98,22 @@ namespace CADMesher
 			double x = mesh->calc_edge_length(the);
 			double min_of_t0_t1 = std::min(t0, t1);
 
-			if (x >= 0.8 * min_of_t0_t1) continue;
+			if (mesh->data(fromvert).get_vertflag()) 
+				continue;
+			if (x >= 0.8 * min_of_t0_t1)
+				continue;
 
+#if 0
 			//特征线上移动点
-			if (mesh->data(mesh->edge_handle(the)).get_edgeflag()) {
+			if (mesh->data(the.edge()).get_edgeflag()) {
 				if (x >= 0.666 * min_of_t0_t1) continue;
 				int count = 0;
 				OV v = fromvert;
 				for (auto tvoh : mesh->voh_range(fromvert)) {
-					if (!mesh->data(mesh->edge_handle(tvoh)).get_edgeflag()) continue;
-					if (mesh->to_vertex_handle(tvoh) == tovert) continue;
+					if (!mesh->data(tvoh.edge()).get_edgeflag()) continue;
+					if (tvoh.to() == tovert) continue;
 					++count;
-					v = mesh->to_vertex_handle(tvoh);
+					v = tvoh.to();
 				}
 				if (count == 1) {
 					double y = (mesh->point(v) - mesh->point(tovert)).norm();
@@ -126,19 +141,31 @@ namespace CADMesher
 				}
 				continue;
 			}
+#else
+			if (mesh->data(the.edge()).flag1 || mesh->data(the.edge()).flag2)
+				continue;
+			if (mesh->is_boundary(the))
+				continue;
+#endif
 			O3d pos = mesh->data(tovert).get_vertflag() ? mesh->point(tovert) : mesh->calc_centroid(the);
 
 			//stop if collapsing results in long edges
 			for (OV thev : mesh->vv_range(fromvert))
-				if ((pos - mesh->point(thev)).norm() > 1.33 * min_of_t0_t1) goto goto20210523;
+				if ((pos - mesh->point(thev)).norm() > 1.33 * min_of_t0_t1)
+					goto goto20210523;
 			for (OV thev : mesh->vv_range(tovert))
-				if ((pos - mesh->point(thev)).norm() > 1.33 * min_of_t0_t1) goto goto20210523;
+				if ((pos - mesh->point(thev)).norm() > 1.33 * min_of_t0_t1)
+					goto goto20210523;
 
 			//stop if collapsing results in small angles
-			auto t_f = mesh->opposite_halfedge_handle(the);
-			auto he = mesh->prev_halfedge_handle(mesh->opposite_halfedge_handle(mesh->prev_halfedge_handle(the)));
+			//auto t_f = mesh->opposite_halfedge_handle(the);
+			//auto he = mesh->prev_halfedge_handle(mesh->opposite_halfedge_handle(mesh->prev_halfedge_handle(the)));
+			auto t_f = the.opp();
+			auto he = the.prev().opp().prev();
 			while (he != t_f) {
-				O3d p1 = mesh->point(mesh->from_vertex_handle(he));
+				/*O3d p1 = mesh->point(mesh->from_vertex_handle(he));
+				O3d p2 = mesh->point(mesh->opposite_vh(he));*/
+				O3d p1 = mesh->point(he.from());
 				O3d p2 = mesh->point(mesh->opposite_vh(he));
 				O3d p01 = (p1 - pos).normalize();
 				O3d p12 = (p2 - p1).normalize();
@@ -146,8 +173,8 @@ namespace CADMesher
 				if (acos(-p01.dot(p12)) < 0.1) goto goto20210523;
 				if (acos(-p12.dot(p20)) < 0.1) goto goto20210523;
 				if (acos(-p20.dot(p01)) < 0.1) goto goto20210523;
-				he = mesh->prev_halfedge_handle(mesh->opposite_halfedge_handle(he));
-				//he = he.opp().prev();
+				//he = mesh->prev_halfedge_handle(mesh->opposite_halfedge_handle(he));
+				he = he.opp().prev();
 			}
 
 			//stop if collapsing results in selfintersection
@@ -165,7 +192,7 @@ namespace CADMesher
 	{
 		auto va = [&](OV v) {return mesh->valence(v) + (mesh->is_boundary(v) ? 2 : 0); };
 
-		double PiDividedByThree = PI / 3.0;
+		double PiDividedByThree = PI * 0.3333;
 		double temp = PiDividedByThree - lowerAngleBound; temp *= temp;
 		auto penaltyFunction = [&](double a)
 		{
@@ -177,7 +204,7 @@ namespace CADMesher
 				+ penaltyFunction(mesh->calc_sector_angle(he.next()));
 		};
 		for (auto te : mesh->edges()) {
-			if (!mesh->is_flip_ok(te) || mesh->data(te).get_edgeflag())
+			if (!mesh->is_flip_ok(te) || mesh->data(te).flag1 || mesh->data(te).flag2)
 				continue;
 			auto h0 = te.h0();
 			auto h1 = te.h1();
@@ -189,24 +216,24 @@ namespace CADMesher
 
 			//在一定程度上可防止翻折
 			double alpha0, alpha1;
-			alpha0 = acos(-mesh->calc_edge_vector(h0).dot(mesh->calc_edge_vector(mesh->next_halfedge_handle(h0)/*h0.next()*/)));
-			alpha1 = acos(-mesh->calc_edge_vector(h1).dot(mesh->calc_edge_vector(mesh->prev_halfedge_handle(h1)/*h1.prev()*/)));
+			alpha0 = acos(-mesh->calc_edge_vector(h0).dot(mesh->calc_edge_vector(/*mesh->next_halfedge_handle(h0)*/h0.next())));
+			alpha1 = acos(-mesh->calc_edge_vector(h1).dot(mesh->calc_edge_vector(/*mesh->prev_halfedge_handle(h1)*/h1.prev())));
 			if (alpha0 + alpha1 > PI) continue;
-			alpha0 = acos(-mesh->calc_edge_vector(h0).dot(mesh->calc_edge_vector(mesh->prev_halfedge_handle(h0)/*h0.prev()*/)));
-			alpha1 = acos(-mesh->calc_edge_vector(h1).dot(mesh->calc_edge_vector(mesh->next_halfedge_handle(h1)/*h1.next()*/)));
+			alpha0 = acos(-mesh->calc_edge_vector(h0).dot(mesh->calc_edge_vector(/*mesh->prev_halfedge_handle(h0)*/h0.prev())));
+			alpha1 = acos(-mesh->calc_edge_vector(h1).dot(mesh->calc_edge_vector(/*mesh->next_halfedge_handle(h1)*/h1.next())));
 			if (alpha0 + alpha1 > PI) continue;
 
-			//检查二面角
-			auto n0 = mesh->calc_face_normal(mesh->face_handle(h0)/*h0.face()*/);
-			auto n1 = mesh->calc_face_normal(mesh->face_handle(h1)/*h1.face()*/);
-			if (n0.dot(n1) < 0.8)
-			{
-				if (mesh->data(te.v0()).get_vertflag() && mesh->data(te.v1()).get_vertflag())
-				{
-					mesh->data(te).set_edgeflag(true);
-					continue;
-				}
-			}
+			////检查二面角
+			//auto n0 = mesh->calc_face_normal(/*mesh->face_handle(h0)*/h0.face());
+			//auto n1 = mesh->calc_face_normal(/*mesh->face_handle(h1)*/h1.face());
+			//if (n0.dot(n1) < 0.8)
+			//{
+			//	if (mesh->data(te.v0()).get_vertflag() && mesh->data(te.v1()).get_vertflag())
+			//	{
+			//		mesh->data(te).set_edgeflag(true);
+			//		continue;
+			//	}
+			//}
 			////防止出现狭长三角形
 			//auto V0 = mesh->point(te->v0());
 			//auto V1 = mesh->point(te->v1());
@@ -229,9 +256,10 @@ namespace CADMesher
 	void TriangleMeshRemeshing::adjustTargetLength()
 	{
 		double maxL = 0;
-		double minL = 0;
+		double minL = expected_length;
 		double sum = 0;
-		double threshold = 0.1*expected_length;
+		double threshold = 0.1 * expected_length;
+
 		for (auto tv : mesh->vertices())
 		{
 			sum = 0;
@@ -345,6 +373,14 @@ namespace CADMesher
 			double a = mesh->calc_face_area(mesh->face_handle(tvoh)) + mesh->calc_face_area(mesh->opposite_face_handle(tvoh));
 			area += a;
 			sum += a*mesh->point(mesh->to_vertex_handle(tvoh));
+		}
+		if (area < epsilonerror)
+		{
+			for (auto tvoh : mesh->voh_range(v))
+			{
+				sum += mesh->point(mesh->to_vertex_handle(tvoh));
+			}
+			return sum / mesh->valence(v);
 		}
 		return sum / area;
 	}
@@ -510,7 +546,7 @@ namespace CADMesher
 
 		//*polymesh = Mesh(*mesh);
 
-		if (expected_length < 0)
+		if (expected_length <= 0)
 		{
 			expected_length = meshAverageLength(*mesh);
 		}

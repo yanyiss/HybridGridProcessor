@@ -635,7 +635,62 @@ void InteractiveViewerWidget::showAnisotropicMesh()
 
 }
 
+#include "..\src\Toolbox\filesOperator.h"
+#include "..\src\Algorithm\SurfaceMesher\Generator\Iso_Mesh.h"
+#include "..\src\Algorithm\SurfaceMesher\Optimizer\TriangleMeshRemeshing.h"
 void InteractiveViewerWidget::showDebugTest()
 {
+#pragma region step files test
+	{
+		std::vector<std::string> allFileName;
+#if 0
+		std::string path = "..\\model\\CAD\\step files lib";
+#else
+		std::string path = "..\\model\\CAD";
+#endif
+		getFiles(path, allFileName);
 
+		using namespace CADMesher;
+		int i = 354;
+		for (; i < allFileName.size();)
+		{
+			auto fileName = allFileName[i];
+			dprint("\n\n\nfile index:\t", i++, "\nfileName:\t", fileName);
+			globalmodel.clear();
+			Iso_Mesh iso_mesh(QString::fromStdString(fileName));
+
+			//TriMesh &m = globalmodel.initial_trimesh;
+			//initMeshStatusAndNormal(m);
+			//TriangleMeshRemeshing tmr(&m);
+			//tmr.run();
+
+			/*double c = 4 * std::sqrt(3);
+			double minAngle = 4, maxAngle = 0, avgAngle = 0;
+			double minQuality = 1, avgQuality = 0;
+			for (auto tf : m.faces())
+			{
+				double h = 0, p = 0;
+				for (auto &tfh : m.fh_range(tf))
+				{
+					double angle = m.calc_sector_angle(tfh);
+					minAngle = std::min(angle, minAngle);
+					maxAngle = std::max(angle, maxAngle);
+					avgAngle += angle;
+
+					double l = m.calc_edge_length(tfh);
+					h = std::max(l, h);
+					p += l;
+				}
+				double q = c * m.calc_face_area(tf) / (p*h);
+				minQuality = std::min(q, minQuality);
+				avgQuality += q;
+			}
+			dprint("angle and quality", minAngle, maxAngle, minQuality);
+			if (minAngle < 0.05)
+			{
+				system("pause");
+			}*/
+		}
+	}
 }
+
