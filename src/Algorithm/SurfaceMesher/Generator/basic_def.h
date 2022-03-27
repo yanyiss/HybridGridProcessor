@@ -13,6 +13,7 @@
 #include <Geom_SurfaceOfRevolution.hxx>
 #include <Geom_SurfaceOfLinearExtrusion.hxx>
 #include <Geom_OffsetSurface.hxx>
+#include <Geom_RectangularTrimmedSurface.hxx>
 
 #include "..\src\MeshViewer\MeshDefinition.h"
 #include "..\src\Dependency\CPS\CPS_AABBTree.h"
@@ -25,13 +26,12 @@ namespace CADMesher
 #define epsilonerror 1.1e-15
 	using namespace Eigen;
 	using std::vector;
-	
 	struct ShapeFace
 	{
 		int id;
 		TopoDS_Face face;
 		vector<vector<int>> wires;
-		BSplineSurface *Surface;
+		GeometryType *Surface;
 		ShapeFace(int id_, TopoDS_Face face_)
 		{
 			id = id_;

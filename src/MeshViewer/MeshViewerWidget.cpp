@@ -986,18 +986,18 @@ void MeshViewerWidget::draw_feature1()
 	glEnd();
 
 	//»­ÇúÂÊÌØÕ÷
-	glLineWidth(5);
-	glColor3d(0.0, 1.0, 0.0);
-	glBegin(GL_LINES);
-	for (auto &te : mesh.edges())
-	{
-		if (mesh.data(te).flag2)
-		{
-			glVertex3dv(mesh.point(te.v0()).data());
-			glVertex3dv(mesh.point(te.v1()).data());
-		}
-	}
-	glEnd();
+	//glLineWidth(5);
+	//glColor3d(0.0, 1.0, 0.0);
+	//glBegin(GL_LINES);
+	//for (auto &te : mesh.edges())
+	//{
+	//	if (mesh.data(te).flag2)
+	//	{
+	//		glVertex3dv(mesh.point(te.v0()).data());
+	//		glVertex3dv(mesh.point(te.v1()).data());
+	//	}
+	//}
+	//glEnd();
 }
 //=======
 #include "../src/Algorithm/CheckBoard/CheckBoardGenerator.h"

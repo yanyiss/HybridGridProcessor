@@ -38,7 +38,7 @@ namespace CADMesher
 			Face_type();
 			Trim_Edge();
 			C0_Feature();
-			curvature_feature();
+			//curvature_feature();
 		}
 		OccReader(const OccReader& or) = delete;
 		~OccReader() {
