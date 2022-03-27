@@ -986,7 +986,7 @@ void MeshViewerWidget::draw_feature1()
 	}
 	glEnd();
 
-	//»­ÇúÂÊÌØÕ÷
+
 	glLineWidth(5);
 	glColor3d(0.0, 1.0, 0.0);
 	glBegin(GL_LINES);

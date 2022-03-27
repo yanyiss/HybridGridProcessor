@@ -21,6 +21,7 @@ BSplineSurface::BSplineSurface(int udeg, int vdeg, std::vector<double> &uknots, 
 	SetRational(true);
 	SetWeights(w);
 	SetControlPoints(controlpoints);
+	UV = Point4(uknots.front(), uknots.back(), vknots.front(), vknots.back()); //2022.03.21
 }
 
 BSplineSurface::BSplineSurface(int udeg, int vdeg, std::vector<double> &uknots, std::vector<double> &vknots, std::vector<std::vector<Point>> &controlpoints)
@@ -31,6 +32,7 @@ BSplineSurface::BSplineSurface(int udeg, int vdeg, std::vector<double> &uknots, 
 	SetRational(false);
 	SetControlPoints(controlpoints);
 	weights.clear();
+	UV = Point4(uknots.front(), uknots.back(), vknots.front(), vknots.back()); //2022.03.21
 }
 
 BSplineSurface::~BSplineSurface()

@@ -1,15 +1,12 @@
 #pragma once
 #include <vector>
 #include <iostream>
-#include <Eigen\Eigen>
 #include <OpenMesh/Core/Geometry/VectorT.hh>
-
-typedef Eigen::Vector3d Point;
-typedef Eigen::Vector4d Point4;
+#include"GeometryType.h"
 
 enum DIRECTION { U_DIRECTION, V_DIRECTION };
 
-class BezierSurface
+class BezierSurface : public GeometryType
 {
 public:
 	BezierSurface();
@@ -37,6 +34,26 @@ public:
 	const bool GetRational(void) const { return isRational; }
 	const std::vector<std::vector<double>> GetWeights(void) const { return weights; }
 	const std::vector<std::vector<Point>> GetControlPoints(void) const { return ctrlpoints; }
+
+	void PrincipalCurvature(const double u, const double v, double &k1, double &k2) const  //¼ÆËãÖ÷ÇúÂÊ
+	{
+		Eigen::Matrix2d Weingarten, value;
+		Point ru = PartialDerivativeU(u, v);
+		Point rv = PartialDerivativeV(u, v);
+		double E = ru.dot(ru);
+		double F = ru.dot(rv);
+		double G = rv.dot(rv);
+		Point n = (ru.cross(rv)).normalized();
+		double L = PartialDerivativeUU(u, v).dot(n);
+		double M = PartialDerivativeUV(u, v).dot(n);
+		double N = PartialDerivativeVV(u, v).dot(n);
+		Weingarten << L * G - M * F, M * E - L * F,
+			M * G - N * F, N * E - M * F;
+		Eigen::EigenSolver<Eigen::Matrix2d> es(Weingarten);
+		value = (es.pseudoEigenvalueMatrix()) / (E*G - pow(F, 2));
+		k1 = std::max(std::abs(value(0, 0)), std::abs(value(1, 1)));
+		k2 = std::min(std::abs(value(0, 0)), std::abs(value(1, 1)));
+	}
 
 	template<typename T>
 	T DeCasteljau(const std::vector<std::vector<T>> controlpoints, const double u, const double v) const

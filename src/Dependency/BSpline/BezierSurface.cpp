@@ -18,6 +18,7 @@ BezierSurface::BezierSurface(int u_deg, int v_deg, double umin, double umax, dou
 	SetRational(true);
 	SetWeights(w);
 	SetControlPoints(controlpoints);
+	UV = Point4(umin, umax, vmin, vmax);  //2022.03.21
 }
 
 BezierSurface::BezierSurface(int u_deg, int v_deg, double umin, double umax, double vmin, double vmax, std::vector<std::vector<Point>> controlpoints)
@@ -26,6 +27,7 @@ BezierSurface::BezierSurface(int u_deg, int v_deg, double umin, double umax, dou
 	SetParameterSpan(umin, umax, vmin, vmax);
 	SetRational(false);
 	SetControlPoints(controlpoints);
+	UV = Point4(umin, umax, vmin, vmax);  //2022.03.21
 }
 
 BezierSurface::~BezierSurface()

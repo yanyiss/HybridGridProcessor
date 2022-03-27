@@ -23,14 +23,12 @@ namespace CADMesher
 			TopLoc_Location loca;
 			opencascade::handle<Geom_Surface> geom_surface = BRep_Tool::Surface(surface.face, loca);
 			opencascade::handle<Standard_Type> type = geom_surface->DynamicType();
-
 			if (type == STANDARD_TYPE(Geom_Plane)) {
 				surface_type[0]++;
 				dprint("Plane", itertimes++);
 				opencascade::handle<Geom_Plane> geom_plane = Handle(Geom_Plane)::DownCast(geom_surface);
 				Standard_Real a, b, c, d;
 				geom_plane->Coefficients(a, b, c, d);
-
 				OpenMesh::Vec3d p;
 				if (fabs(a) > epsilonerror) p = { -d / a,0,0 };
 				else if (fabs(b) > epsilonerror) p = { 0,-d / b,0 };
@@ -231,16 +229,19 @@ namespace CADMesher
 				}
 			}
 			else if (type == STANDARD_TYPE(Geom_SurfaceOfRevolution)) {
-				surface_type[7]++;
+				surface_type[7]++; 
 				dprint("Surface of Revolution", itertimes++);
+				system("pause");
 			}
 			else if (type == STANDARD_TYPE(Geom_SurfaceOfLinearExtrusion)) {
 				surface_type[8]++;
 				dprint("Surface of Extrusion", itertimes++);
+				system("pause");
 			}
 			else if (type == STANDARD_TYPE(Geom_OffsetSurface)) {
 				surface_type[9]++;
 				dprint("Offset Surface", itertimes++);
+				system("pause");
 			}
 			else {
 				dprint("new face", itertimes++);
