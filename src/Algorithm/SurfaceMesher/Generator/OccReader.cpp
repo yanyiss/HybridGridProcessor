@@ -10,7 +10,9 @@ namespace CADMesher
 		Surface_TriMeshes.resize(faceshape.size());
 		for (int i = 0; i < faceshape.size(); i++)
 		{
-			//if (i != 10) continue;
+			//dprint(i);
+			if (i != 0) continue;
+
 			TriMesh &aMesh = Surface_TriMeshes[i];
 			auto &wires = faceshape[i].wires;
 			if (wires.empty())
@@ -66,7 +68,7 @@ namespace CADMesher
 			double if_reverse = aface.Orientation() ? -1.0 : 1.0;
 
 
-			double ra = y_step < epsilonerror ? 1 : x_step / y_step * if_reverse;
+			double ra = (y_step < epsilonerror ? 1 : x_step / y_step) * if_reverse;
 
 			for (int j = 0; j < wires.size(); j++)
 			{
@@ -76,7 +78,7 @@ namespace CADMesher
 					auto &boundpos = edgeshape[edges[k]].parameters;
 					int cols = boundpos.cols() - 1;
 					all_pnts.block(0, s, 2, cols) = boundpos.block(0, 0, 2, cols);
-#if 0
+#if 1
 					dprint();
 					dprint(k);
 					for (int pp = 0; pp < boundpos.cols(); ++pp)
@@ -91,8 +93,8 @@ namespace CADMesher
 			/*for (int pp = 0; pp < all_pnts.cols(); ++pp)
 			{
 				dprintwithprecision(15, pp, all_pnts(0, pp), all_pnts(1, pp));
-			}
-			all_pnts(0, 871) -= 1e-10;*/
+			}*/
+			//all_pnts(0, 871) -= 1e-10;
 			all_pnts.block(1, 0, 1, all_pnts.cols()) *= ra;
 			triangulate(all_pnts, bnd, sqrt(3) * x_step * x_step / 4 * mu, aMesh);
 
@@ -219,7 +221,7 @@ namespace CADMesher
 			pointsnumber = 0;
 			int s = 0;
 			double if_reverse = aface.Orientation() ? -1.0 : 1.0;
-			double ra = y_step < epsilonerror ? 1 : x_step / y_step * if_reverse;
+			double ra = (y_step < epsilonerror ? 1 : x_step / y_step) * if_reverse;
 			for (int j = 0; j < wires.size(); j++)
 			{
 				auto &edges = wires[j];
@@ -615,7 +617,7 @@ namespace CADMesher
 	{
 		TopoDS_Shape &aShape = globalmodel.aShape;
 
-		Vector3d ma(DBL_MIN, DBL_MIN, DBL_MIN);
+		Vector3d ma(-DBL_MAX, -DBL_MAX, -DBL_MAX);
 		Vector3d mi(DBL_MAX, DBL_MAX, DBL_MAX);
 		for (TopExp_Explorer vertexExp(aShape, TopAbs_VERTEX); vertexExp.More(); vertexExp.Next())
 		{
@@ -811,7 +813,7 @@ namespace CADMesher
 			opencascade::handle<Standard_Type> type = geom_surface->DynamicType();
 			if (type == STANDARD_TYPE(Geom_Plane)) 
 			{
-				dprint(i, "plane");
+				//dprint(i, "plane");
 				opencascade::handle<Geom_Plane> geom_plane = Handle(Geom_Plane)::DownCast(geom_surface);
 				Standard_Real U1, U2, V1, V2;
 				geom_plane->Bounds(U1, U2, V1, V2);
@@ -824,7 +826,7 @@ namespace CADMesher
 			}
 			else if (type == STANDARD_TYPE(Geom_CylindricalSurface)) 
 			{
-				dprint(i, "CylindricalSurface");
+				//dprint(i, "CylindricalSurface");
 				opencascade::handle<Geom_CylindricalSurface> geom_cylindricalsurface = opencascade::handle<Geom_CylindricalSurface>::DownCast(geom_surface);
 				Standard_Real U1, U2, V1, V2;
 				geom_cylindricalsurface->Bounds(U1, U2, V1, V2);
@@ -839,7 +841,7 @@ namespace CADMesher
 			}
 			else if (type == STANDARD_TYPE(Geom_ConicalSurface)) 
 			{
-				dprint(i, "ConicalSurface");
+				//dprint(i, "ConicalSurface");
 				opencascade::handle<Geom_ConicalSurface> geom_ConicalSurface = opencascade::handle<Geom_ConicalSurface>::DownCast(geom_surface);
 				Standard_Real U1, U2, V1, V2;
 				geom_ConicalSurface->Bounds(U1, U2, V1, V2);
@@ -870,7 +872,7 @@ namespace CADMesher
 			}
 			else if (type == STANDARD_TYPE(Geom_SphericalSurface)) 
 			{
-				dprint(i, "SphericalSurface");
+				//dprint(i, "SphericalSurface");
 				opencascade::handle<Geom_SphericalSurface> geom_SphericalSurface = opencascade::handle<Geom_SphericalSurface>::DownCast(geom_surface);
 				Standard_Real U1, U2, V1, V2;
 				geom_SphericalSurface->Bounds(U1, U2, V1, V2);
@@ -885,7 +887,7 @@ namespace CADMesher
 			}
 			else if (type == STANDARD_TYPE(Geom_ToroidalSurface)) 
 			{
-				dprint(i, "ToroidalSurface");
+				//dprint(i, "ToroidalSurface");
 				opencascade::handle<Geom_ToroidalSurface> geom_ToroidalSurface = opencascade::handle<Geom_ToroidalSurface>::DownCast(geom_surface);
 				Standard_Real U1, U2, V1, V2;
 				geom_ToroidalSurface->Bounds(U1, U2, V1, V2);
@@ -901,7 +903,7 @@ namespace CADMesher
 			}
 			else if (type == STANDARD_TYPE(Geom_BezierSurface)) 
 			{
-				dprint(i, "BezierSurface");
+				//dprint(i, "BezierSurface");
 				opencascade::handle<Geom_BezierSurface> geom_beziersurface = opencascade::handle<Geom_BezierSurface>::DownCast(geom_surface);
 
 				Standard_Real U1, U2, V1, V2;
@@ -932,7 +934,7 @@ namespace CADMesher
 			}
 			else if (type == STANDARD_TYPE(Geom_BSplineSurface))
 			{
-				dprint(i, "BSplineSurface");
+				//dprint(i, "BSplineSurface");
 				opencascade::handle<Geom_BSplineSurface> geom_bsplinesurface = Handle(Geom_BSplineSurface)::DownCast(geom_surface);
 				TColStd_Array1OfReal uknotsequence = geom_bsplinesurface->UKnotSequence();
 				TColStd_Array1OfReal vknotsequence = geom_bsplinesurface->VKnotSequence();
@@ -1074,7 +1076,7 @@ namespace CADMesher
 			int single_flag = 0;
 			if (aedge.if_trimmed) C0 = 0.95;
 			else C0 = 0.9;
-			dprint(i, aedge.main_face, aedge.secondary_face);
+			//dprint(i, aedge.main_face, aedge.secondary_face);
 			//dprint(C0);
 			auto &face1 = face[aedge.main_face].Surface;
 			auto &face2 = face[aedge.secondary_face].Surface;

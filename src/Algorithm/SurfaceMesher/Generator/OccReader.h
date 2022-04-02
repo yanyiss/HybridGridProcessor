@@ -35,10 +35,10 @@ namespace CADMesher
 
 			ComputeFaceAndEdge();
 			Discrete_Edge();
-			Face_type();
+			/*Face_type();
 			Trim_Edge();
 			C0_Feature();
-			//curvature_feature();
+			curvature_feature();*/
 		}
 		OccReader(const OccReader& or) = delete;
 		~OccReader() {

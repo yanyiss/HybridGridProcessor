@@ -11,12 +11,12 @@ namespace CADMesher
 		occ_reader = new OccReader(fileName);
 #if 1
 		occ_reader->Set_TriMesh();
-		occ_reader->Surface_delete();
+		//occ_reader->Surface_delete();
 		MergeModel();
 		//ResetFeature();
 		//TriangleMeshRemeshing trm(&(globalmodel.initial_trimesh));
 		//trm.run();
-		//Write_Obj(globalmodel.initial_trimesh);
+		Write_Obj(globalmodel.initial_trimesh);
 #else 
 		occ_reader->Set_PolyMesh();
 		occ_reader->Surface_delete();
@@ -162,7 +162,7 @@ namespace CADMesher
 		//	else
 		//		model_mesh.data(tv).set_vertflag(false);
 		//}
-#if 1
+#if 0
 		for (int i = 0; i < edgeshape.size(); i++)
 		{
 			auto &edge0 = edgeshape[i];

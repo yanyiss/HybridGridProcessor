@@ -1,5 +1,4 @@
 #include "MainViewerWidget.h"
-#include "..\src\Algorithm\SurfaceMesher\Generator\Iso_Mesh.h"
 
 MainViewerWidget::MainViewerWidget(QWidget* _parent/* =0 */)
 {
@@ -54,31 +53,6 @@ void MainViewerWidget::createViewerDialog()
 	MeshViewer = new InteractiveViewerWidget(glFormat, NULL);
 	MeshViewer->setAcceptDrops(true);
 	connect(MeshViewer,SIGNAL(loadMeshOK(bool,QString)), this, SLOT(LoadMeshFromInner(bool,QString)) );
-}
-
-void MainViewerWidget::open_CAD_query()
-{
-	QString fileName = QFileDialog::getOpenFileName(this,
-		tr("Open mesh file"),
-		tr("../model/CAD"),
-		tr("(*.STEP;*.STP;*.stp;*.IGES;*.IGS;*.igs;*.obj);;")
-	);
-	if (!fileName.isEmpty())
-	{
-		if (fileName.endsWith(".stp") || fileName.endsWith(".igs") || 
-			fileName.endsWith(".IGS") || fileName.endsWith(".STP") ||
-			fileName.endsWith(".STEP") || fileName.endsWith(".IGES"))
-		{
-			MeshViewer->SetCADFileName(fileName);
-			CADMesher::globalmodel.clear();
-		    CADMesher::Iso_Mesh iso_mesh(fileName);
-#if 1
-			open_mesh_gui(Mesh(CADMesher::globalmodel.initial_trimesh));
-#else
-			open_mesh_gui(CADMesher::globalmodel.initial_polymesh);
-#endif
-		}
-	}
 }
 
 void MainViewerWidget::open_mesh_gui(QString fname)
