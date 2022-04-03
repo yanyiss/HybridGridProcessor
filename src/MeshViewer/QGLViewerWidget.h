@@ -55,7 +55,8 @@ public:
 	enum { WIRE_FRAME=0, HIDDEN_LINES, SOLID_FLAT, FLAT_POINTS, SOLID_SMOOTH, POINT_SET, CHECKBOARD ,DIAGONAL_MESH, N_DRAW_MODES };
 	void setDrawMode(int dm)
 	{ 
-		draw_mode_ = dm; updateGL();
+		draw_mode_ = dm;
+		updateGL();
 		emit setDrawMode_signal(dm);
 	}
 	int draw_mode() const { return draw_mode_; }

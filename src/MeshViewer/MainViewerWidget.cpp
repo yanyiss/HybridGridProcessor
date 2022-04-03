@@ -1,5 +1,4 @@
 #include "MainViewerWidget.h"
-#include "..\src\Algorithm\SurfaceMesher\Generator\Iso_Mesh.h"
 
 MainViewerWidget::MainViewerWidget(QWidget* _parent/* =0 */)
 {
@@ -72,7 +71,7 @@ void MainViewerWidget::open_CAD_query()
 			MeshViewer->SetCADFileName(fileName);
 			CADMesher::globalmodel.clear();
 		    CADMesher::Iso_Mesh iso_mesh(fileName);
-#if 0
+#if 1
 			open_mesh_gui(Mesh(CADMesher::globalmodel.initial_trimesh));
 #else
 			open_mesh_gui(CADMesher::globalmodel.initial_polymesh);

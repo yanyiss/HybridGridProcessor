@@ -11,11 +11,12 @@ namespace CADMesher
 		occ_reader = new OccReader(fileName);
 #if 0
 		occ_reader->Set_TriMesh();
+		occ_reader->Surface_delete();
 		MergeModel();
 		//ResetFeature();
 		//TriangleMeshRemeshing trm(&(globalmodel.initial_trimesh));
 		//trm.run();
-		//Write_Obj(globalmodel.initial_trimesh);
+		Write_Obj(globalmodel.initial_trimesh);
 #else 
 		occ_reader->Set_PolyMesh();
 		MergeModel();
