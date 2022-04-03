@@ -162,7 +162,7 @@ namespace CADMesher
 		//	else
 		//		model_mesh.data(tv).set_vertflag(false);
 		//}
-#if 0
+#if 1
 		for (int i = 0; i < edgeshape.size(); i++)
 		{
 			auto &edge0 = edgeshape[i];
