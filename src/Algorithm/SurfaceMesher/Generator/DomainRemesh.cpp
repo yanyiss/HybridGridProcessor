@@ -1,4 +1,4 @@
-#include"Riemann.h"
+#include"DomainRemesh.h"
 
 Eigen::Matrix2d Riemannremesh::Riemanndata(const TriMesh::Point &p)
 {
@@ -19,7 +19,7 @@ double Riemannremesh::Riemannlen(const TriMesh::VertexHandle &h1, const TriMesh:
 	auto p2 = mesh->point(h2);
 	Eigen::MatrixXd xy = Eigen::MatrixXd::Zero(1, 2);
 	xy << p1[0] - p2[0], p1[1] - p2[1];
-	return pow((xy * ((mesh->data(h1).M + mesh->data(h2).M) / 2) * xy.transpose()).determinant(), 1.0 / 2);
+	return pow((xy * ((mesh->data(h1).M + mesh->data(h2).M) *0.5) * xy.transpose()).determinant(), 0.5);
 }
 
 void Riemannremesh::calulenth()
@@ -28,28 +28,19 @@ void Riemannremesh::calulenth()
 	mesh->request_face_status();
 	mesh->request_vertex_status();
 	mesh->request_halfedge_status();
-	TriMesh::Point p;
-	for (auto v = mesh->vertices_begin(); v != mesh->vertices_end(); v++)
+	for (auto v : mesh->vertices())
 	{
-		p = mesh->point(*v);
-		if (p[0] < uu.front()) p[0] = uu.front();
-		else if (p[0] > uu.back()) p[0] = uu.back();
-
-		if (p[1] < vv.front()) p[1] = vv.front();
-		else if (p[1] > vv.back()) p[1] = vv.back();
-
-		mesh->set_point(*v, p);
-		mesh->data(*v).M = Riemanndata(p);
+		mesh->data(v).M = Riemanndata(mesh->point(v));
 	}
 	double len = 0;
 	TriMesh::HalfedgeHandle he;
 	int count = 0;
-	for (TriMesh::EdgeIter ee = mesh->edges_begin(); ee != mesh->edges_end(); ee++)
+	for (auto e : mesh->edges())
 	{
-		if (mesh->is_boundary(*ee))
+		if (mesh->is_boundary(e))
 		{
 			count++;
-			he = mesh->halfedge_handle(*ee, 0);
+			he = mesh->halfedge_handle(e, 0);
 			len += Riemannlen(mesh->from_vertex_handle(he), mesh->to_vertex_handle(he));
 		}
 	}
@@ -65,7 +56,6 @@ void Riemannremesh::split()
 	TriMesh::HalfedgeHandle he;
 	int edgeNum = mesh->n_edges();
 	double len;
-	std::vector<TriMesh::VertexHandle> facevhandle;
 	for (int i = 0; i < edgeNum; i++)
 	{
 		ee = mesh->edge_handle(i);
@@ -161,26 +151,24 @@ void Riemannremesh::flip()
 			mesh->flip(*e);
 		}
 	}
+	mesh->garbage_collection();
 }
 
 void Riemannremesh::updatepoint()
 {
-	float count;
+	double count;
 	TriMesh::Point newpoint;
-	for (auto v = mesh->vertices_begin(); v != mesh->vertices_end(); v++)
+	for (auto v : mesh->vertices())
 	{
-		if (mesh->is_boundary(*v))
-		{
-			continue;
-		}
+		if (mesh->is_boundary(v)) continue;
 		count = 0.0;
 		newpoint = Mesh::Point(0, 0, 0);
-		for (auto vv = mesh->vv_begin(*v); vv.is_valid(); vv++)
+		for (auto vv : mesh->vv_range(v))
 		{
-			newpoint += mesh->point(*vv);
+			newpoint += mesh->point(vv);
 			count += 1;
 		}
-		mesh->set_point(*v, newpoint / count);
+		mesh->set_point(v, newpoint / count);
 	}
 }
 
@@ -193,43 +181,13 @@ void Riemannremesh::remesh()
 		collapse();
 		flip();
 		updatepoint();
-		if (i < 9)
+		if (i < 4)
 		{
-			for (auto v = mesh->vertices_begin(); v != mesh->vertices_end(); v++)
+			for (auto v : mesh->vertices())
 			{
-				auto p = mesh->point(*v);
-				mesh->set_point(*v, p);
-				mesh->data(*v).M = Riemanndata(p);
+				if (mesh->is_boundary(v)) continue;
+				mesh->data(v).M = Riemanndata(mesh->point(v));
 			}
-		}
-	}
-}
-
-void Riemannremesh::curvature_feature(Eigen::Matrix2Xd &all_pnts, std::vector<bool> &curvature)
-{
-	Point ru, rv, n;
-	Eigen::Matrix2d Weingarten, value;
-	for (int i = 0; i < all_pnts.cols(); i++)
-	{
-		double u =  all_pnts(0,i), v = all_pnts(1,i);
-		ru = B->PartialDerivativeU(u, v);
-		rv = B->PartialDerivativeV(u, v);
-		double E = ru.dot(ru);
-		double F = ru.dot(rv);
-		double G = rv.dot(rv);
-		n = (ru.cross(rv)).normalized();
-		double L = (B->PartialDerivativeUU(u, v)).dot(n);
-		double M = (B->PartialDerivativeUV(u, v)).dot(n);
-		double N = (B->PartialDerivativeVV(u, v)).dot(n);
-		Weingarten << L * G - M * F, M * E - L * F,
-			M * G - N * F, N * E - M * F;
-		Eigen::EigenSolver<Eigen::Matrix2d> es(Weingarten);
-		value = (es.pseudoEigenvalueMatrix())/(E*G-pow(F,2));
-		double K1 = std::max(std::abs(value(0, 0)), std::abs(value(1, 1)));
-		double K2 = std::min(std::abs(value(0, 0)), std::abs(value(1, 1)));
-		if (K2 >= 0.001 && K2/K1 < 0.001)
-		{
-			curvature[i] = true;    
 		}
 	}
 }
