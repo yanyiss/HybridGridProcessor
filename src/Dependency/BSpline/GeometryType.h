@@ -3,6 +3,8 @@
 
 typedef Eigen::Vector3d Point;
 typedef Eigen::Vector4d Point4;
+#define PI 3.1415926535897932
+
 class GeometryType
 {
 public:
@@ -23,8 +25,8 @@ protected:
 class PlaneType:public GeometryType
 {
 public:
-	PlaneType(Point &origin, Point &xdir, Point &ydir, Point4 &uv):
-		Origin(origin), Xdir(xdir), Ydir(ydir) {UV = uv;};  
+	PlaneType(Point &origin, Point &xdir, Point &ydir) :
+		Origin(origin), Xdir(xdir), Ydir(ydir) {UV = Point4(-DBL_MAX, DBL_MAX, -DBL_MAX, DBL_MAX);};
 	~PlaneType() {};
 public:
 	Point PartialDerivativeU(const double u, const double v) const { return Xdir; }
@@ -41,8 +43,8 @@ private:
 class CylindricalType :public GeometryType
 {
 public:
-	CylindricalType(Point &location, Point &xAxis, Point &yAxis, Point &zAxis, double &r, Point4 &uv):
-		Location(location), XAxis(xAxis), YAxis(yAxis), ZAxis(zAxis), R(r){UV = uv;};
+	CylindricalType(Point &location, Point &xAxis, Point &yAxis, Point &zAxis, double &r) :
+		Location(location), XAxis(xAxis), YAxis(yAxis), ZAxis(zAxis), R(r) {UV = Point4(0, 2 * PI, -DBL_MAX, DBL_MAX);};
 	~CylindricalType() {};
 public:
 	Point PartialDerivativeU(const double u, const double v) const { return -std::sin(u)*R*XAxis + std::cos(u)*R*YAxis; }
@@ -59,8 +61,8 @@ private:
 class ConicalType :public GeometryType
 {
 public:
-	ConicalType(Point &origin, Point &xdir, Point &ydir, Point &zdir, double &r, double &ang, Point4 &uv):
-		Origin(origin), Xdir(xdir), Ydir(ydir), Zdir(zdir), R(r), Ang(ang) {UV = uv;};
+	ConicalType(Point &origin, Point &xdir, Point &ydir, Point &zdir, double &r, double &ang) :
+		Origin(origin), Xdir(xdir), Ydir(ydir), Zdir(zdir), R(r), Ang(ang) {UV = Point4(0, 2 * PI, -DBL_MAX, DBL_MAX);}
 	~ConicalType() {};
 public:
 	Point PartialDerivativeU(const double u, const double v) const { return (R + v * std::sin(Ang)) * (-std::sin(u)*Xdir + std::cos(u)*Ydir);}
@@ -96,8 +98,8 @@ private:
 class SphericalType :public GeometryType
 {
 public:
-	SphericalType(Point &origin, Point &xdir, Point &ydir, Point &zdir, double &r, Point4 &uv):
-		Origin(origin), Xdir(xdir), Ydir(ydir), Zdir(zdir), R(r) {UV = uv;};
+	SphericalType(Point &origin, Point &xdir, Point &ydir, Point &zdir, double &r) :
+		Origin(origin), Xdir(xdir), Ydir(ydir), Zdir(zdir), R(r) {UV = Point4(0, 2 * PI, -PI * 0.5, PI*0.5);};
 	~SphericalType() {};
 public:
 	Point PartialDerivativeU(const double u, const double v) const { return R * std::cos(v)* (-std::sin(u)*Xdir + std::cos(u)*Ydir); }
@@ -115,8 +117,8 @@ private:
 class ToroidalType :public GeometryType
 {
 public:
-	ToroidalType(Point &origin, Point &xdir, Point &ydir, Point &zdir, double &r1, double &r2, Point4 &uv):
-		Origin(origin), Xdir(xdir), Ydir(ydir), Zdir(zdir), R(r1), r(r2) {UV = uv;};
+	ToroidalType(Point &origin, Point &xdir, Point &ydir, Point &zdir, double &r1, double &r2):
+		Origin(origin), Xdir(xdir), Ydir(ydir), Zdir(zdir), R(r1), r(r2) {UV = Point4(0, 2 * PI, 0, 2 * PI);};
 	~ToroidalType() {};
 public:
 	Point PartialDerivativeU(const double u, const double v) const { return (R+r * std::cos(v))* (-std::sin(u)*Xdir + std::cos(u)*Ydir); }

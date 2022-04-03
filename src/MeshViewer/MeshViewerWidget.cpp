@@ -972,7 +972,7 @@ void MeshViewerWidget::draw_AnisotropicMesh()
 //<<<<<<< john
 void MeshViewerWidget::draw_feature1()
 {	
-	//»­C0ÌØÕ÷
+	//画C0特征
 	glLineWidth(5);
 	glColor3d(1.0, 0.0, 0.0);
 	glBegin(GL_LINES);
@@ -986,7 +986,7 @@ void MeshViewerWidget::draw_feature1()
 	}
 	glEnd();
 
-
+	//画曲率特征
 	glLineWidth(5);
 	glColor3d(0.0, 1.0, 0.0);
 	glBegin(GL_LINES);

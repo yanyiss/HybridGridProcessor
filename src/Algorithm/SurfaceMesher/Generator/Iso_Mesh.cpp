@@ -9,9 +9,9 @@ namespace CADMesher
 	Iso_Mesh::Iso_Mesh(QString & fileName)
 	{
 		occ_reader = new OccReader(fileName);
-#if 1
+#if 0
 		occ_reader->Set_TriMesh();
-		//occ_reader->Surface_delete();
+		occ_reader->Surface_delete();
 		MergeModel();
 		//ResetFeature();
 		//TriangleMeshRemeshing trm(&(globalmodel.initial_trimesh));
@@ -19,7 +19,6 @@ namespace CADMesher
 		Write_Obj(globalmodel.initial_trimesh);
 #else 
 		occ_reader->Set_PolyMesh();
-		occ_reader->Surface_delete();
 		MergeModel();
 		ResetFeature1();
 		TriangleMeshRemeshing trm(&(globalmodel.initial_polymesh));
@@ -30,7 +29,7 @@ namespace CADMesher
 
 	void Iso_Mesh::MergeModel()
 	{
-#if 1
+#if 0
 		TriMesh &model_mesh = globalmodel.initial_trimesh;
 		auto &surface_meshes = occ_reader->Surface_TriMeshes;
 #else
@@ -109,7 +108,6 @@ namespace CADMesher
 			{
 				auto v = frac_mesh.point(tv);
 				vh = model_mesh.add_vertex(Mesh::Point(v[0], v[1], v[2]));
-				//model_mesh.data(vh).curvatureflag = frac_mesh.data(tv).curvatureflag;
 				vhandle.push_back(vh);
 			}
 			for (auto tf : frac_mesh.faces())
@@ -124,13 +122,20 @@ namespace CADMesher
 				model_mesh.add_face(pos);
 				triangle_surface_index.push_back(i);
 			}
-
-			for (int j = 0; j < frac_mesh.n_edges(); j++)
+			for (auto e : frac_mesh.edges())
 			{
-				model_mesh.data(model_mesh.edge_handle(j + id)).flag1 = frac_mesh.data(frac_mesh.edge_handle(j)).flag1;
-				model_mesh.data(model_mesh.edge_handle(j + id)).flag2 = frac_mesh.data(frac_mesh.edge_handle(j)).flag2;
+				if (frac_mesh.data(e).flag1)
+				{
+					auto he = model_mesh.find_halfedge(model_mesh.vertex_handle((e.v0()).idx()+id), model_mesh.vertex_handle((e.v1()).idx()+id));
+					model_mesh.data(model_mesh.edge_handle(he)).flag1 = true;
+				}
+				if (frac_mesh.data(e).flag2)
+				{
+					auto he = model_mesh.find_halfedge(model_mesh.vertex_handle((e.v0()).idx()+id), model_mesh.vertex_handle((e.v1()).idx()+id));
+					model_mesh.data(model_mesh.edge_handle(he)).flag2 = true;
+				}				
 			}
-			id = model_mesh.n_edges();
+			id = model_mesh.n_vertices();
 
 			auto &wires = faceshape[i].wires;
 			for (auto &edges : wires)
@@ -201,7 +206,7 @@ namespace CADMesher
 					if (model_mesh.data(model_mesh.edge_handle(fe)).get_edgeflag())
 						fv.push_back(model_mesh.to_vertex_handle(fe));
 					if (model_mesh.data(model_mesh.edge_handle(fe)).flag1)
-						fv1.push_back(model_mesh.to_vertex_handle(fe));
+						fv1.push_back(model_mesh.to_vertex_handle(fe));						
 					if (model_mesh.data(model_mesh.edge_handle(fe)).flag2)
 						fv2.push_back(model_mesh.to_vertex_handle(fe));
 				}
