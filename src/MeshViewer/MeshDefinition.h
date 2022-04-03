@@ -108,6 +108,7 @@ struct MeshTraits : public OpenMesh::DefaultTraits
 		double targetlength;
 	public:
 		Eigen::Matrix2d M;   //存放第一基本量
+		double GaussCurvature;
 
 		void set_Hessian(const OpenMesh::Vec6d& h_){h = h_;};
 		OpenMesh::Vec6d& get_Hessian(){return h;};

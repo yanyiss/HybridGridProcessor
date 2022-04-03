@@ -2,7 +2,7 @@
 #define OCCREADER_H
 #include "occheader.h"
 #include "basic_def.h"
-#include"Riemann.h"
+#include "DomainRemesh.h"
 
 namespace CADMesher
 {
@@ -36,13 +36,22 @@ namespace CADMesher
 			ComputeFaceAndEdge();
 			Discrete_Edge();
 			Face_type();
-			Trim_Edge();
+			//Trim_Edge();
 			C0_Feature();
-			//curvature_feature();
+			curvature_feature();
 		}
 		OccReader(const OccReader& or) = delete;
 		~OccReader() {
-			if (reader) { delete reader; reader = nullptr; }
+			if (reader) 
+			{ 
+				delete reader; reader = nullptr; 
+				vector<ShapeFace> &faceshape = globalmodel.faceshape;
+				for (int i = 0; i < faceshape.size(); i++)
+				{
+					delete faceshape[i].Surface;
+					faceshape[i].Surface = nullptr;
+				}
+			}
 		}
 
 	protected:
@@ -61,7 +70,6 @@ namespace CADMesher
 		void Trim_Edge();
 		void C0_Feature();
 		void curvature_feature();
-		void Surface_delete();
 		void Set_TriMesh();
 		void Set_PolyMesh();
 		Matrix2Xd Subdomain(Matrix2Xd &all_pnts, vector<Matrix2Xi> &bnd, int &pointsnumber);

@@ -6,11 +6,11 @@ namespace CADMesher
 	{
 		vector<ShapeFace> &faceshape = globalmodel.faceshape;
 		vector<ShapeEdge> &edgeshape = globalmodel.edgeshape;
-
 		Surface_TriMeshes.resize(faceshape.size());
 		for (int i = 0; i < faceshape.size(); i++)
 		{
-			//if (i != 10) continue;
+			dprint(i);
+			//if (i != 39) continue;
 			TriMesh &aMesh = Surface_TriMeshes[i];
 			auto &wires = faceshape[i].wires;
 			if (wires.empty())
@@ -66,7 +66,7 @@ namespace CADMesher
 			double if_reverse = aface.Orientation() ? -1.0 : 1.0;
 
 
-			double ra = y_step < epsilonerror ? 1 : x_step / y_step * if_reverse;
+			double ra = (y_step < epsilonerror ? 1 : x_step / y_step) * if_reverse;
 
 			for (int j = 0; j < wires.size(); j++)
 			{
@@ -95,15 +95,33 @@ namespace CADMesher
 			all_pnts(0, 871) -= 1e-10;*/
 			all_pnts.block(1, 0, 1, all_pnts.cols()) *= ra;
 			triangulate(all_pnts, bnd, sqrt(3) * x_step * x_step / 4 * mu, aMesh);
-
 			double ra_inv = 1.0 / ra;
 			for (auto tv : aMesh.vertices())
 			{
 				auto pos = aMesh.point(tv);
-				auto v = asurface->Value(pos[0], pos[1] * ra_inv);
-				aMesh.set_point(tv, TriMesh::Point(v.X(), v.Y(), v.Z()));
-				//aMesh.set_point(tv, TriMesh::Point(pos[0], pos[1] * ra_inv, 0));
+				aMesh.set_point(tv, TriMesh::Point(pos[0], pos[1] * ra_inv, 0));
 			}
+
+			//Remesh in domain
+			//BSplineSurface* B = static_cast<BSplineSurface*>(faceshape[i].Surface);
+			auto &Surface = faceshape[i].Surface;
+			Riemannremesh Remesh(Surface, &aMesh);
+			Remesh.remesh();
+			double k1, k2;
+			for (auto v : aMesh.vertices())
+			{
+				auto p = aMesh.point(v);
+				Surface->PrincipalCurvature(p[0], p[1], k1, k2);
+				aMesh.data(v).GaussCurvature = k1 * k2;
+			}
+
+			for (auto tv : aMesh.vertices())
+			{
+				auto pos = aMesh.point(tv);
+				auto v = asurface->Value(pos[0], pos[1]);
+				aMesh.set_point(tv, TriMesh::Point(v.X(), v.Y(), v.Z()));
+			}
+
 			int id = 0, begin, endid;
 			for (int j = 0; j < wires.size(); j++)
 			{
@@ -219,7 +237,7 @@ namespace CADMesher
 			pointsnumber = 0;
 			int s = 0;
 			double if_reverse = aface.Orientation() ? -1.0 : 1.0;
-			double ra = y_step < epsilonerror ? 1 : x_step / y_step * if_reverse;
+			double ra = (y_step < epsilonerror ? 1 : x_step / y_step) * if_reverse;
 			for (int j = 0; j < wires.size(); j++)
 			{
 				auto &edges = wires[j];
@@ -233,19 +251,36 @@ namespace CADMesher
 				pointsnumber = s;
 			}
 			all_pnts.block(1, 0, 1, all_pnts.cols()) *= if_reverse;
+			int startid = 0, endid = -1, beginid;
+			for (int j = 0; j < wires.size(); j++)
+			{
+				beginid = startid;
+				auto &edges = wires[j];
+				for (int k = 0; k < edges.size(); k++)
+				{
+					auto &aedge = edgeshape[edges[k]];
+					if (aedge.if_curvature)
+					{
+						if (k == edges.size() - 1) endid = beginid;
+						else endid = startid + (aedge.parameters).cols()-1;
+
+					}
+				}
+			}
 			newall_pnts = Subdomain(all_pnts, bnd, pointsnumber);
-			newall_pnts.block(1, 0, 1, newall_pnts.cols()) *= x_step / y_step;
+			newall_pnts.block(1, 0, 1, newall_pnts.cols()) *= ra* if_reverse;
 			triangulate(newall_pnts, bnd, sqrt(3) * x_step * x_step / 4 * mu, aMesh);
+			double ra_inv = 1.0 / ra;
 			for (auto v = aMesh.vertices_begin(); v != aMesh.vertices_end(); v++)
 			{
 				auto p = aMesh.point(*v);
-				aMesh.set_point(*v, Mesh::Point{ p[0],p[1] / ra,0 });
+				aMesh.set_point(*v, Mesh::Point{ p[0],p[1]* ra_inv,0 });
 			}
 
 			//Remesh in domain
-			BSplineSurface* pt = static_cast<BSplineSurface*>(faceshape[i].Surface);
-			Riemannremesh Remesh(pt, &aMesh);
-			//Remesh.remesh();
+			Riemannremesh Remesh(faceshape[i].Surface, &aMesh);
+			Remesh.remesh();
+
 			all_pnts.block(1, 0, 1, all_pnts.cols()) *= if_reverse;				
 			
 			Mesh::VertexHandle vh1, vh2, vh3, vh4, vend3, vend4;
@@ -364,7 +399,7 @@ namespace CADMesher
 		dprint("Piecewise PolyMesh Done!");
 	}
 
-	Matrix2Xd OccReader::Subdomain(Matrix2Xd &all_pnts, vector<Matrix2Xi> &bnd, int &pointsnumber)
+	/*Matrix2Xd OccReader::Subdomain(Matrix2Xd &all_pnts, vector<Matrix2Xi> &bnd, int &pointsnumber)
 	{
 		Matrix2Xd newall_pnts(2, pointsnumber),edge;
 		Matrix2Xi P;
@@ -391,7 +426,7 @@ namespace CADMesher
 			}
 			edge.col(0) = edge.col(cols);
 			avelen /= cols;
-			step = avelen * 2;
+			step = avelen *1.0;
 
 			//提取拐点并按角平分线设定步长
 			Matrix2Xd midAngle(2, cols+2);
@@ -609,6 +644,11 @@ namespace CADMesher
 			inflexion.clear();
 		}
 		return newall_pnts;
+	}*/
+
+	Matrix2Xd OccReader::Subdomain(Matrix2Xd &all_pnts, vector<Matrix2Xi> &bnd, int &pointsnumber)
+	{
+
 	}
 
 	void OccReader::ComputeFaceAndEdge()
@@ -813,37 +853,29 @@ namespace CADMesher
 			{
 				dprint(i, "plane");
 				opencascade::handle<Geom_Plane> geom_plane = Handle(Geom_Plane)::DownCast(geom_surface);
-				Standard_Real U1, U2, V1, V2;
-				geom_plane->Bounds(U1, U2, V1, V2);
 				auto local_coordinate = &geom_plane->Position();
 				gp_Pnt oringe = local_coordinate->Location();
 				gp_Dir xdir = local_coordinate->XDirection();
 				gp_Dir ydir = local_coordinate->YDirection();
-				Point4 UV(U1, U2, V1, V2 );
-				faceshape[i].Surface = new PlaneType(Point(oringe.X(), oringe.Y(), oringe.Z()), Point(xdir.X(), xdir.Y(), xdir.Z()), Point(ydir.X(), ydir.Y(), ydir.Z()), UV);
+				faceshape[i].Surface = new PlaneType(Point(oringe.X(), oringe.Y(), oringe.Z()), Point(xdir.X(), xdir.Y(), xdir.Z()), Point(ydir.X(), ydir.Y(), ydir.Z()));
 			}
 			else if (type == STANDARD_TYPE(Geom_CylindricalSurface)) 
 			{
 				dprint(i, "CylindricalSurface");
-				opencascade::handle<Geom_CylindricalSurface> geom_cylindricalsurface = opencascade::handle<Geom_CylindricalSurface>::DownCast(geom_surface);
-				Standard_Real U1, U2, V1, V2;
-				geom_cylindricalsurface->Bounds(U1, U2, V1, V2);
-				Point4 UV(U1, U2, V1, V2);
+				opencascade::handle<Geom_CylindricalSurface> geom_cylindricalsurface = opencascade::handle<Geom_CylindricalSurface>::DownCast(geom_surface);;
 				auto local_coordinate = &geom_cylindricalsurface->Position();
 				gp_Pnt oringe = local_coordinate->Location();
 				gp_Dir xdir = local_coordinate->XDirection();
 				gp_Dir ydir = local_coordinate->YDirection();
 				gp_Dir zdir = (geom_cylindricalsurface->Axis()).Direction();
 				double r = geom_cylindricalsurface->Radius();
-				faceshape[i].Surface = new CylindricalType(Point(oringe.X(), oringe.Y(), oringe.Z()), Point(xdir.X(), xdir.Y(), xdir.Z()), Point(ydir.X(), ydir.Y(), ydir.Z()), Point(zdir.X(), zdir.Y(), zdir.Z()), r, UV);
+				//dprint("cur:", 1 / r);
+				faceshape[i].Surface = new CylindricalType(Point(oringe.X(), oringe.Y(), oringe.Z()), Point(xdir.X(), xdir.Y(), xdir.Z()), Point(ydir.X(), ydir.Y(), ydir.Z()), Point(zdir.X(), zdir.Y(), zdir.Z()), r);
 			}
 			else if (type == STANDARD_TYPE(Geom_ConicalSurface)) 
 			{
 				dprint(i, "ConicalSurface");
 				opencascade::handle<Geom_ConicalSurface> geom_ConicalSurface = opencascade::handle<Geom_ConicalSurface>::DownCast(geom_surface);
-				Standard_Real U1, U2, V1, V2;
-				geom_ConicalSurface->Bounds(U1, U2, V1, V2);
-				Point4 UV(U1, U2, V1, V2);
 				auto local_coordinate = &(geom_ConicalSurface->Position());
 				gp_Pnt oringe = local_coordinate->Location();
 				gp_Dir xdir = local_coordinate->XDirection();
@@ -851,7 +883,7 @@ namespace CADMesher
 				gp_Dir zdir = (geom_ConicalSurface->Axis()).Direction();
 				double r = geom_ConicalSurface->RefRadius();
 				double ang = geom_ConicalSurface->SemiAngle();
-				faceshape[i].Surface = new ConicalType(Point(oringe.X(), oringe.Y(), oringe.Z()), Point(xdir.X(), xdir.Y(), xdir.Z()), Point(ydir.X(), ydir.Y(), ydir.Z()), Point(zdir.X(), zdir.Y(), zdir.Z()), r, ang, UV);
+				faceshape[i].Surface = new ConicalType(Point(oringe.X(), oringe.Y(), oringe.Z()), Point(xdir.X(), xdir.Y(), xdir.Z()), Point(ydir.X(), ydir.Y(), ydir.Z()), Point(zdir.X(), zdir.Y(), zdir.Z()), r, ang);
 				//gp_Vec u2, v2, uu, uv, vv;
 				//gp_Pnt oringe;
 				//geom_bsplinesurface->D2(u[1], v[1], oringe, u2, v2, uu, vv, uv);
@@ -872,24 +904,18 @@ namespace CADMesher
 			{
 				dprint(i, "SphericalSurface");
 				opencascade::handle<Geom_SphericalSurface> geom_SphericalSurface = opencascade::handle<Geom_SphericalSurface>::DownCast(geom_surface);
-				Standard_Real U1, U2, V1, V2;
-				geom_SphericalSurface->Bounds(U1, U2, V1, V2);
-				Point4 UV(U1, U2, V1, V2);
 				auto local_coordinate = &(geom_SphericalSurface->Position());
 				gp_Pnt oringe = local_coordinate->Location();
 				gp_Dir xdir = local_coordinate->XDirection();
 				gp_Dir ydir = local_coordinate->YDirection();
 				gp_Dir zdir = (geom_SphericalSurface->Axis()).Direction();
 				double r = geom_SphericalSurface->Radius();
-				faceshape[i].Surface = new SphericalType(Point(oringe.X(), oringe.Y(), oringe.Z()), Point(xdir.X(), xdir.Y(), xdir.Z()), Point(ydir.X(), ydir.Y(), ydir.Z()), Point(zdir.X(), zdir.Y(), zdir.Z()), r, UV);
+				faceshape[i].Surface = new SphericalType(Point(oringe.X(), oringe.Y(), oringe.Z()), Point(xdir.X(), xdir.Y(), xdir.Z()), Point(ydir.X(), ydir.Y(), ydir.Z()), Point(zdir.X(), zdir.Y(), zdir.Z()), r);
 			}
 			else if (type == STANDARD_TYPE(Geom_ToroidalSurface)) 
 			{
 				dprint(i, "ToroidalSurface");
 				opencascade::handle<Geom_ToroidalSurface> geom_ToroidalSurface = opencascade::handle<Geom_ToroidalSurface>::DownCast(geom_surface);
-				Standard_Real U1, U2, V1, V2;
-				geom_ToroidalSurface->Bounds(U1, U2, V1, V2);
-				Point4 UV(U1, U2, V1, V2);
 				auto local_coordinate = &(geom_ToroidalSurface->Position());
 				gp_Pnt oringe = local_coordinate->Location();
 				gp_Dir xdir = local_coordinate->XDirection();
@@ -897,7 +923,7 @@ namespace CADMesher
 				gp_Dir zdir = (geom_ToroidalSurface->Axis()).Direction();
 				double r1 = geom_ToroidalSurface->MajorRadius();
 				double r2 = geom_ToroidalSurface->MinorRadius();
-				faceshape[i].Surface = new ToroidalType(Point(oringe.X(), oringe.Y(), oringe.Z()), Point(xdir.X(), xdir.Y(), xdir.Z()), Point(ydir.X(), ydir.Y(), ydir.Z()), Point(zdir.X(), zdir.Y(), zdir.Z()), r1, r2, UV);
+				faceshape[i].Surface = new ToroidalType(Point(oringe.X(), oringe.Y(), oringe.Z()), Point(xdir.X(), xdir.Y(), xdir.Z()), Point(ydir.X(), ydir.Y(), ydir.Z()), Point(zdir.X(), zdir.Y(), zdir.Z()), r1, r2);
 			}
 			else if (type == STANDARD_TYPE(Geom_BezierSurface)) 
 			{
@@ -906,7 +932,6 @@ namespace CADMesher
 
 				Standard_Real U1, U2, V1, V2;
 				geom_beziersurface->Bounds(U1, U2, V1, V2);
-
 				TColgp_Array2OfPnt controlpoints = geom_beziersurface->Poles();
 				vector<vector<Point>> cp(controlpoints.NbRows());
 				for (int r = 1; r <= controlpoints.NbRows(); r++)
@@ -1112,6 +1137,7 @@ namespace CADMesher
 		auto &face = globalmodel.faceshape;
 		for (int i = 0; i < edge.size(); i++)
 		{
+			//dprint("edge", i);
 			auto &aedge = edge[i];
 			if (!aedge.if_curvature) continue;
 			if (aedge.if_C0 )
@@ -1122,63 +1148,71 @@ namespace CADMesher
 			auto &facer = face[aedge.main_face].Surface;
 			//dprint("surface_id:", aedge.main_face, aedge.reversed_edge);
 			auto &pnts = aedge.parameters;
+			double u1 = pnts(0, 0), v1 = pnts(1, 0), u2 = pnts(0, pnts.cols() - 1), v2 = pnts(1, pnts.cols() - 1);
+			Eigen::Vector2d step(v1 - v2, u2 - u1);
+			step.normalize();
+			double base_stepu = step(0), base_stepv = step(1);
+			//dprint(u1, v1, u2, v2, base_stepu, base_stepv);
 			Point4 UV = facer->Getbounds();
-			double u1 = UV(0), u2 = UV(1), v1 = UV(2), v2 = UV(3);
-			//dprint(u1, u2, v1, v2);
-			double epsilonu = (u2 - u1)*0.001, epsilonv = (v2 - v1)*0.001;
-			bool line = false;
-			double step, u = pnts(0, 0), v = pnts(1, 0);
-			if (std::abs(u - pnts(0, pnts.cols() - 1) < epsilonu))
-			{
-				line = true;
-				if (u < (u1 + u2)*0.5) step = (u2 - u)*0.05;
-				else step = (u1 - u)*0.05;
-			}
-			else
-			{
-				if (v < (v1 + v2)*0.5) step = (v2 - v)*0.05;
-				else step = (v1 - v)*0.05;
-			}
+			double umin = UV(0), umax = UV(1), vmin = UV(2), vmax = UV(3);
+			//dprint(umin, umax, vmin, vmax);
 			Eigen::Matrix2d Weingarten, value, vec;
 			int single_flag = 0;
-			for (int j = 0; j < pnts.cols(); j++)
-			{
+			for (int j = 1; j < pnts.cols()-1; j++)
+			{				
+				//dprint("point", j);
+				double stepu = base_stepu, stepv = base_stepv;
+				int count = 0;
+				while (true) 
+				{
+					u1 = pnts(0, j);
+					v1 = pnts(1, j);
+					for (int m = 0; m < 15; m++)
+					{
+						//dprint(u1, v1);
+						u1 += stepu;
+						v1 += stepv;
+						if (m==14 || u1 < umin || u1 > umax || v1 < vmin || v1 > vmax)
+						{
+							count = m;
+							break;
+						}		
+					}
+					if (count) break;
+					else
+					{
+						stepu *= 0.5;
+						stepv *= 0.5;
+					}
+				}
+				stepu *= count*0.06;
+				stepv *= count*0.06;
+				u1 = pnts(0, j);
+				v1 = pnts(1, j);
 				std::vector<double> curvature;
-				u = pnts(0, j);
-				v = pnts(1, j);
 				double K1, K2;
 				for (int m = 0; m < 15; m++)
-				{					
-					facer->PrincipalCurvature(u, v, K1, K2);
-					//dprint(j, u, v);
+				{				
+					facer->PrincipalCurvature(u1, v1, K1, K2);
+					//dprint(j, u1, v1, K1);
 					curvature.push_back(K1);
-					if (line) u += step;
-					else v += step;
+					u1 += stepu;
+					v1 += stepv;
 				}
 				K1 = curvature.front();
 				std::sort(curvature.begin(), curvature.end());
-				if (curvature.back() - curvature[curvature.size() - 2] > 4) curvature.pop_back();
+				//if (curvature.back() - curvature[curvature.size() - 2] > 4) curvature.pop_back();
 				if (curvature.back() - curvature.front() > 4 && K1 > curvature[10])
 				{
 					single_flag++;
 					//dprint("juidjfhrythg", j);
 				}
 			}
-			if (single_flag <= pnts.cols()*0.8)
+			if (single_flag <= (pnts.cols()-2)*0.6)
 			{
 				aedge.if_curvature = false;
 				edge[aedge.reversed_edge].if_curvature = false;
 			}
-		}
-	}
-
-	void OccReader::Surface_delete()
-	{
-		vector<ShapeFace> &faceshape = globalmodel.faceshape;
-		for (int i = 0; i < faceshape.size(); i++)
-		{
-			delete faceshape[i].Surface;
-			faceshape[i].Surface = nullptr;
 		}
 	}
 }

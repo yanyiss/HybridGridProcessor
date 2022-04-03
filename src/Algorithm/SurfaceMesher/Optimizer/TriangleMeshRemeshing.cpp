@@ -8,7 +8,7 @@ namespace CADMesher
 			mesh->data(tv).set_targetlength(expected_length);
 
 		printMeshQuality(*mesh);
-		for (int i = 0; i < 30; i++)
+		for (int i = 0; i < 20; i++)
 		{
 			dprint("\niteration times:", i + 1);
 			split();
