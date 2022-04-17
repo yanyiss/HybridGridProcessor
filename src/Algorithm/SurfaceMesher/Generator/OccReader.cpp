@@ -10,7 +10,7 @@ namespace CADMesher
 		for (int i = 0; i < faceshape.size(); i++)
 		{
 			//dprint(i);
-			if (i != 0) continue;
+			//if (i != 0) continue;
 			TriMesh &aMesh = Surface_TriMeshes[i];
 			auto &wires = faceshape[i].wires;
 			if (wires.empty())
@@ -76,7 +76,7 @@ namespace CADMesher
 					auto &boundpos = edgeshape[edges[k]].parameters;
 					int cols = boundpos.cols() - 1;
 					all_pnts.block(0, s, 2, cols) = boundpos.block(0, 0, 2, cols);
-#if 1
+#if 0
 					dprint();
 					dprint(k);
 					for (int pp = 0; pp < boundpos.cols(); ++pp)
@@ -112,7 +112,7 @@ namespace CADMesher
 			{
 				auto p = aMesh.point(v);
 				Surface->PrincipalCurvature(p[0], p[1], k1, k2);
-				aMesh.data(v).GaussCurvature = k1 * k2;
+				aMesh.data(v).GaussCurvature = std::max(std::fabs(k1), std::fabs(k2));
 			}
 
 			for (auto tv : aMesh.vertices())
@@ -174,6 +174,7 @@ namespace CADMesher
 		dprint("Piecewise TriMesh Done!");
 	}
 
+#if 0
 	void OccReader::Set_PolyMesh()
 	{
 		vector<ShapeFace> &faceshape = globalmodel.faceshape;
@@ -398,6 +399,7 @@ namespace CADMesher
 
 		dprint("Piecewise PolyMesh Done!");
 	}
+#endif
 
 	/*Matrix2Xd OccReader::Subdomain(Matrix2Xd &all_pnts, vector<Matrix2Xi> &bnd, int &pointsnumber)
 	{
@@ -646,10 +648,10 @@ namespace CADMesher
 		return newall_pnts;
 	}*/
 
-	Matrix2Xd OccReader::Subdomain(Matrix2Xd &all_pnts, vector<Matrix2Xi> &bnd, int &pointsnumber)
+	/*Matrix2Xd OccReader::Subdomain(Matrix2Xd &all_pnts, vector<Matrix2Xi> &bnd, int &pointsnumber)
 	{
 
-	}
+	}*/
 
 	void OccReader::ComputeFaceAndEdge()
 	{

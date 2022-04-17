@@ -4,20 +4,39 @@ namespace CADMesher
 {
 	void TriangleMeshRemeshing::run()
 	{
+		//double e = expected_length * 0.1;
+		////for (auto tv : mesh->vertices()) dprint(mesh->data(tv).GaussCurvature);
+		//for (auto tv : mesh->vertices())
+		//	mesh->data(tv).set_targetlength(mesh->data(tv).GaussCurvature < 1.0e-5 ? 1.5 * expected_length :
+		//		std::min(1.5*expected_length, std::sqrt(6*e/mesh->data(tv).GaussCurvature-3*e*e)));
+		//	//mesh->data(tv).set_targetlength(expected_length);
+		/*double e = expected_length * 0.0005;
+		for (auto tv : mesh->vertices())
+			dprint(mesh->data(tv).GaussCurvature, expected_length, std::sqrt(6 * e / mesh->data(tv).GaussCurvature - 3 * e*e));*/
+		/*for (auto tv : mesh->vertices())
+		{
+			if(mesh->data(tv).GaussCurvature>1.0e-3)
+			dprint(mesh->data(tv).GaussCurvature, expected_length, expected_length/(4 + Log10(mesh->data(tv).GaussCurvature)));
+		}*/
+#if 0
 		for (auto tv : mesh->vertices())
 			mesh->data(tv).set_targetlength(expected_length);
-
+#else
+		for (auto tv : mesh->vertices())
+			mesh->data(tv).set_targetlength(mesh->data(tv).GaussCurvature > 1.0e-4?
+				expected_length*2/(6+Log10(mesh->data(tv).GaussCurvature)):expected_length);
+#endif
 		printMeshQuality(*mesh);
-		for (int i = 0; i < 20; i++)
+		for (int i = 0; i < 12; i++)
 		{
 			dprint("\niteration times:", i + 1);
 			split();
 			collapse();
 			equalize_valence();
-			if (i > 10 && meshMinAngle(*mesh) < lowerAngleBound)
+			if (i > 5 && meshMinAngle(*mesh) < lowerAngleBound)
 			{
 				adjustTargetLength();
-				//processAngle();
+				processAngle();
 			}
 			tangential_relaxation();
 			dprint("mesh vertices number:", mesh->n_vertices());
@@ -43,12 +62,14 @@ namespace CADMesher
 				continue;
 			}
 #endif
+			
 			//dprint(te.idx());
 			SOV vert[2] = { te.v0(), te.v1() };
 			double t0 = mesh->data(vert[0]).get_targetlength();
 			double t1 = mesh->data(vert[1]).get_targetlength();
 			if (mesh->calc_edge_length(te) < 1.333 * std::min(t0, t1) || te.is_boundary())
 				continue;
+			//dprint(te.idx(), te.v0().idx(), te.v1().idx());
 			OV newvert = mesh->add_vertex(mesh->calc_edge_midpoint(te));
 			mesh->data(newvert).set_targetlength(0.5*(t0 + t1));
 			//bool flag = mesh->data(te).get_edgeflag();
@@ -246,8 +267,8 @@ namespace CADMesher
 			double opt_before = opt(h0) + opt(h1);
 			mesh->flip(te);
 			//若局部网格角度未被优化，则再次flip回到初始状态
-			if (opt_before < opt(te.h0()) + opt(te.h1()))
-				mesh->flip(te);
+			//if (opt_before < opt(te.h0()) + opt(te.h1()))
+				//mesh->flip(te);
 		}
 		mesh->garbage_collection();
 		dprint("equalize done");
@@ -311,10 +332,13 @@ namespace CADMesher
 					{
 						mesh->data(th.to()).set_vertflag(true);
 					}
-					if (mesh->data(th.prev().edge()).get_edgeflag())
+					/*if (mesh->data(th.prev().edge()).get_edgeflag())
 					{
 						mesh->data(h_iter->edge()).set_edgeflag(true);
-					}
+					}*/
+					mesh->data(h_iter->edge()).flag1 = mesh->data(th.prev().edge()).flag1;
+					mesh->data(h_iter->edge()).flag2 = mesh->data(th.prev().edge()).flag2;
+
 					mesh->collapse(th);
 				}
 				else
@@ -331,16 +355,30 @@ namespace CADMesher
 
 					if (!mesh->is_flip_ok(pe))
 						continue;
-					if (mesh->data(pe).get_edgeflag())
+					//if (mesh->data(pe).get_edgeflag())
+					//{
+					//	mesh->data(flagvert).set_vertflag(true);
+					//	mesh->data(te).set_edgeflag(true);
+					//	mesh->data(ne).set_edgeflag(true);
+					//	mesh->data(pe).set_edgeflag(false);
+					//	/*if (!mesh->data(flagvert).get_vertflag())
+					//	{
+					//		mesh->set_point(flagvert, mesh->calc_edge_midpoint(pe));
+					//	}*/
+					//}
+					if (mesh->data(pe).flag1)
 					{
 						mesh->data(flagvert).set_vertflag(true);
-						mesh->data(te).set_edgeflag(true);
-						mesh->data(ne).set_edgeflag(true);
-						mesh->data(pe).set_edgeflag(false);
-						/*if (!mesh->data(flagvert).get_vertflag())
-						{
-							mesh->set_point(flagvert, mesh->calc_edge_midpoint(pe));
-						}*/
+						mesh->data(te).flag1 = true;
+						mesh->data(ne).flag1 = true;
+						mesh->data(pe).flag1 = false;
+					}
+					if (mesh->data(pe).flag2)
+					{
+						mesh->data(flagvert).set_vertflag(true);
+						mesh->data(te).flag2 = true;
+						mesh->data(ne).flag2 = true;
+						mesh->data(pe).flag2 = false;
 					}
 					mesh->flip(pe);
 				}
@@ -510,30 +548,49 @@ namespace CADMesher
 		}
 		for (auto &te : mesh_->edges())
 		{
-			if (mesh_->data(te).get_edgeflag())
+			vertexType vt0 = mesh_->property(typeMap, te.v0());
+			vertexType vt1 = mesh_->property(typeMap, te.v1());
+
+			if (mesh_->data(te).flag1)
 			{
-				vertexType vt0 = mesh_->property(typeMap, te.v0());
-				vertexType vt1 = mesh_->property(typeMap, te.v1()); 
-				auto th = mesh_->find_halfedge(mesh_->vertex_handle(mesh_->property(idMap, te.v0())),
-					mesh_->vertex_handle(mesh_->property(idMap, te.v0())));
 				if (vt0 == tri || vt1 == tri)
 				{
 					mesh->data(mesh->edge_handle(mesh->find_halfedge(mesh->vertex_handle(mesh_->property(idMap, te.v0())),
-						mesh->vertex_handle(mesh_->property(idMap, te.v1()))))).set_edgeflag(true);
+						mesh->vertex_handle(mesh_->property(idMap, te.v1()))))).flag1 = true;
 				}
 				else if (vt0 == poly || vt1 == poly)
 				{
 					polymesh->data(polymesh->edge_handle(polymesh->find_halfedge(polymesh->vertex_handle(mesh_->property(idMap, te.v0())),
-						polymesh->vertex_handle(mesh_->property(idMap, te.v1()))))).set_edgeflag(true);
+						polymesh->vertex_handle(mesh_->property(idMap, te.v1()))))).flag1 = true;
 				}
 				else
 				{
 					mesh->data(mesh->edge_handle(mesh->find_halfedge(mesh->vertex_handle(mesh_->property(idMap, te.v0())),
-						mesh->vertex_handle(mesh_->property(idMap, te.v1()))))).set_edgeflag(true);
+						mesh->vertex_handle(mesh_->property(idMap, te.v1()))))).flag1 = true;
 					polymesh->data(polymesh->edge_handle(polymesh->find_halfedge(polymesh->vertex_handle(mesh_->property(idMap, te.v0())),
-						polymesh->vertex_handle(mesh_->property(idMap, te.v1()))))).set_edgeflag(true);
+						polymesh->vertex_handle(mesh_->property(idMap, te.v1()))))).flag1 = true;
 				}
 			}
+			if (mesh_->data(te).flag2)
+			{
+				if (vt0 == tri || vt1 == tri)
+				{
+					mesh->data(mesh->edge_handle(mesh->find_halfedge(mesh->vertex_handle(mesh_->property(idMap, te.v0())),
+						mesh->vertex_handle(mesh_->property(idMap, te.v1()))))).flag2 = true;
+				}
+				else if (vt0 == poly || vt1 == poly)
+				{
+					polymesh->data(polymesh->edge_handle(polymesh->find_halfedge(polymesh->vertex_handle(mesh_->property(idMap, te.v0())),
+						polymesh->vertex_handle(mesh_->property(idMap, te.v1()))))).flag2 = true;
+				}
+				else
+				{
+					mesh->data(mesh->edge_handle(mesh->find_halfedge(mesh->vertex_handle(mesh_->property(idMap, te.v0())),
+						mesh->vertex_handle(mesh_->property(idMap, te.v1()))))).flag2 = true;
+					polymesh->data(polymesh->edge_handle(polymesh->find_halfedge(polymesh->vertex_handle(mesh_->property(idMap, te.v0())),
+						polymesh->vertex_handle(mesh_->property(idMap, te.v1()))))).flag2 = true;
+				}
+		}
 		}
 		boundaryNum = k;
 		mesh_->remove_property(idMap);
@@ -583,12 +640,11 @@ namespace CADMesher
 		}
 		for (auto &te : mesh->edges())
 		{
-			if (mesh->data(te).get_edgeflag())
-			{
-				polymesh->data(polymesh->edge_handle(polymesh->find_halfedge(
-					polymesh->vertex_handle(te.v0().idx() < boundaryNum ? te.v0().idx() : te.v0().idx() + nv),
-					polymesh->vertex_handle(te.v1().idx() < boundaryNum ? te.v1().idx() : te.v1().idx() + nv)))).set_edgeflag(true);
-			}
+			auto ph = polymesh->edge_handle(polymesh->find_halfedge(
+				polymesh->vertex_handle(te.v0().idx() < boundaryNum ? te.v0().idx() : te.v0().idx() + nv - boundaryNum),
+				polymesh->vertex_handle(te.v1().idx() < boundaryNum ? te.v1().idx() : te.v1().idx() + nv - boundaryNum)));
+			polymesh->data(ph).flag1 = mesh->data(te).flag1;
+			polymesh->data(ph).flag2 = mesh->data(te).flag2;
 		}
 #else
 		*polymesh = Mesh(*mesh);

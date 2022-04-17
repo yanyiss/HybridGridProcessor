@@ -51,7 +51,7 @@ namespace CADMesher
 		double low;
 		double expected_length;
 
-		double lowerAngleBound = 0.05;
+		double lowerAngleBound = 0.06;
 		TriMesh *mesh = nullptr;
 		ClosestPointSearch::AABBTree *aabbtree = nullptr;
 

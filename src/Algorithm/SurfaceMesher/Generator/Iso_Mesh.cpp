@@ -9,13 +9,13 @@ namespace CADMesher
 	Iso_Mesh::Iso_Mesh(QString & fileName)
 	{
 		occ_reader = new OccReader(fileName);
-#if 0
+#if 1
 		occ_reader->Set_TriMesh();
-		occ_reader->Surface_delete();
+		//occ_reader->Surface_delete();
 		MergeModel();
-		//ResetFeature();
-		//TriangleMeshRemeshing trm(&(globalmodel.initial_trimesh));
-		//trm.run();
+		ResetFeature();
+		TriangleMeshRemeshing trm(&(globalmodel.initial_trimesh));
+		trm.run();
 		Write_Obj(globalmodel.initial_trimesh);
 #else 
 		occ_reader->Set_PolyMesh();
@@ -29,7 +29,7 @@ namespace CADMesher
 
 	void Iso_Mesh::MergeModel()
 	{
-#if 0
+#if 1
 		TriMesh &model_mesh = globalmodel.initial_trimesh;
 		auto &surface_meshes = occ_reader->Surface_TriMeshes;
 #else
@@ -108,6 +108,7 @@ namespace CADMesher
 			{
 				auto v = frac_mesh.point(tv);
 				vh = model_mesh.add_vertex(Mesh::Point(v[0], v[1], v[2]));
+				model_mesh.data(vh).GaussCurvature = frac_mesh.data(tv).GaussCurvature;
 				vhandle.push_back(vh);
 			}
 			for (auto tf : frac_mesh.faces())
@@ -210,6 +211,8 @@ namespace CADMesher
 					if (model_mesh.data(model_mesh.edge_handle(fe)).flag2)
 						fv2.push_back(model_mesh.to_vertex_handle(fe));
 				}
+				model_mesh.data(model_mesh.vertex_handle(n1)).GaussCurvature += model_mesh.data(model_mesh.vertex_handle(m0)).GaussCurvature;
+				model_mesh.data(model_mesh.vertex_handle(n1)).GaussCurvature *= 0.5;
 				model_mesh.collapse(model_mesh.find_halfedge(model_mesh.vertex_handle(m0), model_mesh.vertex_handle(n1)));
 				for (OV v : fv) {
 					auto fe = model_mesh.find_halfedge(v, model_mesh.vertex_handle(n1));
@@ -241,6 +244,8 @@ namespace CADMesher
 					if (model_mesh.data(model_mesh.edge_handle(fe)).flag2)
 						fv2.push_back(model_mesh.to_vertex_handle(fe));
 				}
+				model_mesh.data(model_mesh.vertex_handle(n0)).GaussCurvature += model_mesh.data(model_mesh.vertex_handle(m1)).GaussCurvature;
+				model_mesh.data(model_mesh.vertex_handle(n0)).GaussCurvature *= 0.5;
 				model_mesh.collapse(model_mesh.find_halfedge(model_mesh.vertex_handle(m1), model_mesh.vertex_handle(n0)));
 				for (OV v : fv) {
 					auto fe = model_mesh.find_halfedge(v, model_mesh.vertex_handle(n0));
@@ -269,6 +274,8 @@ namespace CADMesher
 					if (model_mesh.data(model_mesh.edge_handle(fe)).flag2)
 						fv2.push_back(model_mesh.to_vertex_handle(fe));
 				}
+				model_mesh.data(model_mesh.vertex_handle(m1 + length - j - 1)).GaussCurvature += model_mesh.data(model_mesh.vertex_handle(m0 + j)).GaussCurvature;
+				model_mesh.data(model_mesh.vertex_handle(m1 + length - j - 1)).GaussCurvature *= 0.5;
 				model_mesh.collapse(model_mesh.find_halfedge(model_mesh.vertex_handle(m0 + j), model_mesh.vertex_handle(m1 + length - j - 1)));
 				for (OV v : fv) {
 					auto fe = model_mesh.find_halfedge(v, model_mesh.vertex_handle(m1 + length - j - 1));

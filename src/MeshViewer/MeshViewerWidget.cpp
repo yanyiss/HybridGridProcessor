@@ -948,9 +948,10 @@ void MeshViewerWidget::draw_IsotropicMesh()
 #include "../src/Algorithm/SurfaceMesher/Optimizer/AnisotropicMeshRemeshing.h"
 void MeshViewerWidget::draw_AnisotropicMesh()
 {
+#if 0
 	if (ifUpdateMesh)
 	{
-		/*timeRecorder tr;
+		timeRecorder tr;
 		CADMesher::AnisotropicMeshRemeshing *amr = new CADMesher::AnisotropicMeshRemeshing();
 		amr->SetMesh(&mesh);
 		amr->load_ref_mesh(&mesh);
@@ -965,8 +966,9 @@ void MeshViewerWidget::draw_AnisotropicMesh()
 		if (if_saveOK)
 			dprint("The isotropic mesh has been saved in \"Anisotropic Mesh\" folder");
 		else
-			dprint("Save anisotropic mesh failed");*/
+			dprint("Save anisotropic mesh failed");
 	}
+#endif
 }
 
 //<<<<<<< john
@@ -999,6 +1001,18 @@ void MeshViewerWidget::draw_feature1()
 		}
 	}
 	glEnd();
+
+	/*glPointSize(5);
+	glColor3d(1.0, 0, 0);
+	glBegin(GL_POINTS);
+	for (auto &tv : mesh.vertices())
+	{
+		if (mesh.data(tv).get_targetlength() < 0.07)
+		{
+			glVertex3dv(mesh.point(tv).data());
+		}
+	}
+	glEnd();*/
 }
 //=======
 #include "../src/Algorithm/CheckBoard/CheckBoardGenerator.h"

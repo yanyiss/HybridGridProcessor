@@ -630,6 +630,7 @@ void InteractiveViewerWidget::showIsotropicMesh()
 
 }
 
+#include "..\src\Algorithm\SurfaceMesher\Optimizer\AnisotropicMeshRemeshing.h"
 void InteractiveViewerWidget::showAnisotropicMesh()
 {
 
