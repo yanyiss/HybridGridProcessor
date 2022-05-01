@@ -8,6 +8,7 @@
 //main widget
 #include "InteractiveViewerWidget.h"
 #include "MeshParamDialog.h"
+#include "..\src\Algorithm\SurfaceMesher\Generator\Iso_Mesh.h"
 
 class MainViewerWidget : public QDialog
 {
@@ -65,7 +66,35 @@ public slots:
 			open_mesh_gui(fileName);
 		}
 	}
-	void open_CAD_query();
+	void open_CAD_query()
+	{
+		QString fileName = QFileDialog::getOpenFileName(this,
+			tr("Open mesh file"),
+			tr("../model/CAD"),
+			tr("(*.STEP;*.STP;*.stp;*.IGES;*.IGS;*.igs;*.obj);;")
+		);
+		if (!fileName.isEmpty())
+		{
+			if (fileName.endsWith(".stp") || fileName.endsWith(".igs") ||
+				fileName.endsWith(".IGS") || fileName.endsWith(".STP") ||
+				fileName.endsWith(".STEP") || fileName.endsWith(".IGES"))
+			{
+				MeshViewer->SetCADFileName(fileName);
+				CADMesher::globalmodel.clear();
+				CADMesher::Iso_Mesh iso_mesh(fileName);
+#if 1
+				Mesh me(CADMesher::globalmodel.initial_trimesh);
+				initMeshStatusAndNormal(me);
+				open_mesh_gui(me);
+				/*Mesh me;
+				bool read_OK = OpenMesh::IO::read_mesh(me, "step_to_obj.obj");
+				open_mesh_gui(me);*/
+#else
+				open_mesh_gui(CADMesher::globalmodel.initial_polymesh);
+#endif
+			}
+		}
+	}
 	void save_mesh_query() 
 	{
 		QString fileName = QFileDialog::getSaveFileName(this,

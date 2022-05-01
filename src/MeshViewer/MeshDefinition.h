@@ -95,8 +95,10 @@ struct MeshTraits : public OpenMesh::DefaultTraits
 
 	VertexTraits
 	{
-		VertexT() : node_type(0), new_pos_fixed(false), color(1), density(1.0), h(OpenMesh::Vec6d(1, 0, 0, 1, 0, 1)), vertflag(false), targetlength(0)
+		VertexT() : node_type(0), new_pos_fixed(false), color(1), density(1.0), h(OpenMesh::Vec6d(1, 0, 0, 1, 0, 1)),
+		new_pos(OpenMesh::Vec3d(0,0,0)), vertflag(false), targetlength(0)
 		{
+		M << 0,0,0,0;
 		};
 	private:
 		OpenMesh::Vec6d h;

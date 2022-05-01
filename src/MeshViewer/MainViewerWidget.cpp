@@ -1,5 +1,4 @@
 #include "MainViewerWidget.h"
-#include "..\src\Algorithm\SurfaceMesher\Generator\Iso_Mesh.h"
 
 MainViewerWidget::MainViewerWidget(QWidget* _parent/* =0 */)
 {

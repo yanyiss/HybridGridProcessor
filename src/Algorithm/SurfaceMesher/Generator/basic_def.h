@@ -18,7 +18,7 @@
 #include "..\src\MeshViewer\MeshDefinition.h"
 #include "..\src\Dependency\CPS\CPS_AABBTree.h"
 #include "..\src\Toolbox\dprinter\dprint.h"
-#include"src\Dependency\BSpline\BSplineSurface.h"
+#include "..\src\Dependency\BSpline\BSplineSurface.h"
 
 namespace CADMesher 
 {
