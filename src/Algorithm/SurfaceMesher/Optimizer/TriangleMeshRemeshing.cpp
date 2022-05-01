@@ -13,11 +13,11 @@ namespace CADMesher
 		/*double e = expected_length * 0.0005;
 		for (auto tv : mesh->vertices())
 			dprint(mesh->data(tv).GaussCurvature, expected_length, std::sqrt(6 * e / mesh->data(tv).GaussCurvature - 3 * e*e));*/
-		/*for (auto tv : mesh->vertices())
-		{
-			if(mesh->data(tv).GaussCurvature>1.0e-3)
-			dprint(mesh->data(tv).GaussCurvature, expected_length, expected_length/(4 + Log10(mesh->data(tv).GaussCurvature)));
-		}*/
+			/*for (auto tv : mesh->vertices())
+			{
+				if(mesh->data(tv).GaussCurvature>1.0e-3)
+				dprint(mesh->data(tv).GaussCurvature, expected_length, expected_length/(4 + Log10(mesh->data(tv).GaussCurvature)));
+			}*/
 		expected_length *= 1.5;
 #if 0
 		for (auto tv : mesh->vertices())
@@ -43,50 +43,50 @@ namespace CADMesher
 		printMeshQuality(*mesh);
 		for (auto &tv : mesh->vertices())
 		{
-			if (tv.valence() <= 2)
+			if (tv.valence() <= 2 && !tv.is_boundary())
 			{
-				system("pause");
+				int p = 0;
 			}
 		}
 		if (!mesh->has_face_normals())
 			mesh->request_face_normals();
 		if (!mesh->has_vertex_normals())
 			mesh->request_vertex_normals();
-		
+
 		double mA = 0;
 		tr.refresh();
 		for (int i = 0; i < 12; i++)
 		{
 			tr.mark();
 			dprint("\niteration times:", i + 1);
-			
+
 			split();
 			collapse();
 			equalize_valence();
+			if (i > 4)
+			{
+				processAngle();
+			}
+			tangential_relaxation();
 			mA = meshMinAngle(*mesh);
 			if (mA > lowerAngleBound)
 			{
 				dprint("iteration times:", i + 1);
 				break;
 			}
-			tangential_relaxation();
-			if (i > 4 && mA < lowerAngleBound)
-			{
-				processAngle();
-			}
 #ifdef printRemeshingInfo
 			dprint("mesh vertices number:", mesh->n_vertices());
 			printMeshQuality(*mesh);
 			tr.pastMark("the " + std::to_string(i + 1) + "-th iteration time:");
 #endif
-			
+
 		}
 		dprint("Remeshing Done!\n");
 
-		
+
 		for (auto &tv : mesh->vertices())
 		{
-			if (tv.valence() <= 2)
+			if (tv.valence() <= 2 && !tv.is_boundary())
 			{
 				int p = 0;
 				dprint(tv.idx(), tv.valence());
@@ -112,7 +112,7 @@ namespace CADMesher
 				continue;
 			}
 #endif
-			
+
 			split_one_edge(te, splitnumber);
 		}
 		mesh->garbage_collection();
@@ -398,9 +398,15 @@ namespace CADMesher
 	void TriangleMeshRemeshing::processAngle()
 	{
 		int id = 0;
-		double upperAngleBound = 2 * (PI - lowerAngleBound);
+		double upperAngleBound = PI - lowerAngleBound * 2;
 		for (auto &th : mesh->halfedges())
 		{
+#ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
+			if (polymeshInput && th.from().idx() < boundaryNum && th.to().idx() < boundaryNum)
+			{
+				continue;
+			}
+#endif
 			if (th.is_boundary() || !th.is_valid())
 				continue;
 			if (mesh->calc_sector_angle(th) < upperAngleBound)
@@ -442,6 +448,12 @@ namespace CADMesher
 			}
 			else
 			{
+#ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
+				if (polymeshInput && th.from().idx() < boundaryNum)
+				{
+					continue;
+				}
+#endif
 				mesh->data(th.edge()).flag1 = mesh->data(th.edge()).flag1 || mesh->data(th.next().edge()).flag1;
 				mesh->data(th.edge()).flag2 = mesh->data(th.edge()).flag2 || mesh->data(th.next().edge()).flag2;
 				mesh->data(th.next().edge()).flag1 = false;
@@ -459,194 +471,195 @@ namespace CADMesher
 				}
 			}
 		}
-
-//#if 1
-//		for (auto &tf : mesh->faces())
-//		{
-//			if (!tf.is_valid()) 
-//				continue;
-//			minAngle = 4.0;
-//			for (auto &tfh : mesh->fh_range(tf))
-//			{
-//				double angle = mesh->calc_sector_angle(tfh);
-//				if (angle < minAngle)
-//				{
-//					minAngle = angle;
-//					th = tfh;
-//				}
-//			}
-//			if (minAngle < lowerAngleBound)
-//			{
-//				double angle0 = mesh->calc_sector_angle(th.next());
-//				double angle1 = mesh->calc_sector_angle(th.prev());
-//#if 1
-//				if (angle0 < lowerAngleBound)
-//				{
-//					split_one_edge(th.next().edge(), id);
-//				}
-//				else if (angle1 < lowerAngleBound)
-//				{
-//					split_one_edge(th.edge(), id);
-//				}
-//				else
-//				{
-//					mesh->data(th.edge()).flag1 = mesh->data(th.edge()).flag1 || mesh->data(th.next().edge()).flag1;
-//					mesh->data(th.edge()).flag2 = mesh->data(th.edge()).flag2 || mesh->data(th.next().edge()).flag2;
-//					mesh->data(th.next().edge()).flag1 = false;
-//					mesh->data(th.next().edge()).flag2 = false;
-//					mesh->data(th.prev().edge()).flag1 = false;
-//					mesh->data(th.prev().edge()).flag2 = false;
-//					mesh->data(th.prev().from()).set_vertflag(false);
-//				}
-//
-//#else
-//				//三角形三点共线
-//				if (angle0 < lowerAngleBound)
-//				{
-//					if (mesh->is_flip_ok(th.next().edge()))
-//					{
-//						mesh->data(th.next().edge()).flag1 = false;
-//						mesh->data(th.next().edge()).flag2 = false;
-//						mesh->flip(th.next().edge());
-//					}
-//					//split_one_edge(th.next().edge(), id);
-//				}
-//				else if (angle1 < lowerAngleBound)
-//				{
-//					if (mesh->is_flip_ok(th.edge()))
-//					{
-//						//mesh->data(th.edge()).flag1 = false;
-//						mesh->data(th.edge()).flag2 = false;
-//						mesh->flip(th.edge());
-//					}
-//					//th = th.prev();
-//					//split_one_edge(th.next().edge(), id);
-//				}
-//				//th = mesh->find_halfedge(mesh->vertex_handle(mesh->n_vertices() - 1), mesh->vertex_handle(th.from().idx())).next();
-//				//只有一个顶点的角很小
-//				else
-//				{
-//					if (!mesh->is_collapse_ok(th.prev()))
-//					{
-//						int p = 0;
-//						//auto tv = th.from().valence() == 3 ? th.from() : (th.to().valence() == 3 ? th.to() : th.next().to());
-//
-//						split_one_edge(th.prev().edge(), p);
-//						split_one_edge(th.next().opp().prev().edge(), p);
-//					}
-//					else
-//					{
-//
-//#ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
-//						if (polymeshInput)
-//						{
-//							if (th.prev().from().idx() >= boundaryNum)
-//							{
-//								mesh->collapse(th.prev());
-//							}
-//							else if (th.prev().to().idx() >= boundaryNum)
-//							{
-//								mesh->collapse(th.prev().opp());
-//							}
-//							continue;
-//						}
-//#endif
-//						mesh->collapse(th.prev());
-//					}
-//				}
-//#endif
-//			}
-//		}
-//#else
-//		for (auto tf : mesh->faces())
-//		{
-//			if (!tf.is_valid()) continue;
-//			id = 0;
-//			minAngle = 4.0;
-//			int i = 0;
-//			for (auto tfh : mesh->fh_range(tf))
-//			{
-//				double angle = mesh->calc_sector_angle(tfh);
-//				if (angle < minAngle)
-//				{
-//					minAngle = angle;
-//					id = i;
-//				}
-//				++i;
-//			}
-//			if (minAngle < lowerAngleBound)
-//			{
-//				auto h_iter = mesh->fh_begin(tf);
-//				for (i = 0; i < id; ++i)
-//				{
-//					++h_iter;
-//				}
-//				auto th = mesh->prev_halfedge_handle(*h_iter);
-//				auto te = mesh->edge_handle(th);
-//				if (mesh->is_boundary(th.from()))
-//				{
-//					continue;
-//				}
-//				if (mesh->is_collapse_ok(th) && mesh->calc_edge_length(te) < threshold)
-//				{
-//					if (mesh->data(th.from()).get_vertflag())
-//					{
-//						mesh->data(th.to()).set_vertflag(true);
-//					}
-//					/*if (mesh->data(th.prev().edge()).get_edgeflag())
-//					{
-//						mesh->data(h_iter->edge()).set_edgeflag(true);
-//					}*/
-//					mesh->data(h_iter->edge()).flag1 = mesh->data(th.prev().edge()).flag1;
-//					mesh->data(h_iter->edge()).flag2 = mesh->data(th.prev().edge()).flag2;
-//
-//					mesh->collapse(th);
-//				}
-//				else
-//				{
-//					if (mesh->calc_sector_angle(th) < mesh->calc_sector_angle(th.prev()))
-//					{
-//						th = th.prev();
-//					}
-//					auto flagvert = th.to();
-//					auto ph = th.prev();
-//					auto ne = th.next().edge();
-//					te = th.edge();
-//					auto pe = ph.edge();
-//
-//					if (!mesh->is_flip_ok(pe))
-//						continue;
-//					//if (mesh->data(pe).get_edgeflag())
-//					//{
-//					//	mesh->data(flagvert).set_vertflag(true);
-//					//	mesh->data(te).set_edgeflag(true);
-//					//	mesh->data(ne).set_edgeflag(true);
-//					//	mesh->data(pe).set_edgeflag(false);
-//					//	/*if (!mesh->data(flagvert).get_vertflag())
-//					//	{
-//					//		mesh->set_point(flagvert, mesh->calc_edge_midpoint(pe));
-//					//	}*/
-//					//}
-//					if (mesh->data(pe).flag1)
-//					{
-//						mesh->data(flagvert).set_vertflag(true);
-//						mesh->data(te).flag1 = true;
-//						mesh->data(ne).flag1 = true;
-//						mesh->data(pe).flag1 = false;
-//					}
-//					if (mesh->data(pe).flag2)
-//					{
-//						mesh->data(flagvert).set_vertflag(true);
-//						mesh->data(te).flag2 = true;
-//						mesh->data(ne).flag2 = true;
-//						mesh->data(pe).flag2 = false;
-//					}
-//					mesh->flip(pe);
-//				}
-//			}
-//		}
-//#endif
 		mesh->garbage_collection();
+
+		//#if 1
+		//		for (auto &tf : mesh->faces())
+		//		{
+		//			if (!tf.is_valid()) 
+		//				continue;
+		//			minAngle = 4.0;
+		//			for (auto &tfh : mesh->fh_range(tf))
+		//			{
+		//				double angle = mesh->calc_sector_angle(tfh);
+		//				if (angle < minAngle)
+		//				{
+		//					minAngle = angle;
+		//					th = tfh;
+		//				}
+		//			}
+		//			if (minAngle < lowerAngleBound)
+		//			{
+		//				double angle0 = mesh->calc_sector_angle(th.next());
+		//				double angle1 = mesh->calc_sector_angle(th.prev());
+		//#if 1
+		//				if (angle0 < lowerAngleBound)
+		//				{
+		//					split_one_edge(th.next().edge(), id);
+		//				}
+		//				else if (angle1 < lowerAngleBound)
+		//				{
+		//					split_one_edge(th.edge(), id);
+		//				}
+		//				else
+		//				{
+		//					mesh->data(th.edge()).flag1 = mesh->data(th.edge()).flag1 || mesh->data(th.next().edge()).flag1;
+		//					mesh->data(th.edge()).flag2 = mesh->data(th.edge()).flag2 || mesh->data(th.next().edge()).flag2;
+		//					mesh->data(th.next().edge()).flag1 = false;
+		//					mesh->data(th.next().edge()).flag2 = false;
+		//					mesh->data(th.prev().edge()).flag1 = false;
+		//					mesh->data(th.prev().edge()).flag2 = false;
+		//					mesh->data(th.prev().from()).set_vertflag(false);
+		//				}
+		//
+		//#else
+		//				//三角形三点共线
+		//				if (angle0 < lowerAngleBound)
+		//				{
+		//					if (mesh->is_flip_ok(th.next().edge()))
+		//					{
+		//						mesh->data(th.next().edge()).flag1 = false;
+		//						mesh->data(th.next().edge()).flag2 = false;
+		//						mesh->flip(th.next().edge());
+		//					}
+		//					//split_one_edge(th.next().edge(), id);
+		//				}
+		//				else if (angle1 < lowerAngleBound)
+		//				{
+		//					if (mesh->is_flip_ok(th.edge()))
+		//					{
+		//						//mesh->data(th.edge()).flag1 = false;
+		//						mesh->data(th.edge()).flag2 = false;
+		//						mesh->flip(th.edge());
+		//					}
+		//					//th = th.prev();
+		//					//split_one_edge(th.next().edge(), id);
+		//				}
+		//				//th = mesh->find_halfedge(mesh->vertex_handle(mesh->n_vertices() - 1), mesh->vertex_handle(th.from().idx())).next();
+		//				//只有一个顶点的角很小
+		//				else
+		//				{
+		//					if (!mesh->is_collapse_ok(th.prev()))
+		//					{
+		//						int p = 0;
+		//						//auto tv = th.from().valence() == 3 ? th.from() : (th.to().valence() == 3 ? th.to() : th.next().to());
+		//
+		//						split_one_edge(th.prev().edge(), p);
+		//						split_one_edge(th.next().opp().prev().edge(), p);
+		//					}
+		//					else
+		//					{
+		//
+		//#ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
+		//						if (polymeshInput)
+		//						{
+		//							if (th.prev().from().idx() >= boundaryNum)
+		//							{
+		//								mesh->collapse(th.prev());
+		//							}
+		//							else if (th.prev().to().idx() >= boundaryNum)
+		//							{
+		//								mesh->collapse(th.prev().opp());
+		//							}
+		//							continue;
+		//						}
+		//#endif
+		//						mesh->collapse(th.prev());
+		//					}
+		//				}
+		//#endif
+		//			}
+		//		}
+		//#else
+		//		for (auto tf : mesh->faces())
+		//		{
+		//			if (!tf.is_valid()) continue;
+		//			id = 0;
+		//			minAngle = 4.0;
+		//			int i = 0;
+		//			for (auto tfh : mesh->fh_range(tf))
+		//			{
+		//				double angle = mesh->calc_sector_angle(tfh);
+		//				if (angle < minAngle)
+		//				{
+		//					minAngle = angle;
+		//					id = i;
+		//				}
+		//				++i;
+		//			}
+		//			if (minAngle < lowerAngleBound)
+		//			{
+		//				auto h_iter = mesh->fh_begin(tf);
+		//				for (i = 0; i < id; ++i)
+		//				{
+		//					++h_iter;
+		//				}
+		//				auto th = mesh->prev_halfedge_handle(*h_iter);
+		//				auto te = mesh->edge_handle(th);
+		//				if (mesh->is_boundary(th.from()))
+		//				{
+		//					continue;
+		//				}
+		//				if (mesh->is_collapse_ok(th) && mesh->calc_edge_length(te) < threshold)
+		//				{
+		//					if (mesh->data(th.from()).get_vertflag())
+		//					{
+		//						mesh->data(th.to()).set_vertflag(true);
+		//					}
+		//					/*if (mesh->data(th.prev().edge()).get_edgeflag())
+		//					{
+		//						mesh->data(h_iter->edge()).set_edgeflag(true);
+		//					}*/
+		//					mesh->data(h_iter->edge()).flag1 = mesh->data(th.prev().edge()).flag1;
+		//					mesh->data(h_iter->edge()).flag2 = mesh->data(th.prev().edge()).flag2;
+		//
+		//					mesh->collapse(th);
+		//				}
+		//				else
+		//				{
+		//					if (mesh->calc_sector_angle(th) < mesh->calc_sector_angle(th.prev()))
+		//					{
+		//						th = th.prev();
+		//					}
+		//					auto flagvert = th.to();
+		//					auto ph = th.prev();
+		//					auto ne = th.next().edge();
+		//					te = th.edge();
+		//					auto pe = ph.edge();
+		//
+		//					if (!mesh->is_flip_ok(pe))
+		//						continue;
+		//					//if (mesh->data(pe).get_edgeflag())
+		//					//{
+		//					//	mesh->data(flagvert).set_vertflag(true);
+		//					//	mesh->data(te).set_edgeflag(true);
+		//					//	mesh->data(ne).set_edgeflag(true);
+		//					//	mesh->data(pe).set_edgeflag(false);
+		//					//	/*if (!mesh->data(flagvert).get_vertflag())
+		//					//	{
+		//					//		mesh->set_point(flagvert, mesh->calc_edge_midpoint(pe));
+		//					//	}*/
+		//					//}
+		//					if (mesh->data(pe).flag1)
+		//					{
+		//						mesh->data(flagvert).set_vertflag(true);
+		//						mesh->data(te).flag1 = true;
+		//						mesh->data(ne).flag1 = true;
+		//						mesh->data(pe).flag1 = false;
+		//					}
+		//					if (mesh->data(pe).flag2)
+		//					{
+		//						mesh->data(flagvert).set_vertflag(true);
+		//						mesh->data(te).flag2 = true;
+		//						mesh->data(ne).flag2 = true;
+		//						mesh->data(pe).flag2 = false;
+		//					}
+		//					mesh->flip(pe);
+		//				}
+		//			}
+		//		}
+		//#endif
+
 
 #ifdef printRemeshingInfo
 		tr.out("process small angle:");
@@ -655,6 +668,8 @@ namespace CADMesher
 
 	void TriangleMeshRemeshing::tangential_relaxation()
 	{
+		mesh->update_face_normals();
+		mesh->update_vertex_normals();
 		for (auto tv : mesh->vertices()) {
 			if (mesh->data(tv).get_vertflag() || mesh->is_boundary(tv))
 				continue;
@@ -688,28 +703,33 @@ namespace CADMesher
 		{
 			sum += mesh->point(tvv);
 		}
-		sum /= mesh->valence(v);
-		//double area = 0;
-		//for (auto tvoh : mesh->voh_range(v))
+		return sum / mesh->valence(v);
+		//sum /= mesh->valence(v);
+		////double area = 0;
+		////for (auto tvoh : mesh->voh_range(v))
+		////{
+		////	
+		////	double a = mesh->calc_face_area(mesh->face_handle(tvoh)) + mesh->calc_face_area(mesh->opposite_face_handle(tvoh));
+		////	area += a;
+		////	sum += a*mesh->point(mesh->to_vertex_handle(tvoh));
+		////}
+		////if (area < epsilonerror)
+		////{
+		////	sum = { 0,0,0 };
+		////	for (auto tvv : mesh->vv_range(v))
+		////	{
+		////		sum += mesh->point(tvv);
+		////	}
+		////	//return sum / mesh->valence(v);
+		////	area = mesh->valence(v);
+		////}
+		////sum /= area;
+		//auto n = mesh->calc_vertex_normal(v);
+		//if (mesh->valence(v) == 0 || isnan(sum[0]*sum[1]*sum[2]*n[0]*n[1]*n[2]))
 		//{
-		//	
-		//	double a = mesh->calc_face_area(mesh->face_handle(tvoh)) + mesh->calc_face_area(mesh->opposite_face_handle(tvoh));
-		//	area += a;
-		//	sum += a*mesh->point(mesh->to_vertex_handle(tvoh));
+		//	int p = 0;
 		//}
-		//if (area < epsilonerror)
-		//{
-		//	sum = { 0,0,0 };
-		//	for (auto tvv : mesh->vv_range(v))
-		//	{
-		//		sum += mesh->point(tvv);
-		//	}
-		//	//return sum / mesh->valence(v);
-		//	area = mesh->valence(v);
-		//}
-		//sum /= area;
-		auto n = mesh->calc_vertex_normal(v);
-		return sum - (sum - mesh->point(v)).dot(n)*n;
+		//return sum - (sum - mesh->point(v)).dot(n)*n;
 	}
 
 #ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH

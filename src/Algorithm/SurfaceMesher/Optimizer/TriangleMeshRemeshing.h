@@ -8,7 +8,7 @@
 #include <numeric>
 #include "..\src\Dependency\CPS\CPS_AABBTree.h"
 #include "..\src\Algorithm\SurfaceMesher\Generator\basic_def.h"
-//#define printRemeshingInfo
+#define printRemeshingInfo
 
 namespace CADMesher
 {
