@@ -301,6 +301,7 @@ void InteractiveViewerWidget::pick_vertex(int x,int y)
 	int r = find_vertex_using_selected_point();
 	lastestVertex = r;
 	printf("Select Vertex : %d\n", r);
+
 	std::vector<int>::iterator it;
 	if( (it = std::find(selectedVertex.begin(),selectedVertex.end(), r)) == selectedVertex.end() )
 	{
@@ -652,7 +653,7 @@ void InteractiveViewerWidget::showDebugTest()
 		getFiles(path, allFileName);
 
 		using namespace CADMesher;
-		int i = 0;
+		int i = 10;
 		for (; i < allFileName.size();)
 		{
 			auto fileName = allFileName[i];

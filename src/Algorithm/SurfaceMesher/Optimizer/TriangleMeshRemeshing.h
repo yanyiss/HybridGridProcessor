@@ -8,6 +8,7 @@
 #include <numeric>
 #include "..\src\Dependency\CPS\CPS_AABBTree.h"
 #include "..\src\Algorithm\SurfaceMesher\Generator\basic_def.h"
+//#define printRemeshingInfo
 
 namespace CADMesher
 {
@@ -36,6 +37,7 @@ namespace CADMesher
 	private:
 		//main step
 		void split();
+		void split_one_edge(const OpenMesh::SmartEdgeHandle &te, int &splitnumber);
 		void collapse();
 		void equalize_valence();
 		void tangential_relaxation();
@@ -51,7 +53,10 @@ namespace CADMesher
 		double low;
 		double expected_length;
 
-		double lowerAngleBound = 0.06;
+		timeRecorder tr;
+
+		double lowerAngleBound = 0.08;
+		std::vector<double> initial_FaceTargetLength;
 		TriMesh *mesh = nullptr;
 		ClosestPointSearch::AABBTree *aabbtree = nullptr;
 

@@ -41,7 +41,13 @@ public:
 	~timeRecorder() {}
 private:
 	std::vector<clock_t> timeKnots;
+	int marking;
 public:
+	inline void refresh()
+	{
+		timeKnots.clear();
+		timeKnots.push_back(clock());
+	}
 	inline void tog(bool if_discard_before = false)
 	{
 		if (if_discard_before)
@@ -60,5 +66,13 @@ public:
 		clock_t presentTime = clock();
 		dprint(info, presentTime - timeKnots.front(), "ms");
 		timeKnots.push_back(presentTime);
+	}
+	inline void mark()
+	{
+		marking = timeKnots.size();
+	}
+	inline void pastMark(const std::string &info = "mark past time:")
+	{
+		dprint(info, clock() - timeKnots[marking], "ms");
 	}
 };

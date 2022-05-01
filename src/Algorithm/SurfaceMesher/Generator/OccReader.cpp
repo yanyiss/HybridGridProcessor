@@ -101,12 +101,11 @@ namespace CADMesher
 				auto pos = aMesh.point(tv);
 				aMesh.set_point(tv, TriMesh::Point(pos[0], pos[1] * ra_inv, 0));
 			}
-
 			//Remesh in domain
 			//BSplineSurface* B = static_cast<BSplineSurface*>(faceshape[i].Surface);
 			auto &Surface = faceshape[i].Surface;
-			Riemannremesh Remesh(Surface, &aMesh);
-			Remesh.remesh();
+			//Riemannremesh Remesh(Surface, &aMesh);
+			//Remesh.remesh();
 			double k1, k2;
 			for (auto v : aMesh.vertices())
 			{
@@ -863,7 +862,7 @@ namespace CADMesher
 			}
 			else if (type == STANDARD_TYPE(Geom_CylindricalSurface)) 
 			{
-				dprint(i, "CylindricalSurface");
+				//dprint(i, "CylindricalSurface");
 				opencascade::handle<Geom_CylindricalSurface> geom_cylindricalsurface = opencascade::handle<Geom_CylindricalSurface>::DownCast(geom_surface);;
 				auto local_coordinate = &geom_cylindricalsurface->Position();
 				gp_Pnt oringe = local_coordinate->Location();

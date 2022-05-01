@@ -11,12 +11,12 @@ namespace CADMesher
 		explicit OccReader(QString &fileName)
 		{
 			std::string filetype;
-			if (fileName.endsWith(".stp") || fileName.endsWith(".STP") || fileName.endsWith(".STEP")) {
+			if (fileName.endsWith(".stp") || fileName.endsWith(".step") || fileName.endsWith(".STP") || fileName.endsWith(".STEP")) {
 				reader = new STEPControl_Reader();
 				dprint("CAD model from STEP file");
 				filetype = "STEP";
 			}
-			else if (fileName.endsWith(".igs") || fileName.endsWith(".IGS") || fileName.endsWith(".IGES")) {
+			else if (fileName.endsWith(".igs") || fileName.endsWith(".iges") || fileName.endsWith(".IGS") || fileName.endsWith(".IGES")) {
 				reader = new IGESControl_Reader();
 				dprint("CAD model from IGES file");
 				filetype = "IGES";
