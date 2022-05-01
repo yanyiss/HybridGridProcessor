@@ -65,6 +65,7 @@ void MainViewerWidget::open_CAD_query()
 	if (!fileName.isEmpty())
 	{
 		if (fileName.endsWith(".stp") || fileName.endsWith(".igs") || 
+			fileName.endsWith(".step") || fileName.endsWith(".iges") || 
 			fileName.endsWith(".IGS") || fileName.endsWith(".STP") ||
 			fileName.endsWith(".STEP") || fileName.endsWith(".IGES"))
 		{

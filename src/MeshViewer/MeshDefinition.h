@@ -73,6 +73,7 @@ struct MeshTraits : public OpenMesh::DefaultTraits
 		bool get_edgeflag() { return edgeflag; };
 
 		bool offsetflag = false;
+		bool is_adjusted = false;
 		std::vector<O3d> offsetpnt;   //存放offset点
 		std::vector<OV> offsetvh;     //存放offset点对应的handle
 
@@ -111,6 +112,9 @@ struct MeshTraits : public OpenMesh::DefaultTraits
 	public:
 		Eigen::Matrix2d M;   //存放第一基本量
 		double GaussCurvature;
+		bool is_adjusted = false; //collapse入射边
+		bool flag1 = false; //C0特征
+		bool flag2 = false; //曲率特征
 
 		void set_Hessian(const OpenMesh::Vec6d& h_){h = h_;};
 		OpenMesh::Vec6d& get_Hessian(){return h;};
