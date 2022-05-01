@@ -37,21 +37,19 @@ void Riemannremesh::calulenth()
 	int count = 0;
 	for (auto e : mesh->edges())
 	{
-		if (mesh->is_boundary(e))
-		{
-			count++;
-			he = mesh->halfedge_handle(e, 0);
-			len += Riemannlen(mesh->from_vertex_handle(he), mesh->to_vertex_handle(he));
-		}
+		count++;
+		he = mesh->halfedge_handle(e, 0);
+		len += Riemannlen(mesh->from_vertex_handle(he), mesh->to_vertex_handle(he));
 	}
 	len /= count;
+	//dprint("jiu",len);
 	highlenth = 4 * len / 3;
 	lowlenth = 0.8 * len ;
 }
 
 void Riemannremesh::split()
 {
-	TriMesh::VertexHandle vh, vh1, vh2, vh3, vh4;
+	TriMesh::VertexHandle vh, vh1, vh2;
 	TriMesh::EdgeHandle ee;
 	TriMesh::HalfedgeHandle he;
 	int edgeNum = mesh->n_edges();
@@ -61,12 +59,14 @@ void Riemannremesh::split()
 		ee = mesh->edge_handle(i);
 		if (mesh->is_boundary(ee)) continue;
 		he = mesh->halfedge_handle(ee, 0);
-		len = Riemannlen(mesh->from_vertex_handle(he), mesh->to_vertex_handle(he));
+		vh1 = mesh->from_vertex_handle(he);
+		vh2 = mesh->to_vertex_handle(he);
+		len = Riemannlen(vh1, vh2);
 		if (len > highlenth)
 		{
 			vh = mesh->add_vertex(mesh->calc_edge_midpoint(ee));
 			mesh->split_edge(ee, vh);   //split²Ù×÷
-			mesh->data(vh).M = Riemanndata(mesh->point(vh));
+			mesh->data(vh).M = (mesh->data(vh1).M + mesh->data(vh2).M) * 0.5;
 		}
 	}
 	mesh->garbage_collection();
@@ -87,7 +87,13 @@ void Riemannremesh::collapse()
 		if (!mesh->is_collapse_ok(he)) continue;
 		p1 = mesh->from_vertex_handle(he);
 		p2 = mesh->to_vertex_handle(he);
-		if (mesh->is_boundary(p1) || mesh->is_boundary(p2)) continue;
+		if (mesh->is_boundary(p1))
+		{
+			if (mesh->is_boundary(p2)) continue;
+			he = mesh->opposite_halfedge_handle(he);
+			p1 = mesh->from_vertex_handle(he);					
+			p2 = mesh->to_vertex_handle(he);
+		}
 		len = Riemannlen(p1, p2);
 		if (len < lowlenth)
 		{
@@ -163,12 +169,17 @@ void Riemannremesh::updatepoint()
 		if (mesh->is_boundary(v)) continue;
 		count = 0.0;
 		newpoint = Mesh::Point(0, 0, 0);
+		auto &M = mesh->data(v).M;
+		M.setZero();
 		for (auto vv : mesh->vv_range(v))
 		{
 			newpoint += mesh->point(vv);
+			M += mesh->data(vv).M;
 			count += 1;
 		}
 		mesh->set_point(v, newpoint / count);
+		M /= count;
+
 	}
 }
 
@@ -177,17 +188,10 @@ void Riemannremesh::remesh()
 	calulenth();
 	for (int i = 0; i < 5; i++)
 	{
+		dprint("Domain remesh iter time:", i,"    Vertices:",mesh->n_vertices());
 		split();
 		collapse();
-		flip();
+		//flip();
 		updatepoint();
-		if (i < 4)
-		{
-			for (auto v : mesh->vertices())
-			{
-				if (mesh->is_boundary(v)) continue;
-				mesh->data(v).M = Riemanndata(mesh->point(v));
-			}
-		}
 	}
 }

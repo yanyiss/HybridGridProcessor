@@ -35,9 +35,9 @@ public:
 	Point PartialDerivativeUV(const double u, const double v) const { return Point(0, 0, 0); }
 	Point PartialDerivativeVV(const double u, const double v) const { return Point(0, 0, 0); }
 	void PrincipalCurvature(const double u, const double v, double &k1, double &k2) const { k1 = k2 = 0; }
+
 private:
-	Point Origin, Xdir, Ydir;
-	
+	Point Origin, Xdir, Ydir;	
 };
 
 class CylindricalType :public GeometryType

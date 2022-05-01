@@ -4,18 +4,19 @@
 #include<algorithm>
 #include "..\src\Algorithm\SurfaceMesher\Optimizer\TriangleMeshRemeshing.h"
 
+
 namespace CADMesher
 {
 	Iso_Mesh::Iso_Mesh(QString & fileName)
 	{
 		occ_reader = new OccReader(fileName);
-#if 0
+#if 1
 		occ_reader->Set_TriMesh();
 		MergeModel();
-		//ResetFeature();
-		//TriangleMeshRemeshing trm(&(globalmodel.initial_trimesh));
-		//trm.run();
-		//Write_Obj(globalmodel.initial_trimesh);
+		ResetFeature();
+		TriangleMeshRemeshing trm(&(globalmodel.initial_trimesh));
+		trm.run();
+		Write_Obj(globalmodel.initial_trimesh);
 #else 
 		occ_reader->Set_PolyMesh();
 		MergeModel();
@@ -28,7 +29,7 @@ namespace CADMesher
 
 	void Iso_Mesh::MergeModel()
 	{
-#if 0
+#if 1
 		TriMesh &model_mesh = globalmodel.initial_trimesh;
 		auto &surface_meshes = occ_reader->Surface_TriMeshes;
 #else
@@ -38,10 +39,10 @@ namespace CADMesher
 		vector<ShapeFace> faceshape = globalmodel.faceshape;
 		vector<ShapeEdge> edgeshape = globalmodel.edgeshape;
 		model_mesh.clear();
-		for(auto &face : faceshape)
+		for (auto &face : faceshape)
 		{
 			auto &wires = face.wires;
-			for(auto &edges : wires)
+			for (auto &edges : wires)
 			{
 				int s = edges.size();
 				for (int i = 0; i < s; ++i)
@@ -65,7 +66,7 @@ namespace CADMesher
 					edges.insert(edges.begin() + i + 1, edgeshape.size());
 					edgeshape[ei].prev_edge = edgeshape.size();
 					edgeshape.emplace_back(edgeshape.size(), edgeshape[ei].edge);
-					
+
 					ShapeEdge &newedge = edgeshape.back();
 					newedge.main_face = edgeshape[ei].main_face;
 					newedge.secondary_face = edgeshape[ei].secondary_face;
@@ -107,6 +108,7 @@ namespace CADMesher
 			{
 				auto v = frac_mesh.point(tv);
 				vh = model_mesh.add_vertex(Mesh::Point(v[0], v[1], v[2]));
+				model_mesh.data(vh).GaussCurvature = frac_mesh.data(tv).GaussCurvature;
 				vhandle.push_back(vh);
 			}
 			for (auto tf : frac_mesh.faces())
@@ -125,14 +127,14 @@ namespace CADMesher
 			{
 				if (frac_mesh.data(e).flag1)
 				{
-					auto he = model_mesh.find_halfedge(model_mesh.vertex_handle((e.v0()).idx()+id), model_mesh.vertex_handle((e.v1()).idx()+id));
+					auto he = model_mesh.find_halfedge(model_mesh.vertex_handle((e.v0()).idx() + id), model_mesh.vertex_handle((e.v1()).idx() + id));
 					model_mesh.data(model_mesh.edge_handle(he)).flag1 = true;
 				}
 				if (frac_mesh.data(e).flag2)
 				{
-					auto he = model_mesh.find_halfedge(model_mesh.vertex_handle((e.v0()).idx()+id), model_mesh.vertex_handle((e.v1()).idx()+id));
+					auto he = model_mesh.find_halfedge(model_mesh.vertex_handle((e.v0()).idx() + id), model_mesh.vertex_handle((e.v1()).idx() + id));
 					model_mesh.data(model_mesh.edge_handle(he)).flag2 = true;
-				}				
+				}
 			}
 			id = model_mesh.n_vertices();
 
@@ -159,13 +161,6 @@ namespace CADMesher
 			else
 				model_mesh.data(te).set_edgeflag(false);
 		}
-		//for (auto tv : model_mesh.vertices())
-		//{
-		//	if (model_mesh.is_boundary(tv))
-		//		model_mesh.data(tv).set_vertflag(true);
-		//	else
-		//		model_mesh.data(tv).set_vertflag(false);
-		//}
 #if 1
 		for (int i = 0; i < edgeshape.size(); i++)
 		{
@@ -205,16 +200,18 @@ namespace CADMesher
 					if (model_mesh.data(model_mesh.edge_handle(fe)).get_edgeflag())
 						fv.push_back(model_mesh.to_vertex_handle(fe));
 					if (model_mesh.data(model_mesh.edge_handle(fe)).flag1)
-						fv1.push_back(model_mesh.to_vertex_handle(fe));						
+						fv1.push_back(model_mesh.to_vertex_handle(fe));
 					if (model_mesh.data(model_mesh.edge_handle(fe)).flag2)
 						fv2.push_back(model_mesh.to_vertex_handle(fe));
 				}
+				model_mesh.data(model_mesh.vertex_handle(n1)).GaussCurvature += model_mesh.data(model_mesh.vertex_handle(m0)).GaussCurvature;
+				model_mesh.data(model_mesh.vertex_handle(n1)).GaussCurvature *= 0.5;
 				model_mesh.collapse(model_mesh.find_halfedge(model_mesh.vertex_handle(m0), model_mesh.vertex_handle(n1)));
 				for (OV v : fv) {
 					auto fe = model_mesh.find_halfedge(v, model_mesh.vertex_handle(n1));
 					if (fe.is_valid())
 						model_mesh.data(model_mesh.edge_handle(fe)).set_edgeflag(true);
-						
+
 				}
 				for (OV v : fv1) {
 					auto fe = model_mesh.find_halfedge(v, model_mesh.vertex_handle(n1));
@@ -240,6 +237,8 @@ namespace CADMesher
 					if (model_mesh.data(model_mesh.edge_handle(fe)).flag2)
 						fv2.push_back(model_mesh.to_vertex_handle(fe));
 				}
+				model_mesh.data(model_mesh.vertex_handle(n0)).GaussCurvature += model_mesh.data(model_mesh.vertex_handle(m1)).GaussCurvature;
+				model_mesh.data(model_mesh.vertex_handle(n0)).GaussCurvature *= 0.5;
 				model_mesh.collapse(model_mesh.find_halfedge(model_mesh.vertex_handle(m1), model_mesh.vertex_handle(n0)));
 				for (OV v : fv) {
 					auto fe = model_mesh.find_halfedge(v, model_mesh.vertex_handle(n0));
@@ -268,6 +267,8 @@ namespace CADMesher
 					if (model_mesh.data(model_mesh.edge_handle(fe)).flag2)
 						fv2.push_back(model_mesh.to_vertex_handle(fe));
 				}
+				model_mesh.data(model_mesh.vertex_handle(m1 + length - j - 1)).GaussCurvature += model_mesh.data(model_mesh.vertex_handle(m0 + j)).GaussCurvature;
+				model_mesh.data(model_mesh.vertex_handle(m1 + length - j - 1)).GaussCurvature *= 0.5;
 				model_mesh.collapse(model_mesh.find_halfedge(model_mesh.vertex_handle(m0 + j), model_mesh.vertex_handle(m1 + length - j - 1)));
 				for (OV v : fv) {
 					auto fe = model_mesh.find_halfedge(v, model_mesh.vertex_handle(m1 + length - j - 1));
@@ -319,191 +320,261 @@ namespace CADMesher
 	void Iso_Mesh::ResetFeature()
 	{
 		TriMesh &model_mesh = globalmodel.initial_trimesh;
-
-#if 1  //����ʽ��������
 		for (auto te : model_mesh.edges())
 		{
-			if (!model_mesh.data(te).get_edgeflag()) continue;
-			if (!model_mesh.data(te).flag1 && !model_mesh.is_boundary(te)) model_mesh.data(te).set_edgeflag(false);
+			if (!model_mesh.data(te).flag1 && !model_mesh.data(te).flag2) continue;
+			model_mesh.data(te.v0()).set_vertflag(true);
+			model_mesh.data(te.v1()).set_vertflag(true);
 		}
-#else   //����ϼ�������
-		for (auto te : model_mesh.edges()) {
-			if (!model_mesh.data(te).get_edgeflag()) continue;
-			auto n0 = model_mesh.calc_face_normal(model_mesh.face_handle(te.h0()));
-			auto n1 = model_mesh.calc_face_normal(model_mesh.face_handle(te.h1()));
-			if (n0.dot(n1) > 0.8 && !model_mesh.is_boundary(te))
-				model_mesh.data(te).set_edgeflag(false);
-			else {
-				model_mesh.data(te.v0()).set_vertflag(true);
-				model_mesh.data(te.v1()).set_vertflag(true);
-			}
-		}
-#endif
-		for (auto tv : model_mesh.vertices())
-		{
-			for (auto tve : model_mesh.ve_range(tv))
-			{
-				if (model_mesh.data(tve).get_edgeflag() || model_mesh.data(tve).flag2)
-					model_mesh.data(tv).set_vertflag(true);
-			}
-		}
-
-		/*for (auto tv : model_mesh.vertices()) {
-			if (!model_mesh.data(tv).get_vertflag())
-				continue;
-			for (auto tve : model_mesh.ve_range(tv))
-				if (model_mesh.data(tve).get_edgeflag())
-					goto goto20210605;
-			model_mesh.data(tv).set_vertflag(false);
-		goto20210605:;
-		}*/
 		dprint("Reset Feature Done!");
 	}
 
 	void Iso_Mesh::ResetFeature1()
 	{
 		Mesh &model_mesh = globalmodel.initial_polymesh;
+		int offsetnum = 5;
+		//double offsetlen = occ_reader->expected_edge_length*(2 - std::pow(0.5, offsetnum));
+		double offsetlen = occ_reader->expected_edge_length*offsetnum*0.125;
+		TriMesh standardmesh(model_mesh);
+		auto aabbtree = new ClosestPointSearch::AABBTree(standardmesh);
 		Mesh::VertexHandle v1, v2, v3, v4;
 		Mesh::Point p1, p2, p3, p4;
 		std::vector<Mesh::VertexHandle> facevhandle;
-		int num = 3;
-		for (auto te : model_mesh.edges()) {
-			if (!model_mesh.data(te).get_edgeflag()) continue;
-			if (model_mesh.data(te).flag2)
-			{
-				model_mesh.data(te).set_edgeflag(false);
-				//calculate the offset points, and push them into a vector named offsetpnt which is attributed for each edge
-				for (int i = 0; i < 2; i++)
-				{
-					if (i && model_mesh.is_boundary(te)) continue;
-					auto he = model_mesh.halfedge_handle(te, i);
-					auto ev = model_mesh.edge_handle(model_mesh.next_halfedge_handle(he));
-					v1 = model_mesh.to_vertex_handle(he);
-					v2 = model_mesh.to_vertex_handle(model_mesh.next_halfedge_handle(he));
-					v3 = model_mesh.from_vertex_handle(model_mesh.prev_halfedge_handle(he));
-					v4 = model_mesh.from_vertex_handle(he);
-					for (int j = 0; j < 2; j++)
-					{
-						auto &offsetpnt = model_mesh.data(ev).offsetpnt;
-						if (offsetpnt.empty())
-						{
-							auto &offsetvh = model_mesh.data(ev).offsetvh;
-							offsetvh.resize(num + 2);
-							offsetvh[0] = v1;
-							offsetvh[num + 1] = v2;
-							p1 = model_mesh.point(v1);
-							p2 = model_mesh.point(v2);
-							model_mesh.data(ev).offsetflag = true;
-							//model_mesh.data(ev.v0()).set_vertflag(true);
-							//model_mesh.data(ev.v1()).set_vertflag(true);
-							auto dire = (p2 - p1) / (pow(2, num + 1) - 1);
-							for (int k = 0; k < num; k++)
-							{
-								offsetpnt.push_back(p1 + (pow(2, k + 1) - 1)*dire);
-							}
-						}
-						if (j) break;
-						v1 = v4;
-						v2 = v3;
-						ev = model_mesh.edge_handle(model_mesh.prev_halfedge_handle(he));
-					}
-				}
-				continue;
-			}
-			if (!model_mesh.data(te).flag1 && !model_mesh.is_boundary(te)) model_mesh.data(te).set_edgeflag(false);
 
-			//divided non-feature quad into two triangles
+		//set vertex flag
+		for (auto te : model_mesh.edges())
+		{
+			if (model_mesh.data(te).flag1)
+			{
+				model_mesh.data(te.v0()).set_vertflag(true);
+				model_mesh.data(te.v1()).set_vertflag(true);
+				model_mesh.data(te.v0()).flag1 = true;
+				model_mesh.data(te.v1()).flag1 = true;
+			}
+			if (!model_mesh.data(te).flag2) continue;
+			model_mesh.data(te.v0()).set_vertflag(true);
+			model_mesh.data(te.v1()).set_vertflag(true);
+			model_mesh.data(te.v0()).flag2 = true;
+			model_mesh.data(te.v1()).flag2 = true;
 			for (int i = 0; i < 2; i++)
 			{
 				if (i && model_mesh.is_boundary(te)) continue;
 				auto he = model_mesh.halfedge_handle(te, i);
-				v1 = model_mesh.from_vertex_handle(he);
-				v2 = model_mesh.to_vertex_handle(he);
-				v3 = model_mesh.to_vertex_handle(model_mesh.next_halfedge_handle(he));
-				v4 = model_mesh.from_vertex_handle(model_mesh.prev_halfedge_handle(he));
-				model_mesh.delete_face(model_mesh.face_handle(he));
-				facevhandle = { v1, v2, v3 };
-				model_mesh.add_face(facevhandle);
-				facevhandle = { v3, v4, v1 };
-				model_mesh.add_face(facevhandle);
-			}
-		}
-		model_mesh.garbage_collection();
-
-		//add offsets point, and push their VertexHandle into a vector named offsetvh which is attributed for each edge
-		for (auto e : model_mesh.edges())
-		{
-			if (!model_mesh.data(e).offsetflag) continue;
-			for (int i = 1; i < num + 1; i++)
-			{
-				v1 = model_mesh.add_vertex(model_mesh.data(e).offsetpnt[i - 1]);
-				auto p3 = model_mesh.point(v1);
-				//model_mesh.data(v1).set_vertflag(true);
-				model_mesh.data(e).offsetvh[i] = v1;
+				v1 = model_mesh.to_vertex_handle(model_mesh.next_halfedge_handle(he));
+				model_mesh.data(v1).set_vertflag(true);
+				model_mesh.data(v1).flag2 = true;
+				v1 = model_mesh.from_vertex_handle(model_mesh.prev_halfedge_handle(he));
+				model_mesh.data(v1).set_vertflag(true);
+				model_mesh.data(v1).flag2 = true;
 			}
 		}
 
-		//add more offsets. 
-		std::vector<OV> offsetvh1, offsetvh2;
-		for (auto e : model_mesh.edges())
+		//collapse the input edge ended by vertex on quad and remove abnormal quad
+		AdjustQuad(model_mesh, offsetlen);
+		//auto v = model_mesh.vertex_handle(1937);
+		//for (auto vf : model_mesh.vf_range(v))
+		//{
+		//	dprint(vf.idx());
+		//}
+		//auto f = model_mesh.face_handle(58139);
+		//dprint("hh");
+		//for (auto fv : model_mesh.fv_range(f))
+		//{
+		//	dprint(fv.idx());
+		//}
+		//f = model_mesh.face_handle(58140);
+		//dprint("hh");
+		//for (auto fv : model_mesh.fv_range(f))
+		//{
+		//	dprint(fv.idx());
+		//}
+		//f = model_mesh.face_handle(42740);
+		//dprint("hh");
+		//for (auto fv : model_mesh.fv_range(f))
+		//{
+		//	dprint(fv.idx());
+		//}
+		//f = model_mesh.face_handle(42832);
+		//dprint("hh");
+		//for (auto fv : model_mesh.fv_range(f))
+		//{
+		//	dprint(fv.idx());
+		//}
+		//f = model_mesh.face_handle(58467);
+		//dprint("hh");
+		//for (auto fv : model_mesh.fv_range(f))
+		//{
+		//	dprint(fv.idx());
+		//}
+
+		//set offset domain
+		/*for (auto te : model_mesh.edges())
 		{
-			if (!model_mesh.data(e).flag2) continue;		
+			if (!model_mesh.data(te).flag2) continue;
 			for (int i = 0; i < 2; i++)
 			{
-				if (i && model_mesh.is_boundary(e)) continue;
-				auto he = model_mesh.halfedge_handle(e, i);
-				v1 = model_mesh.from_vertex_handle(he);
-				v2 = model_mesh.to_vertex_handle(he);
-				offsetvh1 = model_mesh.data(model_mesh.edge_handle(model_mesh.next_halfedge_handle(he))).offsetvh;
-				offsetvh2 = model_mesh.data(model_mesh.edge_handle(model_mesh.prev_halfedge_handle(he))).offsetvh;
-				model_mesh.delete_face(model_mesh.face_handle(he));
-				for (int j = 1; j < num+2; j++)
+				if (i && model_mesh.is_boundary(te)) continue;
+				auto he = model_mesh.halfedge_handle(te, i);
+				auto he1 = model_mesh.next_halfedge_handle(model_mesh.next_halfedge_handle(he));
+				v1 = model_mesh.from_vertex_handle(he1);
+				if (!model_mesh.data(v1).is_adjusted)
 				{
-					v3 = offsetvh1[j];
-					v4 = offsetvh2[j];
-					facevhandle = { v1, v2, v3, v4 };
-					auto fh = model_mesh.add_face(facevhandle);
-					//model_mesh.data(fh).set_faceflag(true);
-					v1 = v4;
-					v2 = v3;
+					p1 = model_mesh.point(model_mesh.to_vertex_handle(he));
+					p2 = model_mesh.point(v1);
+					p2 = aabbtree->closest_point(p1 + (p2 - p1).normalized()*offsetlen);
+					p2 = aabbtree->closest_point(p1 + (p2 - p1).normalized()*offsetlen);
+					model_mesh.set_point(v1, p2);
+					model_mesh.data(v1).is_adjusted = true;
+				}
+				v1 = model_mesh.to_vertex_handle(he1);
+				if (!model_mesh.data(v1).is_adjusted)
+				{
+					p1 = model_mesh.point(model_mesh.from_vertex_handle(he));
+					p2 = model_mesh.point(v1);
+					p2 = aabbtree->closest_point(p1 + (p2 - p1).normalized()*offsetlen);
+					p2 = aabbtree->closest_point(p1 + (p2 - p1).normalized()*offsetlen);
+					model_mesh.set_point(v1, p2);
+					model_mesh.data(v1).is_adjusted = true;
 				}
 			}
-		}
-		model_mesh.garbage_collection();
-
-		//for (auto f : model_mesh.faces())
-		//{
-		//	if (!model_mesh.data(f).get_faceflag()) continue;
-		//	for (auto fe : model_mesh.fe_range(f))
-		//	{
-		//		model_mesh.data(fe).set_edgeflag(true);
-		//	}
-		//}
-
-		for (auto tv : model_mesh.vertices())
-		{
-			for (auto tve : model_mesh.ve_range(tv))
-			{
-				if (model_mesh.data(tve).get_edgeflag() || model_mesh.data(tve).flag2)
-					model_mesh.data(tv).set_vertflag(true);
-			}				
-		}
-
-		//for (auto tv : model_mesh.vertices()) {
-		//	if (!model_mesh.data(tv).get_vertflag())
-		//		continue;
-		//	for (auto tve : model_mesh.ve_range(tv))
-		//		if (model_mesh.data(tve).get_edgeflag())
-		//			goto goto20210605;
-		//	model_mesh.data(tv).set_vertflag(false);
-		//goto20210605:;
-		//}
+		}*/
+		delete aabbtree;
+		aabbtree = nullptr;
 		dprint("Reset Feature Done!");
 	}
 
 #pragma region
 
+	void Iso_Mesh::AdjustQuad(Mesh &model_mesh, double &offsetlen)
+	{
+		Mesh::VertexHandle v1, v2, v3, v4;
+		std::vector<Mesh::VertexHandle> facevhandle;
+		for (int iter = 0;  iter < 2; iter++)
+		{
+			for (auto te : model_mesh.edges())
+			{
+				if (!model_mesh.data(te).flag2) continue;
+				for (int i = 0; i < 2; i++)
+				{
+					if (i && model_mesh.is_boundary(te)) continue;
+					auto he = model_mesh.halfedge_handle(te, i);
+					auto he1 = model_mesh.next_halfedge_handle(model_mesh.next_halfedge_handle(he));
+					v1 = model_mesh.from_vertex_handle(he1);
+					auto offset_direction = (model_mesh.point(v1) - model_mesh.point(model_mesh.to_vertex_handle(he))).normalized();
+					if (!model_mesh.data(v1).is_adjusted)
+					{
+						std::vector<OH> VIH;
+						for (auto vih : model_mesh.vih_range(v1))
+						{
+							v2 = model_mesh.from_vertex_handle(vih);
+							if (!model_mesh.is_collapse_ok(vih) || model_mesh.data(v2).flag2)
+								continue;
+							if (model_mesh.data(v2).flag1 && !model_mesh.data(v1).flag1)
+								continue;
+							if ((model_mesh.point(v2) - model_mesh.point(v1)).dot(offset_direction) < offsetlen)
+								VIH.push_back(vih);
+						}
+						if (VIH.size())
+							for (int i = 0; i < VIH.size(); i++) model_mesh.collapse(VIH[i]);
+						model_mesh.data(v1).is_adjusted = true;
+					}
+					v1 = model_mesh.to_vertex_handle(he1);
+					offset_direction = (model_mesh.point(v1) - model_mesh.point(model_mesh.to_vertex_handle(he))).normalized();
+					if (!model_mesh.data(v1).is_adjusted)
+					{
+						std::vector<OH> VIH;
+						for (auto vih : model_mesh.vih_range(v1))
+						{
+							v2 = model_mesh.from_vertex_handle(vih);
+							if (!model_mesh.is_collapse_ok(vih) || model_mesh.data(v2).flag2)
+								continue;
+							if (model_mesh.data(v2).flag1 && !model_mesh.data(v1).flag1)
+								continue;
+							if ((model_mesh.point(v2) - model_mesh.point(v1)).dot(offset_direction) < offsetlen)
+								VIH.push_back(vih);
+						}
+						for (int i = 0; i < VIH.size(); i++) model_mesh.collapse(VIH[i]);
+						model_mesh.data(v1).is_adjusted = true;
+					}
+				}
+			}
+			model_mesh.garbage_collection();
 
+			//remove abnomal quad
+			bool is_Ok = false;
+			while (is_Ok)
+			{
+				is_Ok = false;
+				for (auto te : model_mesh.edges())
+				{
+					if (!model_mesh.data(te).flag2) continue;
+					for (int i = 0; i < 2; i++)
+					{
+						if (i && model_mesh.is_boundary(te)) continue;
+						auto he = model_mesh.halfedge_handle(te, i);
+						he = model_mesh.opposite_halfedge_handle(model_mesh.next_halfedge_handle(model_mesh.next_halfedge_handle(he)));
+						auto f1 = model_mesh.face_handle(he);
+						v1 = model_mesh.to_vertex_handle(model_mesh.next_halfedge_handle(he));
+						if (!model_mesh.data(v1).flag2) continue;
+						auto he1 = model_mesh.next_halfedge_handle(he);
+						auto f2 = model_mesh.opposite_face_handle(he1);
+						bool is_remove = false;
+						if (model_mesh.is_valid_handle(f2) && f2.valence() == 3)
+						{
+							for (auto fv : model_mesh.fv_range(f2))
+							{
+								if (!model_mesh.data(fv).flag2)
+								{
+									is_remove = true;
+									break;
+								}
+							}
+						}
+						else
+						{
+							he1 = model_mesh.prev_halfedge_handle(he);
+							f2 = model_mesh.opposite_face_handle(he1);
+							if (model_mesh.is_valid_handle(f2) && f2.valence() == 3)
+							{
+								for (auto fv : model_mesh.fv_range(f2))
+								{
+									if (!model_mesh.data(fv).flag2)
+									{
+										is_remove = true;
+										break;
+									}
+								}
+							}
+						}
+						v1 = model_mesh.to_vertex_handle(model_mesh.next_halfedge_handle(he1));
+						model_mesh.delete_face(f1);
+						if (is_remove)
+						{
+							is_Ok = true;
+							he1 = model_mesh.opposite_halfedge_handle(he1);
+							v2 = model_mesh.to_vertex_handle(he1);
+							v3 = model_mesh.from_vertex_handle(he1);
+							v4 = model_mesh.to_vertex_handle(model_mesh.next_halfedge_handle(he1));
+							model_mesh.delete_face(f2);
+							facevhandle = { v2, v4, v1 };
+							model_mesh.add_face(facevhandle);
+							facevhandle = { v4, v3, v1 };
+							model_mesh.add_face(facevhandle);
+						}
+					}
+				}
+				model_mesh.garbage_collection();
+			}
+			
+			//inital is_ajusted
+			for (auto v : model_mesh.vertices())
+			{
+				model_mesh.data(v).is_adjusted = false;
+			}
+
+		}
+		
+	}
 
 	void Iso_Mesh::Open_File(std::ofstream &file_writer)
 	{

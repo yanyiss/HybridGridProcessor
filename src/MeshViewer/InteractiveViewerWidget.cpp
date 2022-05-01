@@ -651,14 +651,17 @@ void InteractiveViewerWidget::showDebugTest()
 		getFiles(path, allFileName);
 
 		using namespace CADMesher;
-		int i = 354;
+		int i = 0;
 		for (; i < allFileName.size();)
 		{
 			auto fileName = allFileName[i];
 			dprint("\n\n\nfile index:\t", i++, "\nfileName:\t", fileName);
 			globalmodel.clear();
 			Iso_Mesh iso_mesh(QString::fromStdString(fileName));
-
+			if (!OpenMesh::IO::write_mesh(globalmodel.initial_trimesh, fileName+".obj"))
+			{
+				std::cerr << "fail";
+			}
 			//TriMesh &m = globalmodel.initial_trimesh;
 			//initMeshStatusAndNormal(m);
 			//TriangleMeshRemeshing tmr(&m);

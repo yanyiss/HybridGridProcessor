@@ -66,13 +66,14 @@ void MainViewerWidget::open_CAD_query()
 	if (!fileName.isEmpty())
 	{
 		if (fileName.endsWith(".stp") || fileName.endsWith(".igs") || 
+			fileName.endsWith(".step") || fileName.endsWith(".iges") || 
 			fileName.endsWith(".IGS") || fileName.endsWith(".STP") ||
 			fileName.endsWith(".STEP") || fileName.endsWith(".IGES"))
 		{
 			MeshViewer->SetCADFileName(fileName);
 			CADMesher::globalmodel.clear();
 		    CADMesher::Iso_Mesh iso_mesh(fileName);
-#if 0
+#if 1
 			open_mesh_gui(Mesh(CADMesher::globalmodel.initial_trimesh));
 #else
 			open_mesh_gui(CADMesher::globalmodel.initial_polymesh);
