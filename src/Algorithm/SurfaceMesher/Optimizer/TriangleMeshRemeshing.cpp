@@ -4,7 +4,6 @@ namespace CADMesher
 {
 	void TriangleMeshRemeshing::run()
 	{
-		//double e = expected_length * 0.1;
 		////for (auto tv : mesh->vertices()) dprint(mesh->data(tv).GaussCurvature);
 		//for (auto tv : mesh->vertices())
 		//	mesh->data(tv).set_targetlength(mesh->data(tv).GaussCurvature < 1.0e-5 ? 1.5 * expected_length :
@@ -13,16 +12,13 @@ namespace CADMesher
 		/*double e = expected_length * 0.0005;
 		for (auto tv : mesh->vertices())
 			dprint(mesh->data(tv).GaussCurvature, expected_length, std::sqrt(6 * e / mesh->data(tv).GaussCurvature - 3 * e*e));*/
-			/*for (auto tv : mesh->vertices())
-			{
-				if(mesh->data(tv).GaussCurvature>1.0e-3)
-				dprint(mesh->data(tv).GaussCurvature, expected_length, expected_length/(4 + Log10(mesh->data(tv).GaussCurvature)));
-			}*/
+
 		expected_length *= 1.5;
 #if 0
 		for (auto tv : mesh->vertices())
 			mesh->data(tv).set_targetlength(expected_length);
 #else
+
 		for (auto &tv : mesh->vertices())
 		{
 			mesh->data(tv).set_targetlength(mesh->data(tv).GaussCurvature > 1.0e-4 ?
@@ -42,6 +38,7 @@ namespace CADMesher
 #endif
 		printMeshQuality(*mesh);
 		for (auto &tv : mesh->vertices())
+
 		{
 			if (tv.valence() <= 2 && !tv.is_boundary())
 			{
@@ -63,6 +60,7 @@ namespace CADMesher
 			split();
 			collapse();
 			equalize_valence();
+
 			if (i > 4)
 			{
 				processAngle();
@@ -113,7 +111,9 @@ namespace CADMesher
 			}
 #endif
 
+
 			split_one_edge(te, splitnumber);
+
 		}
 		mesh->garbage_collection();
 		//mesh->update_normals();
@@ -192,7 +192,7 @@ namespace CADMesher
 				continue;
 
 #if 0
-			//ÌØÕ÷ÏßÉÏÒÆ¶¯µã
+			//ç‰¹å¾çº¿ä¸Šç§»åŠ¨ç‚¹
 			if (mesh->data(the.edge()).get_edgeflag()) {
 				if (x >= 0.666 * min_of_t0_t1) continue;
 				int count = 0;
@@ -207,8 +207,8 @@ namespace CADMesher
 					double y = (mesh->point(v) - mesh->point(tovert)).norm();
 					double z = (mesh->point(v) - mesh->point(fromvert)).norm();
 					double a = sqrt((x + y + z)*(x + y - z)*(x + z - y)*(y + z - x)) * 0.25;
-					//if (400 * a > expected_length*y) continue;//Òª±£Ö¤ÓÉx,y,z¹¹³ÉµÄÈı½ÇĞÎÔÚyÉÏµÄ¸ß£¬Ğ¡ÓÚerr=expected_length*0.05
-					//ÕâÀïÎªÁË½øÒ»²½¹Ì¶¨ÌØÕ÷£¬ÒªÇó¸üÑÏ¸ñ
+					//if (400 * a > expected_length*y) continue;//è¦ä¿è¯ç”±x,y,zæ„æˆçš„ä¸‰è§’å½¢åœ¨yä¸Šçš„é«˜ï¼Œå°äºerr=expected_length*0.05
+					//è¿™é‡Œä¸ºäº†è¿›ä¸€æ­¥å›ºå®šç‰¹å¾ï¼Œè¦æ±‚æ›´ä¸¥æ ¼
 					if (z > x)
 					{
 						mesh->set_point(fromvert, aabbtree->closest_point((mesh->point(v) + mesh->point(tovert))*0.5));
@@ -221,7 +221,7 @@ namespace CADMesher
 				continue;
 			}
 			//if (mesh->data(mesh->edge_handle(the)).get_edgeflag()) continue;
-			//ÒÆ³ı¶Ì±ß
+			//ç§»é™¤çŸ­è¾¹
 			if (mesh->data(fromvert).get_vertflag()) {
 				if (mesh->data(tovert).get_vertflag() && x < min_of_t0_t1*0.1)
 				{
@@ -315,7 +315,7 @@ namespace CADMesher
 			int u1 = va(mesh->opposite_vh(h1));
 			if (fabs(v0 - 6) + fabs(v1 - 6) + fabs(u0 - 6) + fabs(u1 - 6) <= fabs(v0 - 7) + fabs(v1 - 7) + fabs(u0 - 5) + fabs(u1 - 5)) continue;
 
-			//ÔÚÒ»¶¨³Ì¶ÈÉÏ¿É·ÀÖ¹·­ÕÛ
+			//åœ¨ä¸€å®šç¨‹åº¦ä¸Šå¯é˜²æ­¢ç¿»æŠ˜
 			double alpha0, alpha1;
 			alpha0 = acos(-mesh->calc_edge_vector(h0).dot(mesh->calc_edge_vector(/*mesh->next_halfedge_handle(h0)*/h0.next())));
 			alpha1 = acos(-mesh->calc_edge_vector(h1).dot(mesh->calc_edge_vector(/*mesh->prev_halfedge_handle(h1)*/h1.prev())));
@@ -326,7 +326,7 @@ namespace CADMesher
 			if (alpha0 + alpha1 > PI)
 				continue;
 
-			////¼ì²é¶şÃæ½Ç
+			////æ£€æŸ¥äºŒé¢è§’
 			//auto n0 = mesh->calc_face_normal(/*mesh->face_handle(h0)*/h0.face());
 			//auto n1 = mesh->calc_face_normal(/*mesh->face_handle(h1)*/h1.face());
 			//if (n0.dot(n1) < 0.8)
@@ -337,7 +337,7 @@ namespace CADMesher
 			//		continue;
 			//	}
 			//}
-			////·ÀÖ¹³öÏÖÏÁ³¤Èı½ÇĞÎ
+			////é˜²æ­¢å‡ºç°ç‹­é•¿ä¸‰è§’å½¢
 			//auto V0 = mesh->point(te->v0());
 			//auto V1 = mesh->point(te->v1());
 			//auto U0 = mesh->point(mesh->opposite_vh(h0));
@@ -345,13 +345,13 @@ namespace CADMesher
 			//if (((U0 - V1).norm() + (U1 - V1).norm()) / (U0 - U1).norm() < 1.1) continue;
 			//if (((U0 - V0).norm() + (U1 - V0).norm()) / (U0 - U1).norm() < 1.1) continue;
 
-			//¼ÙÉèflip£¬¼ì²é¾Ö²¿Íø¸ñ½Ç¶ÈÊÇ·ñ±»ÓÅ»¯
+			//å‡è®¾flipï¼Œæ£€æŸ¥å±€éƒ¨ç½‘æ ¼è§’åº¦æ˜¯å¦è¢«ä¼˜åŒ–
 			double opt_before = opt(h0) + opt(h1);
 			mesh->flip(te);
 			++equalizenumber;
-			//Èô¾Ö²¿Íø¸ñ½Ç¶ÈÎ´±»ÓÅ»¯£¬ÔòÔÙ´Îflip»Øµ½³õÊ¼×´Ì¬
-			if (opt_before < opt(te.h0()) + opt(te.h1()))
-				mesh->flip(te);
+			//è‹¥å±€éƒ¨ç½‘æ ¼è§’åº¦æœªè¢«ä¼˜åŒ–ï¼Œåˆ™å†æ¬¡flipå›åˆ°åˆå§‹çŠ¶æ€
+			//if (opt_before < opt(te.h0()) + opt(te.h1()))
+				//mesh->flip(te);
 		}
 		mesh->garbage_collection();
 
@@ -453,6 +453,7 @@ namespace CADMesher
 				{
 					continue;
 				}
+
 #endif
 				mesh->data(th.edge()).flag1 = mesh->data(th.edge()).flag1 || mesh->data(th.next().edge()).flag1;
 				mesh->data(th.edge()).flag2 = mesh->data(th.edge()).flag2 || mesh->data(th.next().edge()).flag2;
@@ -468,6 +469,7 @@ namespace CADMesher
 				{
 					mesh->collapse(th.prev());
 					mesh->set_point(tv, aabbtree->closest_point(GravityPos(tv)));
+
 				}
 			}
 		}
@@ -513,7 +515,7 @@ namespace CADMesher
 		//				}
 		//
 		//#else
-		//				//Èı½ÇĞÎÈıµã¹²Ïß
+		//				//ä¸‰è§’å½¢ä¸‰ç‚¹å…±çº¿
 		//				if (angle0 < lowerAngleBound)
 		//				{
 		//					if (mesh->is_flip_ok(th.next().edge()))
@@ -536,7 +538,7 @@ namespace CADMesher
 		//					//split_one_edge(th.next().edge(), id);
 		//				}
 		//				//th = mesh->find_halfedge(mesh->vertex_handle(mesh->n_vertices() - 1), mesh->vertex_handle(th.from().idx())).next();
-		//				//Ö»ÓĞÒ»¸ö¶¥µãµÄ½ÇºÜĞ¡
+		//				//åªæœ‰ä¸€ä¸ªé¡¶ç‚¹çš„è§’å¾ˆå°
 		//				else
 		//				{
 		//					if (!mesh->is_collapse_ok(th.prev()))

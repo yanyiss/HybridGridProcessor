@@ -660,7 +660,10 @@ void InteractiveViewerWidget::showDebugTest()
 			dprint("\n\n\nfile index:\t", i++, "\nfileName:\t", fileName);
 			globalmodel.clear();
 			Iso_Mesh iso_mesh(QString::fromStdString(fileName));
-
+			if (!OpenMesh::IO::write_mesh(globalmodel.initial_trimesh, fileName+".obj"))
+			{
+				std::cerr << "fail";
+			}
 			//TriMesh &m = globalmodel.initial_trimesh;
 			//initMeshStatusAndNormal(m);
 			//TriangleMeshRemeshing tmr(&m);

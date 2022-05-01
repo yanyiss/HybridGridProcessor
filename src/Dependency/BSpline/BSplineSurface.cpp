@@ -21,7 +21,75 @@ BSplineSurface::BSplineSurface(int udeg, int vdeg, std::vector<double> &uknots, 
 	SetRational(true);
 	SetWeights(w);
 	SetControlPoints(controlpoints);
-	UV = Point4(uknots.front(), uknots.back(), vknots.front(), vknots.back()); //2022.03.21
+	int m = GetNumOfCtrlptsU() - 1;
+	int n = GetNumOfCtrlptsV() - 1;
+	UV = Point4(uknots[u_degree], uknots[m+1], vknots[v_degree], vknots[n+1]); //2022.03.21
+	Pw_ctrlpts.resize(m + 1, std::vector<Point4>(n + 1));
+	for (int i = 0; i <= m; i++)
+	{
+		for (int j = 0; j <= n; j++)
+		{
+			Pw_ctrlpts[i][j] << ctrlpoints[i][j] * weights[i][j], weights[i][j];
+		}
+	}
+
+	PartialUCtrpts = Pw_ctrlpts;
+	for (int i = 0; i <= m - 1; i++)
+	{
+		for (int j = 0; j <= n; j++)
+		{
+			PartialUCtrpts[i][j] = (PartialUCtrpts[i + 1][j] - PartialUCtrpts[i][j]) * (u_degree) / (u_knots[i + u_degree + 1] - u_knots[i + 1]);
+		}
+	}
+
+	PartialVCtrpts = Pw_ctrlpts;
+	for (int i = 0; i <= m; i++)
+	{
+		for (int j = 0; j <= n - 1; j++)
+		{
+			PartialVCtrpts[i][j] = (PartialVCtrpts[i][j + 1] - PartialVCtrpts[i][j]) * (v_degree) / (v_knots[j + v_degree + 1] - v_knots[j + 1]);
+		}
+	}
+
+	PartialUUCtrpts = Pw_ctrlpts;
+	for (int a = 1; a <= 2; a++)
+	{
+		for (int i = 0; i <= m - a; i++)
+		{
+			for (int j = 0; j <= n; j++)
+			{
+				PartialUUCtrpts[i][j] = (PartialUUCtrpts[i + 1][j] - PartialUUCtrpts[i][j]) * (u_degree - a + 1) / (u_knots[i + u_degree + 1] - u_knots[i + a]);
+			}
+		}
+	}
+
+	PartialUVCtrpts = Pw_ctrlpts;
+	for (int i = 0; i <= m - 1; i++)
+	{
+		for (int j = 0; j <= n; j++)
+		{
+			PartialUVCtrpts[i][j] = (PartialUVCtrpts[i + 1][j] - PartialUVCtrpts[i][j]) * (u_degree) / (u_knots[i + u_degree + 1] - u_knots[i + 1]);
+		}
+	}
+	for (int i = 0; i <= m - 1; i++)
+	{
+		for (int j = 0; j <= n - 1; j++)
+		{
+			PartialUVCtrpts[i][j] = (PartialUVCtrpts[i][j + 1] - PartialUVCtrpts[i][j]) * (v_degree) / (v_knots[j + v_degree + 1] - v_knots[j + 1]);
+		}
+	}
+
+	PartialVVCtrpts = Pw_ctrlpts;
+	for (int b = 1; b <= 2; b++)
+	{
+		for (int i = 0; i <= m; i++)
+		{
+			for (int j = 0; j <= n - b; j++)
+			{
+				PartialVVCtrpts[i][j] = (PartialVVCtrpts[i][j + 1] - PartialVVCtrpts[i][j]) * (v_degree - b + 1) / (v_knots[j + v_degree + 1] - v_knots[j + b]);
+			}
+		}
+	}
 }
 
 BSplineSurface::BSplineSurface(int udeg, int vdeg, std::vector<double> &uknots, std::vector<double> &vknots, std::vector<std::vector<Point>> &controlpoints)
@@ -32,7 +100,67 @@ BSplineSurface::BSplineSurface(int udeg, int vdeg, std::vector<double> &uknots, 
 	SetRational(false);
 	SetControlPoints(controlpoints);
 	weights.clear();
-	UV = Point4(uknots.front(), uknots.back(), vknots.front(), vknots.back()); //2022.03.21
+	int m = GetNumOfCtrlptsU() - 1;
+	int n = GetNumOfCtrlptsV() - 1;
+	UV = Point4(uknots[u_degree], uknots[m+1], vknots[v_degree], vknots[n+1]); //2022.03.21
+
+	PartialUCtrpts_ = ctrlpoints;
+	for (int i = 0; i <= m - 1; i++)
+	{
+		for (int j = 0; j <= n; j++)
+		{
+			PartialUCtrpts_[i][j] = (PartialUCtrpts_[i + 1][j] - PartialUCtrpts_[i][j]) * (u_degree) / (u_knots[i + u_degree + 1] - u_knots[i + 1]);
+		}
+	}
+
+	PartialVCtrpts_ = ctrlpoints;
+	for (int i = 0; i <= m; i++)
+	{
+		for (int j = 0; j <= n - 1; j++)
+		{
+			PartialVCtrpts_[i][j] = (PartialVCtrpts_[i][j + 1] - PartialVCtrpts_[i][j]) * (v_degree) / (v_knots[j + v_degree + 1] - v_knots[j + 1]);
+		}
+	}
+
+	PartialUUCtrpts_ = ctrlpoints;
+	for (int a = 1; a <= 2; a++)
+	{
+		for (int i = 0; i <= m - a; i++)
+		{
+			for (int j = 0; j <= n; j++)
+			{
+				PartialUUCtrpts_[i][j] = (PartialUUCtrpts_[i + 1][j] - PartialUUCtrpts_[i][j]) * (u_degree - a + 1) / (u_knots[i + u_degree + 1] - u_knots[i + a]);
+			}
+		}
+	}
+
+	PartialUVCtrpts_ = ctrlpoints;
+	for (int i = 0; i <= m - 1; i++)
+	{
+		for (int j = 0; j <= n; j++)
+		{
+			PartialUVCtrpts_[i][j] = (PartialUVCtrpts_[i + 1][j] - PartialUVCtrpts_[i][j]) * (u_degree) / (u_knots[i + u_degree + 1] - u_knots[i + 1]);
+		}
+	}
+	for (int i = 0; i <= m - 1; i++)
+	{
+		for (int j = 0; j <= n - 1; j++)
+		{
+			PartialUVCtrpts_[i][j] = (PartialUVCtrpts_[i][j + 1] - PartialUVCtrpts_[i][j]) * (v_degree) / (v_knots[j + v_degree + 1] - v_knots[j + 1]);
+		}
+	}
+
+	PartialVVCtrpts_ = ctrlpoints;
+	for (int b = 1; b <= 2; b++)
+	{
+		for (int i = 0; i <= m; i++)
+		{
+			for (int j = 0; j <= n - b; j++)
+			{
+				PartialVVCtrpts_[i][j] = (PartialVVCtrpts_[i][j + 1] - PartialVVCtrpts_[i][j]) * (v_degree - b + 1) / (v_knots[j + v_degree + 1] - v_knots[j + b]);
+			}
+		}
+	}
 }
 
 BSplineSurface::~BSplineSurface()
@@ -65,16 +193,6 @@ Point BSplineSurface::DeBoor(const double u, const double v) const
 
 	if (isRational)
 	{
-		int m = GetNumOfCtrlptsU() - 1;
-		int n = GetNumOfCtrlptsV() - 1;
-		std::vector<std::vector<Point4>> Pw_ctrlpts(m + 1, std::vector<Point4>(n + 1));
-		for (int i = 0; i <= m; i++)
-		{
-			for (int j = 0; j <= n; j++)
-			{
-				Pw_ctrlpts[i][j] << ctrlpoints[i][j] * weights[i][j], weights[i][j];
-			}
-		}
 		auto Pw = DeBoor(Pw_ctrlpts, u, v);
 		return Pw.head(3) / Pw[3];
 	}
@@ -89,18 +207,8 @@ Point BSplineSurface::PartialDerivativeU(const double u, const double v) const
 	if (u_degree < 1) return Point(0.0, 0.0, 0.0);
 	if (isRational)
 	{
-		int m = GetNumOfCtrlptsU() - 1;
-		int n = GetNumOfCtrlptsV() - 1;
-		std::vector<std::vector<Point4>> Pw_ctrlpts(m + 1, std::vector<Point4>(n + 1));
-		for (int i = 0; i <= m; i++)
-		{
-			for (int j = 0; j <= n; j++)
-			{
-				Pw_ctrlpts[i][j] << ctrlpoints[i][j] * weights[i][j], weights[i][j];
-			}
-		}
 		auto Pw = DeBoor(Pw_ctrlpts, u, v);
-		auto Aw_u = Derivative(Pw_ctrlpts, u, v, 1, 0);
+		auto Aw_u = Derivative(PartialUCtrpts, u, v, 1, 0);
 		double W_u = Aw_u(3);
 		Point A_u = Aw_u.head(3);
 		double W = Pw(3);
@@ -110,7 +218,7 @@ Point BSplineSurface::PartialDerivativeU(const double u, const double v) const
 	}
 	else
 	{
-		return Derivative(ctrlpoints, u, v, 1, 0);
+		return Derivative(PartialUCtrpts_, u, v, 1, 0);
 	}
 }
 
@@ -119,21 +227,8 @@ Point BSplineSurface::PartialDerivativeV(const double u, const double v)const
 	if (v_degree < 1) return Point(0.0, 0.0, 0.0);
 	if (isRational)
 	{
-		//std::cout << "hh" << std::endl;
-		int m = GetNumOfCtrlptsU() - 1;
-		int n = GetNumOfCtrlptsV() - 1;
-		std::vector<std::vector<Point4>> Pw_ctrlpts(m + 1, std::vector<Point4>(n + 1));
-		for (int i = 0; i <= m; i++)
-		{
-			for (int j = 0; j <= n; j++)
-			{
-				Pw_ctrlpts[i][j] << ctrlpoints[i][j] * weights[i][j], weights[i][j];
-			}
-		}
 		auto Pw = DeBoor(Pw_ctrlpts, u, v);
-		//std::cout << Pw << std::endl;
-		auto Aw_v = Derivative(Pw_ctrlpts, u, v, 0, 1);
-		//std::cout << Aw_v << std::endl;
+		auto Aw_v = Derivative(PartialVCtrpts, u, v, 0, 1);
 		double W_v = Aw_v(3);
 		Point A_v = Aw_v.head(3);
 		double W = Pw(3);
@@ -143,7 +238,7 @@ Point BSplineSurface::PartialDerivativeV(const double u, const double v)const
 	}
 	else
 	{
-		return Derivative(ctrlpoints, u, v, 0, 1);
+		return Derivative(PartialVCtrpts_, u, v, 0, 1);
 	}
 }
 
@@ -152,19 +247,9 @@ Point BSplineSurface::PartialDerivativeUU(const double u, const double v) const
 	if (u_degree < 2) return Point(0.0, 0.0, 0.0);
 	if (isRational)
 	{
-		int m = GetNumOfCtrlptsU() - 1;
-		int n = GetNumOfCtrlptsV() - 1;
-		std::vector<std::vector<Point4>> Pw_ctrlpts(m + 1, std::vector<Point4>(n + 1));
-		for (int i = 0; i <= m; i++)
-		{
-			for (int j = 0; j <= n; j++)
-			{
-				Pw_ctrlpts[i][j] << ctrlpoints[i][j] * weights[i][j], weights[i][j];
-			}
-		}
 		auto Pw = DeBoor(Pw_ctrlpts, u, v);
-		auto Aw_u = Derivative(Pw_ctrlpts, u, v, 1, 0);
-		auto Aw_uu = Derivative(Pw_ctrlpts, u, v, 2, 0);
+		auto Aw_u = Derivative(PartialUCtrpts, u, v, 1, 0);
+		auto Aw_uu = Derivative(PartialUUCtrpts, u, v, 2, 0);
 
 		double W_uu = Aw_uu(3);
 		double W_u = Aw_u(3);
@@ -178,7 +263,7 @@ Point BSplineSurface::PartialDerivativeUU(const double u, const double v) const
 	}
 	else
 	{
-		return Derivative(ctrlpoints, u, v, 2, 0);
+		return Derivative(PartialUUCtrpts_, u, v, 2, 0);
 	}
 }
 
@@ -187,20 +272,10 @@ Point BSplineSurface::PartialDerivativeUV(const double u, const double v)const
 	if (u_degree < 1 || v_degree < 1) return Point(0.0, 0.0, 0.0);
 	if (isRational)
 	{
-		int m = GetNumOfCtrlptsU() - 1;
-		int n = GetNumOfCtrlptsV() - 1;
-		std::vector<std::vector<Point4>> Pw_ctrlpts(m + 1, std::vector<Point4>(n + 1));
-		for (int i = 0; i <= m; i++)
-		{
-			for (int j = 0; j <= n; j++)
-			{
-				Pw_ctrlpts[i][j] << ctrlpoints[i][j] * weights[i][j], weights[i][j];
-			}
-		}
 		auto Pw = DeBoor(Pw_ctrlpts, u, v);
-		auto Aw_u = Derivative(Pw_ctrlpts, u, v, 1, 0);
-		auto Aw_v = Derivative(Pw_ctrlpts, u, v, 0, 1);
-		auto Aw_uv = Derivative(Pw_ctrlpts, u, v, 1, 1);
+		auto Aw_u = Derivative(PartialUCtrpts, u, v, 1, 0);
+		auto Aw_v = Derivative(PartialVCtrpts, u, v, 0, 1);
+		auto Aw_uv = Derivative(PartialUVCtrpts, u, v, 1, 1);
 
 		double W_uv = Aw_uv(3);
 		double W_u = Aw_u(3);
@@ -217,7 +292,7 @@ Point BSplineSurface::PartialDerivativeUV(const double u, const double v)const
 	}
 	else
 	{
-		return Derivative(ctrlpoints, u, v, 1, 1);
+		return Derivative(PartialUVCtrpts_, u, v, 1, 1);
 	}
 }
 
@@ -226,20 +301,9 @@ Point BSplineSurface::PartialDerivativeVV(const double u, const double v) const
 	if (v_degree < 2) return Point(0.0, 0.0, 0.0);
 	if (isRational)
 	{
-		int m = GetNumOfCtrlptsU() - 1;
-		int n = GetNumOfCtrlptsV() - 1;
-		std::vector<std::vector<Point4>> Pw_ctrlpts(m + 1, std::vector<Point4>(n + 1));
-		for (int i = 0; i <= m; i++)
-		{
-			for (int j = 0; j <= n; j++)
-			{
-				Pw_ctrlpts[i][j] << ctrlpoints[i][j] * weights[i][j], weights[i][j];
-			}
-		}
 		auto Pw = DeBoor(Pw_ctrlpts, u, v);
-		auto Aw_v = Derivative(Pw_ctrlpts, u, v, 0, 1);
-		auto Aw_vv = Derivative(Pw_ctrlpts, u, v, 0, 2);
-
+		auto Aw_v = Derivative(PartialVCtrpts, u, v, 0, 1);
+		auto Aw_vv = Derivative(PartialVVCtrpts, u, v, 0, 2);
 		double W_vv = Aw_vv(3);
 		double W_v = Aw_v(3);
 		double W = Pw(3);
@@ -252,10 +316,29 @@ Point BSplineSurface::PartialDerivativeVV(const double u, const double v) const
 	}
 	else
 	{
-		return Derivative(ctrlpoints, u, v, 0, 2);
+		return Derivative(PartialVVCtrpts_, u, v, 0, 2);
 	}
 }
 
+void BSplineSurface::PrincipalCurvature(const double u, const double v, double &k1, double &k2) const
+{
+	Eigen::Matrix2d Weingarten, value;
+	Point ru = PartialDerivativeU(u, v);
+	Point rv = PartialDerivativeV(u, v);
+	double E = ru.dot(ru);
+	double F = ru.dot(rv);
+	double G = rv.dot(rv);
+	Point n = (ru.cross(rv)).normalized();
+	double L = PartialDerivativeUU(u, v).dot(n);
+	double M = PartialDerivativeUV(u, v).dot(n);
+	double N = PartialDerivativeVV(u, v).dot(n);
+	Weingarten << L * G - M * F, M * E - L * F,
+		M * G - N * F, N * E - M * F;
+	Eigen::EigenSolver<Eigen::Matrix2d> es(Weingarten);
+	value = (es.pseudoEigenvalueMatrix()) / (E*G - pow(F, 2));
+	k1 = std::max(std::abs(value(0, 0)), std::abs(value(1, 1)));
+	k2 = std::min(std::abs(value(0, 0)), std::abs(value(1, 1)));
+}
 
 void BSplineSurface::KnotInsertion(double uv, int k, DIRECTION dir, BSplineSurface & new_surface)
 {

@@ -60,7 +60,8 @@ namespace CADMesher
 
 	public:
 		double expected_edge_length;
-		double mu = 1.2;//三角形面积允许扩张系数
+		double mu = 1.2;        //三角形面积允许扩张系数
+		double epsratio = 0.005;//网格和曲面的误差系数
 		vector<TriMesh> Surface_TriMeshes;
 		vector<PolyMesh> Surface_PolyMeshes;
 
@@ -71,10 +72,12 @@ namespace CADMesher
 		void C0_Feature();
 		void curvature_feature();
 		void Set_TriMesh();
-		//void Set_PolyMesh();
-		//Matrix2Xd Subdomain(Matrix2Xd &all_pnts, vector<Matrix2Xi> &bnd, int &pointsnumber);
+
+		void Set_PolyMesh();
+		Matrix2Xd Subdomain(Matrix2Xd &parameters, Matrix2Xd prepnt, Matrix2Xd nextpnt);
+
 	private:
-		double initialRate = 0.003;
+		double initialRate = 0.006;
 		double degeneratedRate = 0.01;
 	};
 }

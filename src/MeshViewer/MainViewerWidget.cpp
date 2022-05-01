@@ -55,6 +55,7 @@ void MainViewerWidget::createViewerDialog()
 	connect(MeshViewer,SIGNAL(loadMeshOK(bool,QString)), this, SLOT(LoadMeshFromInner(bool,QString)) );
 }
 
+
 void MainViewerWidget::open_mesh_gui(QString fname)
 {
 	if (fname.isEmpty() || !MeshViewer->openMesh(fname.toLocal8Bit())) 

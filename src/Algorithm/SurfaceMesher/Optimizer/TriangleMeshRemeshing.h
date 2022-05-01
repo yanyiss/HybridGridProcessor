@@ -53,10 +53,12 @@ namespace CADMesher
 		double low;
 		double expected_length;
 
+
 		timeRecorder tr;
 
 		double lowerAngleBound = 0.08;
 		std::vector<double> initial_FaceTargetLength;
+
 		TriMesh *mesh = nullptr;
 		ClosestPointSearch::AABBTree *aabbtree = nullptr;
 
