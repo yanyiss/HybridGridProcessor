@@ -11,6 +11,7 @@ namespace CADMesher
 		{
 			dprint(i,"*******");
 			//if (i != 8) continue;
+
 			TriMesh &aMesh = Surface_TriMeshes[i];
 			auto &wires = faceshape[i].wires;
 			if (wires.empty())
@@ -76,7 +77,7 @@ namespace CADMesher
 					auto &boundpos = edgeshape[edges[k]].parameters;
 					int cols = boundpos.cols() - 1;
 					all_pnts.block(0, s, 2, cols) = boundpos.block(0, 0, 2, cols);
-#if 1
+#if 0
 					dprint();
 					dprint(k);
 					for (int pp = 0; pp < boundpos.cols(); ++pp)
@@ -193,6 +194,7 @@ namespace CADMesher
 		dprint("Piecewise TriMesh Done!");
 	}
 
+#if 0
 	void OccReader::Set_PolyMesh()
 	{
 		vector<ShapeFace> &faceshape = globalmodel.faceshape;
@@ -571,6 +573,7 @@ namespace CADMesher
 
 		dprint("Piecewise PolyMesh Done!");
 	}
+#endif
 
 	Matrix2Xd OccReader::Subdomain(Matrix2Xd &parameters, Matrix2Xd preedgepara, Matrix2Xd nextedgepara)
 	{
@@ -602,7 +605,6 @@ namespace CADMesher
 			else p4 = ((p2 + p3)*0.5).normalized();
 			dire.col(i) = p4;
 		}
-
 		//adjust the offset direction 
 		Matrix2Xd dire_temp(2, pntsnum);
 		dire_temp.col(0) = dire.col(0);
@@ -622,6 +624,7 @@ namespace CADMesher
 		}
 		return offsetline;
 	}
+
 
 	void OccReader::ComputeFaceAndEdge()
 	{
