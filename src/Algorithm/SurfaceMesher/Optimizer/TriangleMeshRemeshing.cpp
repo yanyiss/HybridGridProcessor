@@ -18,9 +18,13 @@ namespace CADMesher
 		for (auto tv : mesh->vertices())
 			mesh->data(tv).set_targetlength(expected_length);
 #else
-
+		
 		for (auto &tv : mesh->vertices())
 		{
+			if (isnan(mesh->data(tv).GaussCurvature))
+			{
+				int p = 0;
+			}
 			mesh->data(tv).set_targetlength(mesh->data(tv).GaussCurvature > 1.0e-4 ?
 				expected_length * 2 / (6 + Log10(mesh->data(tv).GaussCurvature)) : expected_length);
 		}
@@ -38,7 +42,6 @@ namespace CADMesher
 #endif
 		printMeshQuality(*mesh);
 		for (auto &tv : mesh->vertices())
-
 		{
 			if (tv.valence() <= 2 && !tv.is_boundary())
 			{
@@ -52,6 +55,7 @@ namespace CADMesher
 
 		double mA = 0;
 		tr.refresh();
+		dprint("mesh vertices number:", mesh->n_vertices());
 		for (int i = 0; i < 12; i++)
 		{
 			tr.mark();
@@ -65,13 +69,14 @@ namespace CADMesher
 			{
 				processAngle();
 			}
-			tangential_relaxation();
 			mA = meshMinAngle(*mesh);
 			if (mA > lowerAngleBound)
 			{
 				dprint("iteration times:", i + 1);
 				break;
 			}
+			tangential_relaxation();
+			
 #ifdef printRemeshingInfo
 			dprint("mesh vertices number:", mesh->n_vertices());
 			printMeshQuality(*mesh);
