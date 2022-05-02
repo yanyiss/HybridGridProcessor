@@ -507,8 +507,6 @@ double meshMinAngle(TriMesh &mesh)
 	double angle = 4;
 	for (auto th : mesh.halfedges())
 	{
-		if (th.is_boundary())
-			continue;
 		angle = std::min(angle, mesh.calc_sector_angle(th));
 	}
 	return angle;
