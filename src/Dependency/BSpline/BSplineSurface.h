@@ -18,10 +18,10 @@ public:
 	void SetRational(const bool rational) { isRational = rational; }
 	void SetKnotsU(const std::vector<double> &uknots) { u_knots.clear(); u_knots = uknots; }
 	void SetKnotsV(const std::vector<double> &vknots) { v_knots.clear(); v_knots = vknots; }
-	void SetWeights(const std::vector<std::vector<double>> &w) 
-	{ 
-		weights.clear(); 
-		weights = w; 
+	void SetWeights(const std::vector<std::vector<double>> &w)
+	{
+		weights.clear();
+		weights = w;
 		isRational = true;
 	}
 	void SetControlPoints(const std::vector<std::vector<Point>> &points)
@@ -29,7 +29,7 @@ public:
 		ctrlpoints.clear(); ctrlpoints = points;
 	}
 	void SetDataPoints(const std::vector<Point> &points) { datapoints.clear(); datapoints = points; }
-	
+
 	const int GetDegreeU(void) const { return u_degree; }
 	const int GetDegreeV(void) const { return v_degree; }
 	const bool GetRational(void) const { return isRational; }
@@ -38,15 +38,15 @@ public:
 	const int GetNumOfCtrlptsU(void) const { return ctrlpoints.size(); }
 	const int GetNumOfCtrlptsV(void) const { return ctrlpoints[0].size(); }
 	const std::vector<double> GetKnotsU(void) const { return u_knots; }
-	const std::vector<double> GetKnotsV(void) const { return v_knots; }	
+	const std::vector<double> GetKnotsV(void) const { return v_knots; }
 	const std::vector<std::vector<double>> GetWeights(void) const { return weights; }
 	const std::vector<std::vector<Point>> GetControlPoints(void) const { return ctrlpoints; }
 	const std::vector<Point> & DataPoints(void) const { return datapoints; }
 	const int FindSpan(int n, int p, double u, std::vector<double> K) const;
 
 	void PrincipalCurvature(const double u, const double v, double &k1, double &k2) const;  //¼ÆËãÖ÷ÇúÂÊ
-	
-	void setZero(double &t) const  { t = 0; }
+
+	void setZero(double &t) const { t = 0; }
 	void setZero(Point &t)  const { t.setZero(); }
 	void setZero(Point4 &t) const { t.setZero(); }
 
@@ -81,7 +81,7 @@ public:
 					{
 						double alpha = (u - u_knots[i + ru - u_degree]) / diffu;
 						d[i][j] = (1 - alpha) * d[i - 1][j] + alpha * d[i][j];
-					}				
+					}
 				}
 			}
 		}
@@ -96,7 +96,7 @@ public:
 				{
 					double alpha = (v - v_knots[j + rv - v_degree]) / diffv;
 					d[u_degree][j] = (1 - alpha) * d[u_degree][j - 1] + alpha * d[u_degree][j];
-				}			
+				}
 			}
 		}
 		return d[u_degree][v_degree];
@@ -440,7 +440,7 @@ public:
 	void PreprocessData(void);
 	void Regression(void);
 	void Parameterization(std::vector<double> &t);
-	
+
 
 	std::vector<std::vector<int>> Face_Control_index;
 	std::vector<OpenMesh::Vec3d> control_list;

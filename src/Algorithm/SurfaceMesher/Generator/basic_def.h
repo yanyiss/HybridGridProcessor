@@ -19,6 +19,7 @@
 #include "..\src\Dependency\CPS\CPS_AABBTree.h"
 #include "..\src\Toolbox\dprinter\dprint.h"
 #include"src\Dependency\BSpline\BSplineSurface.h"
+#include"src\Dependency\BSpline\BSplineCurve.h"
 
 namespace CADMesher 
 {
@@ -44,7 +45,6 @@ namespace CADMesher
 		int id;
 		bool if_merged;
 		bool if_splitted;
-		bool if_trimmed; 
 		bool if_C0;
 		bool if_curvature;
 		TopoDS_Edge edge;
@@ -65,7 +65,6 @@ namespace CADMesher
 			edge = edge_;
 			if_merged = false;
 			if_splitted = false;
-			if_trimmed = true;
 			if_curvature = true;
 			if_C0 = false;
 			next_reversed_edge = -1;

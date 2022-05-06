@@ -977,10 +977,10 @@ void MeshViewerWidget::draw_feature()
 	//}
 	//glEnd();
 	//glLineWidth(20);
-	//glColor3d(1.0, 0.0, 0.0);
+	//glColor3d(0.0, 0.0, 1.0);
 	//glPointSize(20);
 	//glBegin(GL_POINTS);
-	//auto f = mesh.vertex_handle(1938);
+	//auto f = mesh.vertex_handle(46);
 	//glVertex3dv(mesh.point(f).data());
 	//glEnd();
 }
