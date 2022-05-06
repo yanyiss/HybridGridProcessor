@@ -76,7 +76,7 @@ namespace CADMesher
 					auto &boundpos = edgeshape[edges[k]].parameters;
 					int cols = boundpos.cols() - 1;
 					all_pnts.block(0, s, 2, cols) = boundpos.block(0, 0, 2, cols);
-#if 0
+#if 1
 					dprint();
 					dprint(k);
 					for (int pp = 0; pp < boundpos.cols(); ++pp)
@@ -647,7 +647,7 @@ namespace CADMesher
 	{
 		TopoDS_Shape &aShape = globalmodel.aShape;
 
-		Vector3d ma(DBL_MIN, DBL_MIN, DBL_MIN);
+		Vector3d ma(-DBL_MAX, -DBL_MAX, -DBL_MAX);
 		Vector3d mi(DBL_MAX, DBL_MAX, DBL_MAX);
 		for (TopExp_Explorer vertexExp(aShape, TopAbs_VERTEX); vertexExp.More(); vertexExp.Next())
 		{
