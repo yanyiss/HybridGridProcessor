@@ -71,17 +71,20 @@ public slots:
 		QString fileName = QFileDialog::getOpenFileName(this,
 			tr("Open mesh file"),
 			tr("../model/CAD"),
-			tr("(*.STEP;*.STP;*.stp;*.IGES;*.IGS;*.igs;*.obj);;")
+			tr("(*.STEP;*.STP;*.step;*.stp;*.IGES;*.IGS;*.iges;*.igs;*.obj);;")
 		);
 		if (!fileName.isEmpty())
 		{
 			if (fileName.endsWith(".stp") || fileName.endsWith(".igs") ||
+				fileName.endsWith(".step") || fileName.endsWith(".iges") ||
 				fileName.endsWith(".IGS") || fileName.endsWith(".STP") ||
 				fileName.endsWith(".STEP") || fileName.endsWith(".IGES"))
 			{
 				MeshViewer->SetCADFileName(fileName);
 				CADMesher::globalmodel.clear();
+				timeRecorder tr;
 				CADMesher::Iso_Mesh iso_mesh(fileName);
+				tr.out("time of generating isotropic mesh:");
 #if 1
 				Mesh me(CADMesher::globalmodel.initial_trimesh);
 				initMeshStatusAndNormal(me);

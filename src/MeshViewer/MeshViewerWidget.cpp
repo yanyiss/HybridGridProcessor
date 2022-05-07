@@ -914,9 +914,10 @@ void MeshViewerWidget::draw_IsotropicMesh()
 #include "../src/Algorithm/SurfaceMesher/Optimizer/AnisotropicMeshRemeshing.h"
 void MeshViewerWidget::draw_AnisotropicMesh()
 {
+#if 0
 	if (ifUpdateMesh)
 	{
-		/*timeRecorder tr;
+		timeRecorder tr;
 		CADMesher::AnisotropicMeshRemeshing *amr = new CADMesher::AnisotropicMeshRemeshing();
 		amr->SetMesh(&mesh);
 		amr->load_ref_mesh(&mesh);
@@ -931,15 +932,17 @@ void MeshViewerWidget::draw_AnisotropicMesh()
 		if (if_saveOK)
 			dprint("The isotropic mesh has been saved in \"Anisotropic Mesh\" folder");
 		else
-			dprint("Save anisotropic mesh failed");*/
+			dprint("Save anisotropic mesh failed");
 	}
+#endif
 }
 
 //<<<<<<< john
 void MeshViewerWidget::draw_feature()
 {	
+#if 1
 	//画C0特征
-	glLineWidth(5);
+	glLineWidth(2);
 	glColor3d(1.0, 0.0, 0.0);
 	glBegin(GL_LINES);
 	for (auto &te : mesh.edges())
@@ -966,23 +969,25 @@ void MeshViewerWidget::draw_feature()
 	}
 	glEnd();
 
-	//glLineWidth(5);
-	//glColor3d(1.0, 0.0, 0.0);
-	//glBegin(GL_POLYGON);
-	//auto f = mesh.face_handle(42832);
-	//for (auto fv : mesh.fv_range(f))
-	//{
-	//	glVertex3dv(mesh.point(fv).data());
-	//	glVertex3dv(mesh.point(fv).data());
-	//}
-	//glEnd();
-	//glLineWidth(20);
-	//glColor3d(0.0, 0.0, 1.0);
-	//glPointSize(20);
-	//glBegin(GL_POINTS);
-	//auto f = mesh.vertex_handle(46);
-	//glVertex3dv(mesh.point(f).data());
-	//glEnd();
+#endif
+	//draw triangles with low quality
+	glColor3d(0.9, 0.1, 0.9);
+	glPointSize(8);
+	glBegin(GL_POINTS);
+	for (auto &tf : mesh.faces())
+	{
+		for (auto &tfh : mesh.fh_range(tf))
+		{
+			if (mesh.calc_sector_angle(tfh) < 0.08)
+			{
+				glVertex3dv(mesh.point(tfh.from()).data());
+				glVertex3dv(mesh.point(tfh.to()).data());
+				glVertex3dv(mesh.point(tfh.next().to()).data());
+				break;
+			}
+		}
+	}
+	glEnd();
 }
 //=======
 #include "../src/Algorithm/CheckBoard/CheckBoardGenerator.h"
