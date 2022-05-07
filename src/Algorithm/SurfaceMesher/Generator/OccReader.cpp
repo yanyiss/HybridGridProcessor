@@ -9,8 +9,8 @@ namespace CADMesher
 		Surface_TriMeshes.resize(faceshape.size());
 		for (int i = 0; i < faceshape.size(); i++)
 		{
-			dprint(i,"*******");
-			//if (i != 180) continue;
+			//dprint(i,"*******");
+			//if (i != 67) continue;
 			TriMesh &aMesh = Surface_TriMeshes[i];
 			auto &wires = faceshape[i].wires;
 			if (wires.empty())
@@ -114,7 +114,7 @@ namespace CADMesher
 			errorbounds /= 2 * testnum;
 			errorbounds = std::max(errorbounds, 0.00001);
 			double target_h = std::sqrt(epsratio / errorbounds);
-			dprint(aMesh.n_vertices(), target_h, x_step);
+			//dprint(aMesh.n_vertices(), target_h, x_step);
 			if (target_h < x_step)
 			{
 				triangulate(all_pnts, bnd, sqrt(3) * target_h * target_h *0.25, aMesh);
@@ -129,12 +129,12 @@ namespace CADMesher
 					aMesh.set_point(tv, TriMesh::Point(pos[0], pos[1] * ra_inv, 0));
 				}
 			}
-			dprint("initial vertices:", aMesh.n_vertices());
+			//dprint("initial vertices:", aMesh.n_vertices());
 
 			//Remesh in domain		
-			Riemannremesh Remesh(Surface, &aMesh);
-			Remesh.remesh();
-			dprint("domain remesh done!");
+			/*Riemannremesh Remesh(Surface, &aMesh);
+			Remesh.remesh();*/
+			//dprint("domain remesh done!");
 
 			if (!OpenMesh::IO::write_mesh(aMesh, "one.obj"))
 			{
@@ -152,7 +152,7 @@ namespace CADMesher
 				}
 				aMesh.data(v).GaussCurvature = std::max(std::fabs(k1), std::fabs(k2));
 			}
-			dprint("GaussCurvature compute done!");
+			//dprint("GaussCurvature compute done!");
 			for (auto tv : aMesh.vertices())
 			{
 				auto pos = aMesh.point(tv);
@@ -213,7 +213,6 @@ namespace CADMesher
 		dprint("Piecewise TriMesh Done!");
 	}
 
-#if 0
 	void OccReader::Set_PolyMesh()
 	{
 		vector<ShapeFace> &faceshape = globalmodel.faceshape;
@@ -222,7 +221,7 @@ namespace CADMesher
 		Surface_PolyMeshes.resize(faceshape.size());
 		for (int i = 0; i < faceshape.size(); i++)
 		{
-			dprint(i);
+			//dprint(i);
 			//if (i != 69) continue;
 			Mesh &newmesh = Surface_PolyMeshes[i];
 			TriMesh aMesh;
@@ -592,7 +591,6 @@ namespace CADMesher
 
 		dprint("Piecewise PolyMesh Done!");
 	}
-#endif
 
 	Matrix2Xd OccReader::Subdomain(Matrix2Xd &parameters, Matrix2Xd preedgepara, Matrix2Xd nextedgepara)
 	{
@@ -624,6 +622,7 @@ namespace CADMesher
 			else p4 = ((p2 + p3)*0.5).normalized();
 			dire.col(i) = p4;
 		}
+
 		//adjust the offset direction 
 		Matrix2Xd dire_temp(2, pntsnum);
 		dire_temp.col(0) = dire.col(0);
@@ -644,12 +643,11 @@ namespace CADMesher
 		return offsetline;
 	}
 
-
 	void OccReader::ComputeFaceAndEdge()
 	{
 		TopoDS_Shape &aShape = globalmodel.aShape;
 
-		Vector3d ma(-DBL_MAX, -DBL_MAX, -DBL_MAX);
+		Vector3d ma(DBL_MIN, DBL_MIN, DBL_MIN);
 		Vector3d mi(DBL_MAX, DBL_MAX, DBL_MAX);
 		for (TopExp_Explorer vertexExp(aShape, TopAbs_VERTEX); vertexExp.More(); vertexExp.Next())
 		{
@@ -976,8 +974,6 @@ namespace CADMesher
 					faceshape[i].Surface = new BSplineSurface(geom_bsplinesurface->UDegree(), geom_bsplinesurface->VDegree(), u, v, cp);
 				//gp_Vec u2, v2, uu, uv, vv;
 				//gp_Pnt oringe;
-				////double ut = u.back()-(u.back()-u.front())*0.5, vt = v.back()-(v.back()-v.front())*0.5;
-				//double ut = 179.999998, vt = 0.999998;
 				//geom_bsplinesurface->D2(ut, vt, oringe, u2, v2, uu, vv, uv);
 				////double k1, k2;
 				////faceshape[i].Surface->PrincipalCurvature(ut, vt, k1, k2);
