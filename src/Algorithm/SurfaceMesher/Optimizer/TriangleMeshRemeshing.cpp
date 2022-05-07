@@ -54,19 +54,22 @@ namespace CADMesher
 			mesh->request_vertex_normals();
 
 		double mA = 0;
+		bool ifEnhanced = false;
 		tr.refresh();
 		dprint("mesh vertices number:", mesh->n_vertices());
 		for (int i = 0; i < 12; i++)
 		{
 			tr.mark();
 			dprint("\niteration times:", i + 1);
+			dprint("mesh vertices number:", mesh->n_vertices());
 
 			split();
-			collapse();
+			collapse(ifEnhanced);
 			equalize_valence();
 
 			if (i > 4)
 			{
+				ifEnhanced = true;
 				processAngle();
 			}
 			mA = meshMinAngle(*mesh);
@@ -164,9 +167,13 @@ namespace CADMesher
 		}
 	}
 
-	void TriangleMeshRemeshing::collapse()
+	void TriangleMeshRemeshing::collapse(bool ifEnhanced)
 	{
 		int collapsenumber = 0;
+		auto edgeFlag = [&](OpenMesh::SmartEdgeHandle &e)
+		{
+			return mesh->data(e).flag1 || mesh->data(e).flag2;
+		};
 		for (auto the : mesh->halfedges()) {
 			if (!mesh->is_collapse_ok(the))
 			{
@@ -178,10 +185,10 @@ namespace CADMesher
 				continue;
 			}
 #endif
-			if (mesh->data(the.edge()).flag1 || mesh->data(the.edge()).flag2)
+			/*if (mesh->data(the.edge()).flag1 || mesh->data(the.edge()).flag2)
 				continue;
 			if (mesh->is_boundary(the))
-				continue;
+				continue;*/
 
 			OV fromvert = mesh->from_vertex_handle(the);
 			if (mesh->data(fromvert).get_vertflag())
@@ -196,22 +203,27 @@ namespace CADMesher
 			if (x >= 0.8 * min_of_t0_t1)
 				continue;
 
-#if 0
+#if 1
 			//特征线上移动点
-			if (mesh->data(the.edge()).get_edgeflag()) {
+			//if (mesh->data(the.edge()).get_edgeflag())
+			if(edgeFlag(the.edge()))
+			{
 				if (x >= 0.666 * min_of_t0_t1) continue;
 				int count = 0;
 				OV v = fromvert;
-				for (auto tvoh : mesh->voh_range(fromvert)) {
-					if (!mesh->data(tvoh.edge()).get_edgeflag()) continue;
+				for (auto &tvoh : mesh->voh_range(fromvert)) 
+				{
+					//if (!mesh->data(tvoh.edge()).get_edgeflag()) continue;
+					if (!edgeFlag(tvoh.edge())) continue;
 					if (tvoh.to() == tovert) continue;
 					++count;
 					v = tvoh.to();
 				}
-				if (count == 1) {
+				if (count == 1) 
+				{
 					double y = (mesh->point(v) - mesh->point(tovert)).norm();
 					double z = (mesh->point(v) - mesh->point(fromvert)).norm();
-					double a = sqrt((x + y + z)*(x + y - z)*(x + z - y)*(y + z - x)) * 0.25;
+					//double a = sqrt((x + y + z)*(x + y - z)*(x + z - y)*(y + z - x)) * 0.25;
 					//if (400 * a > expected_length*y) continue;//要保证由x,y,z构成的三角形在y上的高，小于err=expected_length*0.05
 					//这里为了进一步固定特征，要求更严格
 					if (z > x)
@@ -227,7 +239,8 @@ namespace CADMesher
 			}
 			//if (mesh->data(mesh->edge_handle(the)).get_edgeflag()) continue;
 			//移除短边
-			if (mesh->data(fromvert).get_vertflag()) {
+			if (mesh->data(fromvert).get_vertflag()) 
+			{
 				if (mesh->data(tovert).get_vertflag() && x < min_of_t0_t1*0.1)
 				{
 					mesh->collapse(the);
@@ -240,31 +253,37 @@ namespace CADMesher
 			if (mesh->is_boundary(the))
 				continue;*/
 #endif
+			if (mesh->data(the.edge()).flag1 || mesh->data(the.edge()).flag2)
+				continue;
+			if (mesh->is_boundary(the))
+				continue;
 			O3d pos = mesh->data(tovert).get_vertflag() ? mesh->point(tovert) : mesh->calc_centroid(the);
 
-			//stop if collapsing results in long edges
-			for (OV thev : mesh->vv_range(fromvert))
-				if ((pos - mesh->point(thev)).norm() > 1.33 * min_of_t0_t1)
-					goto goto20210523;
-			for (OV thev : mesh->vv_range(tovert))
-				if ((pos - mesh->point(thev)).norm() > 1.33 * min_of_t0_t1)
-					goto goto20210523;
+			if (ifEnhanced)
+			{
+				//stop if collapsing results in long edges
+				for (OV thev : mesh->vv_range(fromvert))
+					if ((pos - mesh->point(thev)).norm() > 1.33 * min_of_t0_t1)
+						goto goto20210523;
+				for (OV thev : mesh->vv_range(tovert))
+					if ((pos - mesh->point(thev)).norm() > 1.33 * min_of_t0_t1)
+						goto goto20210523;
 
-			//stop if collapsing results in small angles
-			auto t_f = the.opp();
-			auto he = the.prev().opp().prev();
-			while (he != t_f) {
-				O3d p1 = mesh->point(he.from());
-				O3d p2 = mesh->point(mesh->opposite_vh(he));
-				O3d p01 = (p1 - pos).normalize();
-				O3d p12 = (p2 - p1).normalize();
-				O3d p20 = (pos - p2).normalize();
-				if (acos(-p01.dot(p12)) < 0.1) goto goto20210523;
-				if (acos(-p12.dot(p20)) < 0.1) goto goto20210523;
-				if (acos(-p20.dot(p01)) < 0.1) goto goto20210523;
-				he = he.opp().prev();
+				//stop if collapsing results in small angles
+				auto t_f = the.opp();
+				auto he = the.prev().opp().prev();
+				while (he != t_f) {
+					O3d p1 = mesh->point(he.from());
+					O3d p2 = mesh->point(mesh->opposite_vh(he));
+					O3d p01 = (p1 - pos).normalize();
+					O3d p12 = (p2 - p1).normalize();
+					O3d p20 = (pos - p2).normalize();
+					if (acos(-p01.dot(p12)) < 0.1) goto goto20210523;
+					if (acos(-p12.dot(p20)) < 0.1) goto goto20210523;
+					if (acos(-p20.dot(p01)) < 0.1) goto goto20210523;
+					he = he.opp().prev();
+				}
 			}
-
 			//stop if collapsing results in selfintersection
 			//to be completed
 
@@ -297,7 +316,7 @@ namespace CADMesher
 
 		auto va = [&](OV v) {return mesh->valence(v) + (mesh->is_boundary(v) ? 2 : 0); };
 
-		double PiDividedByThree = PI * 0.3333;
+		/*double PiDividedByThree = PI * 0.3333;
 		double temp = PiDividedByThree - lowerAngleBound; temp *= temp;
 		auto penaltyFunction = [&](double a)
 		{
@@ -307,15 +326,16 @@ namespace CADMesher
 		auto opt = [&](OpenMesh::SmartHalfedgeHandle &he) {
 			return penaltyFunction(mesh->calc_sector_angle(he)) + penaltyFunction(mesh->calc_sector_angle(he.prev()))
 				+ penaltyFunction(mesh->calc_sector_angle(he.next()));
-		};
+		};*/
 		int equalizenumber = 0;
+		double pentaLowerAngleBound = 3*lowerAngleBound;
 		for (auto te : mesh->edges()) {
 			if (!mesh->is_flip_ok(te) || mesh->data(te).flag1 || mesh->data(te).flag2)
 				continue;
 			auto h0 = te.h0();
 			auto h1 = te.h1();
-			int v0 = va(te.v0());
-			int v1 = va(te.v1());
+			int v0 = va(h0.from());
+			int v1 = va(h0.to());
 			int u0 = va(mesh->opposite_vh(h0));
 			int u1 = va(mesh->opposite_vh(h1));
 			if (fabs(v0 - 6) + fabs(v1 - 6) + fabs(u0 - 6) + fabs(u1 - 6) <= fabs(v0 - 7) + fabs(v1 - 7) + fabs(u0 - 5) + fabs(u1 - 5)) continue;
@@ -350,8 +370,15 @@ namespace CADMesher
 			//if (((U0 - V1).norm() + (U1 - V1).norm()) / (U0 - U1).norm() < 1.1) continue;
 			//if (((U0 - V0).norm() + (U1 - V0).norm()) / (U0 - U1).norm() < 1.1) continue;
 
+			////尽量防止出现小角
+			//if (mesh->calc_sector_angle(h0.next()) < pentaLowerAngleBound)
+			//	continue;
+			//if (mesh->calc_sector_angle(h1.next()) < pentaLowerAngleBound)
+			//	continue;
+
+
 			//假设flip，检查局部网格角度是否被优化
-			double opt_before = opt(h0) + opt(h1);
+			//double opt_before = opt(h0) + opt(h1);
 			mesh->flip(te);
 			++equalizenumber;
 			//若局部网格角度未被优化，则再次flip回到初始状态
@@ -677,6 +704,9 @@ namespace CADMesher
 	{
 		mesh->update_face_normals();
 		mesh->update_vertex_normals();
+
+
+
 		for (auto tv : mesh->vertices()) {
 			if (mesh->data(tv).get_vertflag() || mesh->is_boundary(tv))
 				continue;

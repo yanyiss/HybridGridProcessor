@@ -72,10 +72,8 @@ namespace CADMesher
 		void C0_Feature();
 		void curvature_feature();
 		void Set_TriMesh();
-
 		void Set_PolyMesh();
 		Matrix2Xd Subdomain(Matrix2Xd &parameters, Matrix2Xd prepnt, Matrix2Xd nextpnt);
-
 	private:
 		double initialRate = 0.006;
 		double degeneratedRate = 0.01;

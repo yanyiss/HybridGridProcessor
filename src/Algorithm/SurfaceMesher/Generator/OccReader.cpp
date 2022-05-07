@@ -9,9 +9,8 @@ namespace CADMesher
 		Surface_TriMeshes.resize(faceshape.size());
 		for (int i = 0; i < faceshape.size(); i++)
 		{
-			dprint(i,"*******");
-			//if (i != 8) continue;
-
+			//dprint(i,"*******");
+			//if (i != 67) continue;
 			TriMesh &aMesh = Surface_TriMeshes[i];
 			auto &wires = faceshape[i].wires;
 			if (wires.empty())
@@ -89,11 +88,17 @@ namespace CADMesher
 				}
 				pointsnumber = s;
 			}
+			Matrix2Xd boundary = all_pnts.block(0, 0, 2, pointsnumber);
 			all_pnts.block(1, 0, 1, all_pnts.cols()) *= ra;
 			triangulate(all_pnts, bnd, sqrt(3) * x_step * x_step *0.25 * mu, aMesh); 
 			double ra_inv = 1.0 / ra;
 			for (auto tv : aMesh.vertices())
 			{
+				if (tv.idx() < pointsnumber)
+				{
+					aMesh.set_point(tv, TriMesh::Point(boundary(0, tv.idx()), boundary(1, tv.idx()), 0));
+					continue;
+				}
 				auto pos = aMesh.point(tv);
 				aMesh.set_point(tv, TriMesh::Point(pos[0], pos[1] * ra_inv, 0));
 			}
@@ -106,34 +111,43 @@ namespace CADMesher
 				auto p = aMesh.point(aMesh.vertex_handle(j));
 				errorbounds += (Surface->PartialDerivativeUU(p[0], p[1])).norm() + 2 * (Surface->PartialDerivativeUV(p[0], p[1])).norm() + (Surface->PartialDerivativeVV(p[0], p[1])).norm();
 			}
-			errorbounds /= 2 * (aMesh.n_vertices());
+			errorbounds /= 2 * testnum;
 			errorbounds = std::max(errorbounds, 0.00001);
 			double target_h = std::sqrt(epsratio / errorbounds);
-			dprint(aMesh.n_vertices(), target_h, x_step);
+			//dprint(aMesh.n_vertices(), target_h, x_step);
 			if (target_h < x_step)
 			{
 				triangulate(all_pnts, bnd, sqrt(3) * target_h * target_h *0.25, aMesh);
 				for (auto tv : aMesh.vertices())
 				{
+					if (tv.idx() < pointsnumber)
+					{
+						aMesh.set_point(tv, TriMesh::Point(boundary(0, tv.idx()), boundary(1, tv.idx()), 0));
+						continue;
+					}
 					auto pos = aMesh.point(tv);
 					aMesh.set_point(tv, TriMesh::Point(pos[0], pos[1] * ra_inv, 0));
 				}
 			}
-			dprint("initial vertices:", aMesh.n_vertices());
+			//dprint("initial vertices:", aMesh.n_vertices());
 
 			//Remesh in domain		
-			Riemannremesh Remesh(Surface, &aMesh);
-			Remesh.remesh();
-			dprint("domain remesh done!");
+			/*Riemannremesh Remesh(Surface, &aMesh);
+			Remesh.remesh();*/
+			//dprint("domain remesh done!");
 
 			double k1, k2;
 			for (auto v : aMesh.vertices())
 			{
 				auto p = aMesh.point(v);
 				Surface->PrincipalCurvature(p[0], p[1], k1, k2);
+				if (isnan(k1*k2))
+				{
+					dprint("bug", v.idx());
+				}
 				aMesh.data(v).GaussCurvature = std::max(std::fabs(k1), std::fabs(k2));
 			}
-			dprint("GaussCurvature compute done!");
+			//dprint("GaussCurvature compute done!");
 			for (auto tv : aMesh.vertices())
 			{
 				auto pos = aMesh.point(tv);
@@ -194,7 +208,6 @@ namespace CADMesher
 		dprint("Piecewise TriMesh Done!");
 	}
 
-#if 0
 	void OccReader::Set_PolyMesh()
 	{
 		vector<ShapeFace> &faceshape = globalmodel.faceshape;
@@ -203,7 +216,7 @@ namespace CADMesher
 		Surface_PolyMeshes.resize(faceshape.size());
 		for (int i = 0; i < faceshape.size(); i++)
 		{
-			dprint(i);
+			//dprint(i);
 			//if (i != 69) continue;
 			Mesh &newmesh = Surface_PolyMeshes[i];
 			TriMesh aMesh;
@@ -573,7 +586,6 @@ namespace CADMesher
 
 		dprint("Piecewise PolyMesh Done!");
 	}
-#endif
 
 	Matrix2Xd OccReader::Subdomain(Matrix2Xd &parameters, Matrix2Xd preedgepara, Matrix2Xd nextedgepara)
 	{
@@ -605,6 +617,7 @@ namespace CADMesher
 			else p4 = ((p2 + p3)*0.5).normalized();
 			dire.col(i) = p4;
 		}
+
 		//adjust the offset direction 
 		Matrix2Xd dire_temp(2, pntsnum);
 		dire_temp.col(0) = dire.col(0);
@@ -625,12 +638,11 @@ namespace CADMesher
 		return offsetline;
 	}
 
-
 	void OccReader::ComputeFaceAndEdge()
 	{
 		TopoDS_Shape &aShape = globalmodel.aShape;
 
-		Vector3d ma(-DBL_MAX, -DBL_MAX, -DBL_MAX);
+		Vector3d ma(DBL_MIN, DBL_MIN, DBL_MIN);
 		Vector3d mi(DBL_MAX, DBL_MAX, DBL_MAX);
 		for (TopExp_Explorer vertexExp(aShape, TopAbs_VERTEX); vertexExp.More(); vertexExp.Next())
 		{
@@ -928,6 +940,7 @@ namespace CADMesher
 				for (auto itr = vknotsequence.begin(); itr != vknotsequence.end(); itr++)
 					v.push_back(*itr);
 
+				auto isuclosed = geom_bsplinesurface->IsUClosed(), isvclosed = geom_bsplinesurface->IsVClosed();
 				TColgp_Array2OfPnt controlpoints = geom_bsplinesurface->Poles();
 				vector<vector<Point>> cp(controlpoints.NbRows());
 				for (int r = 1; r <= controlpoints.NbRows(); r++)
@@ -937,8 +950,9 @@ namespace CADMesher
 						gp_Pnt pos = controlpoints.Value(r, c);
 						cp[r - 1].emplace_back(pos.X(), pos.Y(), pos.Z());
 					}
-					//cp[r - 1].push_back(cp[r - 1][0]);//2022/4/25
+					if(isvclosed) cp[r - 1].push_back(cp[r - 1][0]);
 				}
+				if (isuclosed) cp.push_back(cp.front());
 				const TColStd_Array2OfReal* weights = geom_bsplinesurface->Weights();
 				if (weights) {
 					vector<vector<double>> w(weights->NbRows());
@@ -947,22 +961,22 @@ namespace CADMesher
 						w[r - 1].reserve(weights->NbColumns());
 						for (int c = 1; c <= weights->NbColumns(); c++)
 							w[r - 1].push_back(weights->Value(r, c));
-						//w[r - 1].push_back(w[r - 1][0]);//2022/4/25
+						if(isvclosed) w[r - 1].push_back(w[r - 1][0]);
 					}
+					if (isuclosed) w.push_back(w.front());
 					faceshape[i].Surface = new BSplineSurface(geom_bsplinesurface->UDegree(), geom_bsplinesurface->VDegree(), u, v, w, cp);
 				}
 				else
 					faceshape[i].Surface = new BSplineSurface(geom_bsplinesurface->UDegree(), geom_bsplinesurface->VDegree(), u, v, cp);
 				//gp_Vec u2, v2, uu, uv, vv;
 				//gp_Pnt oringe;
-				////double ut = u.back()-(u.back()-u.front())*0.5, vt = v.back()-(v.back()-v.front())*0.5;
-				//double ut = u.back(), vt = v.back();
+				//double ut = u.back()-(u.back()-u.front())*0.5, vt = v.back()-(v.back()-v.front())*0.5;
+				////double ut = 180, vt = 1;
+				//geom_bsplinesurface->D2(ut, vt, oringe, u2, v2, uu, vv, uv);
 				////double k1, k2;
 				////faceshape[i].Surface->PrincipalCurvature(ut, vt, k1, k2);
-				////dprint(k1, k2);
-				//geom_bsplinesurface->D2(ut, vt, oringe, u2, v2, uu, vv, uv);
-				//auto u1 = faceshape[i].Surface->PartialDerivativeU(ut, vt);
 				//auto v1 = faceshape[i].Surface->PartialDerivativeV(ut, vt);
+				//auto u1 = faceshape[i].Surface->PartialDerivativeU(ut, vt);
 				//auto uu1 = faceshape[i].Surface->PartialDerivativeUU(ut, vt);
 				//auto vv1 = faceshape[i].Surface->PartialDerivativeVV(ut, vt);
 				//auto uv1 = faceshape[i].Surface->PartialDerivativeUV(ut, vt);
@@ -991,10 +1005,10 @@ namespace CADMesher
 			{
 				double &u = pnts(0, j);
 				double &v = pnts(1, j);
-				if (u <= u1) u = u1;
-				else if (u >= u2) u = u2;
-				if (v <= v1) v = v1;
-				else if (v >= v2) v = v2;
+				if (u <= u1) u = u1 + (u2 - u1)*10e-8;
+				else if (u >= u2) u = u2 - (u2 - u1)*10e-8;
+				if (v <= v1) v = v1 + (v2 - v1)*10e-8;
+				else if (v >= v2) v = v2 - (v2 - v1)*10e-8;
 			}
 		}
 	}

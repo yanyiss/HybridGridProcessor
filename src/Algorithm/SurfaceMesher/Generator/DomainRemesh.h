@@ -15,7 +15,7 @@ public:
 	double Riemannlen(const TriMesh::VertexHandle &h1, const TriMesh::VertexHandle &h2);
 	void split();
 	void collapse();
-	void flip();
+	void equalize_valence();
 	void updatepoint();
 	void calulenth();
 	void remesh();

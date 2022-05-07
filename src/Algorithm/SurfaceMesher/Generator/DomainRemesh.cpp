@@ -77,8 +77,7 @@ void Riemannremesh::collapse()
 	TriMesh::EdgeHandle e;
 	TriMesh::HalfedgeHandle he;
 	TriMesh::VertexHandle p1, p2;
-	float len;
-	bool is_collapse;
+	bool is_collapse = true;
 	for (int i = mesh->n_edges() - 1; i >= 0; i--)
 	{
 		if (i > mesh->n_edges() - 1) continue;
@@ -94,56 +93,54 @@ void Riemannremesh::collapse()
 			p1 = mesh->from_vertex_handle(he);					
 			p2 = mesh->to_vertex_handle(he);
 		}
-		len = Riemannlen(p1, p2);
-		if (len < lowlenth)
+		if (Riemannlen(p1, p2) >= lowlenth) continue;
+		for (auto vf : mesh->vf_range(p1))
 		{
-			is_collapse = 1;
-			for (auto vv = mesh->vv_begin(p1); vv.is_valid(); vv++)
+			int count = 0;
+			for (auto fv : mesh->fv_range(vf))
 			{
-				if (Riemannlen(*vv, p2) > highlenth)
-				{
-					is_collapse = 0;
-					break;
-				}
+				if (fv.is_boundary() && fv.idx() != p2.idx()) count++;
 			}
-			if (is_collapse)
+			if (count > 1)
 			{
-				mesh->collapse(he);
+				is_collapse = false;
+				break;
 			}
 		}
+		if (!is_collapse) continue;
+		for (auto vv = mesh->vv_begin(p1); vv.is_valid(); vv++)
+		{
+			if (Riemannlen(*vv, p2) > highlenth)
+			{
+				is_collapse = false;
+				break;
+			}
+		}
+		if (is_collapse) mesh->collapse(he);
 	}
 	mesh->garbage_collection();
 }
 
-void Riemannremesh::flip()
+void Riemannremesh::equalize_valence()
 {
 	std::vector<int> targetv;
-	TriMesh::HalfedgeHandle he, op;
 	TriMesh::VertexHandle a, b, c, d;
 	int pre, post;
 	for (auto v = mesh->vertices_begin(); v != mesh->vertices_end(); v++)
 	{
-		if (mesh->is_boundary(*v))
-		{
-			targetv.push_back(4);
-		}
-		else
-		{
-			targetv.push_back(6);
-		}
+		if (mesh->is_boundary(*v)) targetv.push_back(4);
+		else targetv.push_back(6);
 	}
-	for (auto e = mesh->edges_begin(); e != mesh->edges_end(); e++)
+	for (auto e : mesh->edges())
 	{
-		if (mesh->is_boundary(*e) || !mesh->is_flip_ok(*e))
-		{
-			continue;
-		}
-		he = mesh->halfedge_handle(*e, 0);
+		if (mesh->is_boundary(e) || !mesh->is_flip_ok(e)) continue;
+		auto he = e.h0();
 		a = mesh->from_vertex_handle(he);
 		b = mesh->to_vertex_handle(he);
 		c = mesh->to_vertex_handle(mesh->next_halfedge_handle(he));
-		op = mesh->opposite_halfedge_handle(he);
+		auto op = he.opp();
 		d = mesh->to_vertex_handle(mesh->next_halfedge_handle(op));
+		if (mesh->is_boundary(c) && mesh->is_boundary(d)) continue;
 		pre = abs(int(mesh->valence(a) - targetv[a.idx()])) +
 			abs(int(mesh->valence(b) - targetv[b.idx()])) +
 			abs(int(mesh->valence(c) - targetv[c.idx()])) +
@@ -152,10 +149,13 @@ void Riemannremesh::flip()
 			abs(int(mesh->valence(b) - 1 - targetv[b.idx()])) +
 			abs(int(mesh->valence(c) + 1 - targetv[c.idx()])) +
 			abs(int(mesh->valence(d) + 1 - targetv[d.idx()]));
-		if (pre > post)
-		{
-			mesh->flip(*e);
-		}
+		if (pre <= post) continue;
+		auto edire = mesh->calc_edge_vector(he);
+		double alpha = acos(-edire.dot(mesh->calc_edge_vector(he.prev()))) + acos(edire.dot(mesh->calc_edge_vector(op.next())));
+		if (alpha > PI) continue;
+		alpha = acos(-edire.dot(mesh->calc_edge_vector(he.next()))) + acos(edire.dot(mesh->calc_edge_vector(op.prev())));
+		if (alpha > PI) continue;
+		mesh->flip(e);
 	}
 	mesh->garbage_collection();
 }
@@ -179,7 +179,6 @@ void Riemannremesh::updatepoint()
 		}
 		mesh->set_point(v, newpoint / count);
 		M /= count;
-
 	}
 }
 
@@ -191,7 +190,7 @@ void Riemannremesh::remesh()
 		dprint("Domain remesh iter time:", i,"    Vertices:",mesh->n_vertices());
 		split();
 		collapse();
-		//flip();
+		equalize_valence();
 		updatepoint();
 	}
 }

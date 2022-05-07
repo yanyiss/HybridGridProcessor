@@ -15,9 +15,9 @@ namespace CADMesher
 		//occ_reader->Surface_delete();
 		MergeModel();
 		ResetFeature();
-		TriangleMeshRemeshing trm(&(globalmodel.initial_trimesh));
-		trm.run();
-		Write_Obj(globalmodel.initial_trimesh);
+		/*TriangleMeshRemeshing trm(&(globalmodel.initial_trimesh));
+		trm.run();*/
+		//Write_Obj(globalmodel.initial_trimesh);
 #else 
 		occ_reader->Set_PolyMesh();
 		MergeModel();

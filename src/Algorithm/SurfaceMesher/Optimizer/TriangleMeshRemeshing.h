@@ -8,7 +8,7 @@
 #include <numeric>
 #include "..\src\Dependency\CPS\CPS_AABBTree.h"
 #include "..\src\Algorithm\SurfaceMesher\Generator\basic_def.h"
-#define printRemeshingInfo
+//#define printRemeshingInfo
 
 namespace CADMesher
 {
@@ -38,7 +38,7 @@ namespace CADMesher
 		//main step
 		void split();
 		void split_one_edge(const OpenMesh::SmartEdgeHandle &te, int &splitnumber);
-		void collapse();
+		void collapse(bool ifEnhanced);
 		void equalize_valence();
 		void tangential_relaxation();
 		//auxiliary step
