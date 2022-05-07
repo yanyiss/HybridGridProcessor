@@ -23,7 +23,7 @@ BSplineSurface::BSplineSurface(int udeg, int vdeg, std::vector<double> &uknots, 
 	SetControlPoints(controlpoints);
 	int m = GetNumOfCtrlptsU() - 1;
 	int n = GetNumOfCtrlptsV() - 1;
-	UV = Point4(uknots[u_degree], uknots[m+1], vknots[v_degree], vknots[n+1]); //2022.03.21
+	UV = Point4(uknots[u_degree], uknots[m + 1], vknots[v_degree], vknots[n + 1]); //2022.03.21
 	Pw_ctrlpts.resize(m + 1, std::vector<Point4>(n + 1));
 	for (int i = 0; i <= m; i++)
 	{
@@ -36,9 +36,18 @@ BSplineSurface::BSplineSurface(int udeg, int vdeg, std::vector<double> &uknots, 
 	PartialUCtrpts = Pw_ctrlpts;
 	for (int i = 0; i <= m - 1; i++)
 	{
+		double diffu = u_knots[i + u_degree + 1] - u_knots[i + 1];
+		if (diffu < DBL_EPSILON)
+		{
+			for (int j = 0; j <= n; j++)
+			{
+				setZero(PartialUCtrpts[i][j]);
+			}	
+			continue;
+		}
 		for (int j = 0; j <= n; j++)
 		{
-			PartialUCtrpts[i][j] = (PartialUCtrpts[i + 1][j] - PartialUCtrpts[i][j]) * (u_degree) / (u_knots[i + u_degree + 1] - u_knots[i + 1]);
+			PartialUCtrpts[i][j] = (PartialUCtrpts[i + 1][j] - PartialUCtrpts[i][j]) * (u_degree) / diffu;
 		}
 	}
 
@@ -47,7 +56,9 @@ BSplineSurface::BSplineSurface(int udeg, int vdeg, std::vector<double> &uknots, 
 	{
 		for (int j = 0; j <= n - 1; j++)
 		{
-			PartialVCtrpts[i][j] = (PartialVCtrpts[i][j + 1] - PartialVCtrpts[i][j]) * (v_degree) / (v_knots[j + v_degree + 1] - v_knots[j + 1]);
+			double diffv = v_knots[j + v_degree + 1] - v_knots[j + 1];
+			if (diffv < DBL_EPSILON) setZero(PartialVCtrpts[i][j]);
+			else PartialVCtrpts[i][j] = (PartialVCtrpts[i][j + 1] - PartialVCtrpts[i][j]) * (v_degree) / diffv;		
 		}
 	}
 
@@ -56,9 +67,18 @@ BSplineSurface::BSplineSurface(int udeg, int vdeg, std::vector<double> &uknots, 
 	{
 		for (int i = 0; i <= m - a; i++)
 		{
+			double diffu = u_knots[i + u_degree + 1] - u_knots[i + a];
+			if (diffu < DBL_EPSILON)
+			{
+				for (int j = 0; j <= n; j++)
+				{
+					setZero(PartialUUCtrpts[i][j]);
+				}
+				continue;
+			}
 			for (int j = 0; j <= n; j++)
 			{
-				PartialUUCtrpts[i][j] = (PartialUUCtrpts[i + 1][j] - PartialUUCtrpts[i][j]) * (u_degree - a + 1) / (u_knots[i + u_degree + 1] - u_knots[i + a]);
+				PartialUUCtrpts[i][j] = (PartialUUCtrpts[i + 1][j] - PartialUUCtrpts[i][j]) * (u_degree - a + 1) / diffu;
 			}
 		}
 	}
@@ -66,16 +86,27 @@ BSplineSurface::BSplineSurface(int udeg, int vdeg, std::vector<double> &uknots, 
 	PartialUVCtrpts = Pw_ctrlpts;
 	for (int i = 0; i <= m - 1; i++)
 	{
+		double diffu = u_knots[i + u_degree + 1] - u_knots[i + 1];
+		if (diffu < DBL_EPSILON)
+		{
+			for (int j = 0; j <= n; j++)
+			{
+				setZero(PartialUVCtrpts[i][j]);
+			}
+			continue;
+		}
 		for (int j = 0; j <= n; j++)
 		{
-			PartialUVCtrpts[i][j] = (PartialUVCtrpts[i + 1][j] - PartialUVCtrpts[i][j]) * (u_degree) / (u_knots[i + u_degree + 1] - u_knots[i + 1]);
+			PartialUVCtrpts[i][j] = (PartialUVCtrpts[i + 1][j] - PartialUVCtrpts[i][j]) * (u_degree) / diffu;
 		}
 	}
 	for (int i = 0; i <= m - 1; i++)
 	{
 		for (int j = 0; j <= n - 1; j++)
 		{
-			PartialUVCtrpts[i][j] = (PartialUVCtrpts[i][j + 1] - PartialUVCtrpts[i][j]) * (v_degree) / (v_knots[j + v_degree + 1] - v_knots[j + 1]);
+			double diffv = v_knots[j + v_degree + 1] - v_knots[j + 1];
+			if (diffv < DBL_EPSILON) setZero(PartialUVCtrpts[i][j]);
+			else PartialUVCtrpts[i][j] = (PartialUVCtrpts[i][j + 1] - PartialUVCtrpts[i][j]) * (v_degree) / diffv;			
 		}
 	}
 
@@ -86,7 +117,9 @@ BSplineSurface::BSplineSurface(int udeg, int vdeg, std::vector<double> &uknots, 
 		{
 			for (int j = 0; j <= n - b; j++)
 			{
-				PartialVVCtrpts[i][j] = (PartialVVCtrpts[i][j + 1] - PartialVVCtrpts[i][j]) * (v_degree - b + 1) / (v_knots[j + v_degree + 1] - v_knots[j + b]);
+				double diffv = v_knots[j + v_degree + 1] - v_knots[j + b];
+				if (diffv < DBL_EPSILON) setZero(PartialVVCtrpts[i][j]);
+				else PartialVVCtrpts[i][j] = (PartialVVCtrpts[i][j + 1] - PartialVVCtrpts[i][j]) * (v_degree - b + 1) / diffv;				
 			}
 		}
 	}
@@ -102,14 +135,23 @@ BSplineSurface::BSplineSurface(int udeg, int vdeg, std::vector<double> &uknots, 
 	weights.clear();
 	int m = GetNumOfCtrlptsU() - 1;
 	int n = GetNumOfCtrlptsV() - 1;
-	UV = Point4(uknots[u_degree], uknots[m+1], vknots[v_degree], vknots[n+1]); //2022.03.21
+	UV = Point4(uknots[u_degree], uknots[m + 1], vknots[v_degree], vknots[n + 1]); //2022.03.21
 
 	PartialUCtrpts_ = ctrlpoints;
 	for (int i = 0; i <= m - 1; i++)
 	{
+		double diffu = u_knots[i + u_degree + 1] - u_knots[i + 1];
+		if (diffu < DBL_EPSILON)
+		{
+			for (int j = 0; j <= n; j++)
+			{
+				setZero(PartialUCtrpts_[i][j]);
+			}
+			continue;
+		}
 		for (int j = 0; j <= n; j++)
 		{
-			PartialUCtrpts_[i][j] = (PartialUCtrpts_[i + 1][j] - PartialUCtrpts_[i][j]) * (u_degree) / (u_knots[i + u_degree + 1] - u_knots[i + 1]);
+			PartialUCtrpts_[i][j] = (PartialUCtrpts_[i + 1][j] - PartialUCtrpts_[i][j]) * (u_degree) / diffu;
 		}
 	}
 
@@ -118,7 +160,9 @@ BSplineSurface::BSplineSurface(int udeg, int vdeg, std::vector<double> &uknots, 
 	{
 		for (int j = 0; j <= n - 1; j++)
 		{
-			PartialVCtrpts_[i][j] = (PartialVCtrpts_[i][j + 1] - PartialVCtrpts_[i][j]) * (v_degree) / (v_knots[j + v_degree + 1] - v_knots[j + 1]);
+			double diffv = v_knots[j + v_degree + 1] - v_knots[j + 1];
+			if (diffv < DBL_EPSILON) setZero(PartialVCtrpts_[i][j]);
+			else PartialVCtrpts_[i][j] = (PartialVCtrpts_[i][j + 1] - PartialVCtrpts_[i][j]) * (v_degree) / diffv;
 		}
 	}
 
@@ -127,9 +171,18 @@ BSplineSurface::BSplineSurface(int udeg, int vdeg, std::vector<double> &uknots, 
 	{
 		for (int i = 0; i <= m - a; i++)
 		{
+			double diffu = u_knots[i + u_degree + 1] - u_knots[i + a];
+			if (diffu < DBL_EPSILON)
+			{
+				for (int j = 0; j <= n; j++)
+				{
+					setZero(PartialUUCtrpts_[i][j]);
+				}
+				continue;
+			}
 			for (int j = 0; j <= n; j++)
 			{
-				PartialUUCtrpts_[i][j] = (PartialUUCtrpts_[i + 1][j] - PartialUUCtrpts_[i][j]) * (u_degree - a + 1) / (u_knots[i + u_degree + 1] - u_knots[i + a]);
+				PartialUUCtrpts_[i][j] = (PartialUUCtrpts_[i + 1][j] - PartialUUCtrpts_[i][j]) * (u_degree - a + 1) / diffu;
 			}
 		}
 	}
@@ -137,16 +190,27 @@ BSplineSurface::BSplineSurface(int udeg, int vdeg, std::vector<double> &uknots, 
 	PartialUVCtrpts_ = ctrlpoints;
 	for (int i = 0; i <= m - 1; i++)
 	{
+		double diffu = u_knots[i + u_degree + 1] - u_knots[i + 1];
+		if (diffu < DBL_EPSILON)
+		{
+			for (int j = 0; j <= n; j++)
+			{
+				setZero(PartialUVCtrpts_[i][j]);
+			}
+			continue;
+		}
 		for (int j = 0; j <= n; j++)
 		{
-			PartialUVCtrpts_[i][j] = (PartialUVCtrpts_[i + 1][j] - PartialUVCtrpts_[i][j]) * (u_degree) / (u_knots[i + u_degree + 1] - u_knots[i + 1]);
+			PartialUVCtrpts_[i][j] = (PartialUVCtrpts_[i + 1][j] - PartialUVCtrpts_[i][j]) * (u_degree) / diffu;
 		}
 	}
 	for (int i = 0; i <= m - 1; i++)
 	{
 		for (int j = 0; j <= n - 1; j++)
 		{
-			PartialUVCtrpts_[i][j] = (PartialUVCtrpts_[i][j + 1] - PartialUVCtrpts_[i][j]) * (v_degree) / (v_knots[j + v_degree + 1] - v_knots[j + 1]);
+			double diffv = v_knots[j + v_degree + 1] - v_knots[j + 1];
+			if (diffv < DBL_EPSILON) setZero(PartialUVCtrpts_[i][j]);
+			else PartialUVCtrpts_[i][j] = (PartialUVCtrpts_[i][j + 1] - PartialUVCtrpts_[i][j]) * (v_degree) / diffv;
 		}
 	}
 
@@ -157,7 +221,9 @@ BSplineSurface::BSplineSurface(int udeg, int vdeg, std::vector<double> &uknots, 
 		{
 			for (int j = 0; j <= n - b; j++)
 			{
-				PartialVVCtrpts_[i][j] = (PartialVVCtrpts_[i][j + 1] - PartialVVCtrpts_[i][j]) * (v_degree - b + 1) / (v_knots[j + v_degree + 1] - v_knots[j + b]);
+				double diffv = v_knots[j + v_degree + 1] - v_knots[j + b];
+				if (diffv < DBL_EPSILON) setZero(PartialVVCtrpts_[i][j]);
+				else PartialVVCtrpts_[i][j] = (PartialVVCtrpts_[i][j + 1] - PartialVVCtrpts_[i][j]) * (v_degree - b + 1) / diffv;
 			}
 		}
 	}
@@ -253,12 +319,12 @@ Point BSplineSurface::PartialDerivativeUU(const double u, const double v) const
 
 		double W_uu = Aw_uu(3);
 		double W_u = Aw_u(3);
-		double W = Pw(3);	
+		double W = Pw(3);
 		Point A_uu = Aw_uu.head(3);
 		Point A_u = Aw_u.head(3);
 		Point S = Pw.head(3) / W;
 		Point S_u = (A_u - W_u * S) / W;
-		
+
 		return (A_uu - 2 * W_u * S_u - W_uu * S) / W;
 	}
 	else
@@ -372,7 +438,7 @@ void BSplineSurface::KnotInsertion(double uv, int k, DIRECTION dir, BSplineSurfa
 					Rw[i][j] << ctrlpoints[i][j] * weights[i][j], weights[i][j];
 				}
 			}
-			
+
 			KnotInsertion(uv, k, U_DIRECTION, u_knots, v_knots, Rw, new_knotsU, new_knotsV, pts);
 			for (int j = 0; j <= nq; j++)
 			{
@@ -382,7 +448,7 @@ void BSplineSurface::KnotInsertion(double uv, int k, DIRECTION dir, BSplineSurfa
 					new_ctrlpts[i][j] = pts[i][j].head(3) / pts[i][j](3);
 				}
 			}
-		
+
 			new_surface.SetWeights(new_weights);
 		}
 
@@ -483,7 +549,7 @@ void BSplineSurface::Split(double uv, DIRECTION dir, BSplineSurface &left_s, BSp
 		std::vector<std::vector<Point>> right_ctrlpts(right_n + 1, std::vector<Point>(nq + 1));
 		std::vector<double> left_uknots(left_m + 1);
 		std::vector<double> right_uknots(right_m + 1);
-		
+
 		// control points;
 		for (int j = 0; j <= nq; j++)
 		{
@@ -519,7 +585,7 @@ void BSplineSurface::Split(double uv, DIRECTION dir, BSplineSurface &left_s, BSp
 			auto tmp_weights = tmp_surface.GetWeights();
 			std::vector<std::vector<double>> left_weights(left_n + 1, std::vector<double>(nq + 1));
 			std::vector<std::vector<double>> right_weights(right_n + 1, std::vector<double>(nq + 1));
-			
+
 			for (int j = 0; j <= nq; j++)
 			{
 				for (int i = 0; i <= left_n; i++)
@@ -663,7 +729,7 @@ void BSplineSurface::BSplineToBezier(std::vector<BezierSurface> &bezier_surfaces
 	if (isRational)
 	{
 		std::vector<std::vector<Point4>> Pw(np + 1, std::vector<Point4>(nq + 1));
-		std::vector<std::vector<std::vector<Point4>>> Qw;		
+		std::vector<std::vector<std::vector<Point4>>> Qw;
 		for (int i = 0; i <= np; i++)
 		{
 			for (int j = 0; j <= nq; j++)
@@ -678,7 +744,7 @@ void BSplineSurface::BSplineToBezier(std::vector<BezierSurface> &bezier_surfaces
 		std::vector<std::vector<Point>> points(u_degree + 1, std::vector<Point>(v_degree + 1));
 		std::vector<std::vector<double>> w(u_degree + 1, std::vector<double>(v_degree + 1));
 		for (int i = 0; i <= num_ubezier; i++)
-		{		
+		{
 			BSplineToBezier(V_DIRECTION, v_degree, v_knots, Qw[i], num_vbezier, VSpan, pts_vec);
 			for (int j = 0; j <= num_vbezier; j++)
 			{
@@ -698,13 +764,13 @@ void BSplineSurface::BSplineToBezier(std::vector<BezierSurface> &bezier_surfaces
 	}
 
 	else
-	{		
+	{
 		std::vector<std::vector<std::vector<Point>>> Qw;
 		BSplineToBezier(U_DIRECTION, u_degree, u_knots, ctrlpoints, num_ubezier, USpan, Qw);
-	
+
 		std::vector<std::vector<std::vector<Point>>> pts_vec;
 		for (int i = 0; i <= num_ubezier; i++)
-		{				
+		{
 			BSplineToBezier(V_DIRECTION, v_degree, v_knots, Qw[i], num_vbezier, VSpan, pts_vec);
 
 			for (int j = 0; j <= num_vbezier; j++)

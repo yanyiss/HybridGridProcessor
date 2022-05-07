@@ -36,7 +36,6 @@ namespace CADMesher
 			ComputeFaceAndEdge();
 			Discrete_Edge();
 			Face_type();
-			//Trim_Edge();
 			C0_Feature();
 			curvature_feature();
 		}
@@ -68,7 +67,6 @@ namespace CADMesher
 		void ComputeFaceAndEdge();
 		void Discrete_Edge();
 		void Face_type();
-		void Trim_Edge();
 		void C0_Feature();
 		void curvature_feature();
 		void Set_TriMesh();
