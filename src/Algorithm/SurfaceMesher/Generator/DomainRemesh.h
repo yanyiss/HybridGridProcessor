@@ -17,11 +17,11 @@ public:
 	void collapse();
 	void equalize_valence();
 	void updatepoint();
-	void calulenth();
+	void calclength();
 	void remesh();
 
-	double highlenth;
-	double lowlenth;
+	double highlength;
+	double lowlength;
 	GeometryType *B;
 	TriMesh *mesh;
 };

@@ -14,6 +14,7 @@
 #include <Geom_ConicalSurface.hxx>
 #include <Geom_ToroidalSurface.hxx>
 #include <Geom_CylindricalSurface.hxx>
+#include <Geom_SurfaceOfRevolution.hxx>
 
 #include <GCE2d_MakeSegment.hxx>
 

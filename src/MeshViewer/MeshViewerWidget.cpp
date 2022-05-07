@@ -969,7 +969,6 @@ void MeshViewerWidget::draw_feature()
 	}
 	glEnd();
 
-
 #endif
 	//draw triangles with low quality
 	glColor3d(0.9, 0.1, 0.9);
@@ -989,19 +988,6 @@ void MeshViewerWidget::draw_feature()
 		}
 	}
 	glEnd();
-
-	/*glPointSize(5);
-	glColor3d(1.0, 0, 0);
-	glBegin(GL_POINTS);
-	for (auto &tv : mesh.vertices())
-	{
-		if (mesh.data(tv).get_targetlength() < 0.07)
-		{
-			glVertex3dv(mesh.point(tv).data());
-		}
-	}
-	glEnd();*/
-
 }
 //=======
 #include "../src/Algorithm/CheckBoard/CheckBoardGenerator.h"

@@ -136,6 +136,11 @@ namespace CADMesher
 			Remesh.remesh();*/
 			//dprint("domain remesh done!");
 
+			if (!OpenMesh::IO::write_mesh(aMesh, "one.obj"))
+			{
+				std::cerr << "fail";
+			}
+
 			double k1, k2;
 			for (auto v : aMesh.vertices())
 			{
@@ -857,7 +862,6 @@ namespace CADMesher
 				gp_Dir ydir = local_coordinate->YDirection();
 				gp_Dir zdir = (geom_cylindricalsurface->Axis()).Direction();
 				double r = geom_cylindricalsurface->Radius();
-				//dprint("cur:", 1 / r);
 				faceshape[i].Surface = new CylindricalType(Point(oringe.X(), oringe.Y(), oringe.Z()), Point(xdir.X(), xdir.Y(), xdir.Z()), Point(ydir.X(), ydir.Y(), ydir.Z()), Point(zdir.X(), zdir.Y(), zdir.Z()), r);
 			}
 			else if (type == STANDARD_TYPE(Geom_ConicalSurface)) 
@@ -970,8 +974,6 @@ namespace CADMesher
 					faceshape[i].Surface = new BSplineSurface(geom_bsplinesurface->UDegree(), geom_bsplinesurface->VDegree(), u, v, cp);
 				//gp_Vec u2, v2, uu, uv, vv;
 				//gp_Pnt oringe;
-				//double ut = u.back()-(u.back()-u.front())*0.5, vt = v.back()-(v.back()-v.front())*0.5;
-				////double ut = 180, vt = 1;
 				//geom_bsplinesurface->D2(ut, vt, oringe, u2, v2, uu, vv, uv);
 				////double k1, k2;
 				////faceshape[i].Surface->PrincipalCurvature(ut, vt, k1, k2);
@@ -985,6 +987,75 @@ namespace CADMesher
 				//dprint("D2U:", uu.X(), uu.Y(), uu.Z(), uu1(0), uu1(1), uu1(2));
 				//dprint("D2V:", vv.X(), vv.Y(), vv.Z(), vv1(0), vv1(1), vv1(2));
 				//dprint("D2UV:", uv.X(), uv.Y(), uv.Z(), uv1(0), uv1(1), uv1(2));
+			}
+			else if (type == STANDARD_TYPE(Geom_SurfaceOfRevolution))
+			{
+				//dprint(i, "SurfaceOfRevolution");
+				opencascade::handle<Geom_SurfaceOfRevolution> geom_RevolutionSurface = opencascade::handle<Geom_SurfaceOfRevolution>::DownCast(geom_surface);
+				auto basecurve = geom_RevolutionSurface->BasisCurve();
+				auto typecurve = basecurve->DynamicType();
+				if (typecurve == STANDARD_TYPE(Geom_BSplineCurve))
+				{
+					//获取B样条曲线的信息
+					BSplineCurve *B;
+					opencascade::handle<Geom_BSplineCurve> geom_bsplinecurve = Handle(Geom_BSplineCurve)::DownCast(basecurve);
+					TColStd_Array1OfReal knot = geom_bsplinecurve->KnotSequence();
+					TColgp_Array1OfPnt ctrpnts = geom_bsplinecurve->Poles();
+					std::vector<double> u;
+					std::vector<Point> ctr;
+					ctr.reserve(ctrpnts.Size());
+					for (auto itr = knot.begin(); itr != knot.end(); itr++)
+					{
+						u.push_back(*itr);
+					}
+					for (int r = 1; r <= ctrpnts.Size(); r++) 
+					{
+						gp_Pnt pos = ctrpnts.Value(r);
+						ctr.emplace_back(pos.X(), pos.Y(), pos.Z());
+					}
+					const TColStd_Array1OfReal* weights = geom_bsplinecurve->Weights();
+					if (weights) 
+					{
+						vector<double> w(weights->Size());
+						for (int r = 1; r <= weights->Size(); r++) w.push_back(weights->Value(r));
+						B = new BSplineCurve(geom_bsplinecurve->Degree(), u, w, ctr);
+					}
+					else
+					{
+						B = new BSplineCurve(geom_bsplinecurve->Degree(), u, ctr);
+					}
+					auto axis = geom_RevolutionSurface->Axis();
+					auto p = axis.Location();
+					auto dir = axis.Direction();
+					faceshape[i].Surface = new SurfaceRevolutionType(Point(p.X(), p.Y(), p.Z()), Point(dir.X(), dir.Y(), dir.Z()), B);
+					//double ut = 2.5, vt = 5 ,k1, k2;
+					//faceshape[i].Surface->PrincipalCurvature(ut, vt, k1, k2);
+					//gp_Pnt origin;
+					//gp_Vec u2, v2, uu, uv, vv;
+					//geom_RevolutionSurface->D2(ut, vt, origin, u2, v2, uu, vv, uv);
+					//auto v1 = faceshape[i].Surface->PartialDerivativeV(ut, vt);
+					//auto u1 = faceshape[i].Surface->PartialDerivativeU(ut, vt);
+					//auto uu1 = faceshape[i].Surface->PartialDerivativeUU(ut, vt);
+					//auto vv1 = faceshape[i].Surface->PartialDerivativeVV(ut, vt);
+					//auto uv1 = faceshape[i].Surface->PartialDerivativeUV(ut, vt);
+					//dprint("D1U:", u2.X(),u2.Y(),u2.Z(), u1(0), u1(1), u1(2));
+					//dprint("D1V:", v2.X(), v2.Y(), v2.Z(), v1(0), v1(1), v1(2));
+					//dprint("D2U:", uu.X(), uu.Y(), uu.Z(), uu1(0), uu1(1), uu1(2));
+					//dprint("D2V:", vv.X(), vv.Y(), vv.Z(), vv1(0), vv1(1), vv1(2));
+					//dprint("D2UV:", uv.X(), uv.Y(), uv.Z(), uv1(0), uv1(1), uv1(2));
+
+					//auto p1 = geom_RevolutionSurface->Value(0, 0.1);
+					//auto p2 = geom_RevolutionSurface->Value(0, 0.2);
+					//auto p3 = geom_RevolutionSurface->Value(0, 0.4);
+					//auto p4 = geom_RevolutionSurface->Value(0, 0.6);
+					//int y = 0;
+				}
+				else
+				{
+					dprint(typecurve);
+					dprint("Cannot recognize the type of the curve of this revolution surface!");
+					system("pause");
+				}
 			}
 			else 
 			{ 
@@ -1011,69 +1082,7 @@ namespace CADMesher
 				else if (v >= v2) v = v2 - (v2 - v1)*10e-8;
 			}
 		}
-	}
-
-	void OccReader::Trim_Edge()  
-	{
-		vector<ShapeFace> &faceshape = globalmodel.faceshape;
-		for (int i = 0; i < faceshape.size(); i++)
-		{
-			auto &face = faceshape[i];
-
-			//获取该面片的参数域边界
-			Point4 UV = face.Surface->Getbounds();
-			double u1 = UV(0), u2 = UV(1), v1 = UV(2), v2 = UV(3);
-			double epsilonu = (u2 - u1)*0.001, epsilonv = (v2 - v1)*0.001;
-			//dprint("参数域端点：", u1, u2, v1, v2, epsilonu, epsilonv);
-
-			//判断该边是否被裁剪
-			auto &wires = face.wires;
-			for (int j = 0; j < wires.size(); j++)
-			{
-				if (wires.empty()) continue;
-				auto &edge = wires[j];
-				for (int k = 0; k < edge.size(); k++)
-				{
-					auto &aedge = globalmodel.edgeshape[edge[k]];
-					if (!aedge.if_trimmed) continue;
-					auto &parameters = aedge.parameters;
-					int line;
-					double epsilon;
-					double a1 = parameters(0, 0), a2 = parameters(1, 0), a3 = parameters(0, parameters.cols()-1), a4 = parameters(1, parameters.cols()-1);
-					//dprint(a1, a2, a3, a4);
-					if (std::abs(a1 - a3) > epsilonu)
-					{
-						if (std::abs(a2 - a4) > epsilonv)
-						{
-							//dprint("yy", k);
-							continue;
-						}
-						line = 1;
-						epsilon = epsilonv;
-					}
-					else
-					{
-						line = 0;
-						epsilon = epsilonu;
-					}
-					double standard = parameters(line, 0);
-					int nonparallel = 0;
-					for (int m = 1; m < parameters.cols()-1; m++)
-					{
-						//dprint(m, parameters(line, m), standard, std::abs(parameters(line, m) - standard), epsilon);
-						if (std::abs(parameters(line, m) - standard) > epsilon) nonparallel++;
-						
-					}
-					if (nonparallel <= parameters.cols()*0.5)
-					{
-						aedge.if_trimmed = false;
-						if(aedge.reversed_edge != -1)
-							globalmodel.edgeshape[aedge.reversed_edge].if_trimmed = false;
-						//dprint("kk", k);
-					}
-				}
-			}
-		}		
+		dprint("face type done!");
 	}
 
 	void OccReader::C0_Feature()
@@ -1090,12 +1099,9 @@ namespace CADMesher
 				continue;
 			}	
 			if (aedge.if_C0) continue;
-			double C0;
+			double C0 = 0.9;
 			int single_flag = 0;
-			if (aedge.if_trimmed) C0 = 0.95;
-			else C0 = 0.9;
 			//dprint(i, aedge.main_face, aedge.secondary_face);
-			//dprint(C0);
 			auto &face1 = face[aedge.main_face].Surface;
 			auto &face2 = face[aedge.secondary_face].Surface;
 			auto &pnts1 = aedge.parameters;
@@ -1127,6 +1133,7 @@ namespace CADMesher
 				edge[aedge.reversed_edge].if_C0 = true;
 			}
 		}
+		dprint("C0 feature done!");
 	}
 
 	void OccReader::curvature_feature()
@@ -1212,6 +1219,7 @@ namespace CADMesher
 				edge[aedge.reversed_edge].if_curvature = false;
 			}
 		}
+		dprint("curvature feature done!");
 	}
 }
 

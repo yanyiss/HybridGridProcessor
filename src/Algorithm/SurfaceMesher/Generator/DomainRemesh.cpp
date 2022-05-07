@@ -22,7 +22,7 @@ double Riemannremesh::Riemannlen(const TriMesh::VertexHandle &h1, const TriMesh:
 	return pow((xy * ((mesh->data(h1).M + mesh->data(h2).M) *0.5) * xy.transpose()).determinant(), 0.5);
 }
 
-void Riemannremesh::calulenth()
+void Riemannremesh::calclength()
 {
 	mesh->request_edge_status();
 	mesh->request_face_status();
@@ -42,9 +42,8 @@ void Riemannremesh::calulenth()
 		len += Riemannlen(mesh->from_vertex_handle(he), mesh->to_vertex_handle(he));
 	}
 	len /= count;
-	//dprint("jiu",len);
-	highlenth = 4 * len / 3;
-	lowlenth = 0.8 * len ;
+	highlength = 4 * len / 3;
+	lowlength = 0.8 * len ;
 }
 
 void Riemannremesh::split()
@@ -62,10 +61,10 @@ void Riemannremesh::split()
 		vh1 = mesh->from_vertex_handle(he);
 		vh2 = mesh->to_vertex_handle(he);
 		len = Riemannlen(vh1, vh2);
-		if (len > highlenth)
+		if (len > highlength)
 		{
 			vh = mesh->add_vertex(mesh->calc_edge_midpoint(ee));
-			mesh->split_edge(ee, vh);   //split²Ù×÷
+			mesh->split_edge(ee, vh);   
 			mesh->data(vh).M = (mesh->data(vh1).M + mesh->data(vh2).M) * 0.5;
 		}
 	}
@@ -93,7 +92,7 @@ void Riemannremesh::collapse()
 			p1 = mesh->from_vertex_handle(he);					
 			p2 = mesh->to_vertex_handle(he);
 		}
-		if (Riemannlen(p1, p2) >= lowlenth) continue;
+		if (Riemannlen(p1, p2) >= lowlength) continue;
 		for (auto vf : mesh->vf_range(p1))
 		{
 			int count = 0;
@@ -110,7 +109,7 @@ void Riemannremesh::collapse()
 		if (!is_collapse) continue;
 		for (auto vv = mesh->vv_begin(p1); vv.is_valid(); vv++)
 		{
-			if (Riemannlen(*vv, p2) > highlenth)
+			if (Riemannlen(*vv, p2) > highlength)
 			{
 				is_collapse = false;
 				break;
@@ -184,7 +183,7 @@ void Riemannremesh::updatepoint()
 
 void Riemannremesh::remesh()
 {
-	calulenth();
+	calclength();
 	for (int i = 0; i < 5; i++)
 	{
 		dprint("Domain remesh iter time:", i,"    Vertices:",mesh->n_vertices());
