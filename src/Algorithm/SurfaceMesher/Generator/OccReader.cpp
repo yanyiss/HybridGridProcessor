@@ -136,11 +136,6 @@ namespace CADMesher
 			Remesh.remesh();
 			dprint("domain remesh done!");
 
-			if (!OpenMesh::IO::write_mesh(aMesh, "one.obj"))
-			{
-				std::cerr << "fail";
-			}
-
 			double k1, k2;
 			for (auto v : aMesh.vertices())
 			{
@@ -290,6 +285,8 @@ namespace CADMesher
 				}
 				pointsnumber = s;
 			}
+			Matrix2Xd boundary = all_pnts.block(0, 0, 2, pointsnumber);
+			auto &Surface = faceshape[i].Surface;
 			all_pnts.block(1, 0, 1, all_pnts.cols()) *= if_reverse;
 
 			int startid = 0, endid = -1, beginid;
@@ -341,15 +338,46 @@ namespace CADMesher
 				triangulate(all_pnts, bnd, sqrt(3) * x_step * x_step / 4 * mu, aMesh);
 
 				double ra_inv = 1.0 / ra;
-				for (auto v = aMesh.vertices_begin(); v != aMesh.vertices_end(); v++)
+				for (auto tv : aMesh.vertices())
 				{
-					auto p = aMesh.point(*v);
-					aMesh.set_point(*v, Mesh::Point{ p[0],p[1] * ra_inv,0 });
+					if (tv.idx() < pointsnumber)
+					{
+						aMesh.set_point(tv, TriMesh::Point(boundary(0, tv.idx()), boundary(1, tv.idx()), 0));
+						continue;
+					}
+					auto p = aMesh.point(tv);
+					aMesh.set_point(tv, Mesh::Point{ p[0],p[1] * ra_inv,0 });
+				}
+
+				//calculate the target edge length with respect to the error between mesh and surface		
+				double errorbounds = 0.0, testnum = std::min(200, (int)aMesh.n_vertices());
+				for (int j = 0; j < testnum; j++)
+				{
+					auto p = aMesh.point(aMesh.vertex_handle(j));
+					errorbounds += (Surface->PartialDerivativeUU(p[0], p[1])).norm() + 2 * (Surface->PartialDerivativeUV(p[0], p[1])).norm() + (Surface->PartialDerivativeVV(p[0], p[1])).norm();
+				}
+				errorbounds /= 2 * testnum;
+				errorbounds = std::max(errorbounds, 0.00001);
+				double target_h = std::sqrt(epsratio / errorbounds);
+				dprint(aMesh.n_vertices(), target_h, x_step);
+				if (target_h < x_step)
+				{
+					triangulate(all_pnts, bnd, sqrt(3) * target_h * target_h *0.25, aMesh);
+					for (auto tv : aMesh.vertices())
+					{
+						if (tv.idx() < pointsnumber)
+						{
+							aMesh.set_point(tv, TriMesh::Point(boundary(0, tv.idx()), boundary(1, tv.idx()), 0));
+							continue;
+						}
+						auto pos = aMesh.point(tv);
+						aMesh.set_point(tv, TriMesh::Point(pos[0], pos[1] * ra_inv, 0));
+					}
 				}
 
 				//Remesh in domain
-				//Riemannremesh Remesh(faceshape[i].Surface, &aMesh);
-				//Remesh.remesh();
+				Riemannremesh Remesh(Surface, &aMesh);
+				Remesh.remesh();
 
 				newmesh = Mesh(aMesh);
 			}
@@ -371,17 +399,39 @@ namespace CADMesher
 					newall_pnts.block(0, endid - 1, 2, pointsnumber - endid - 1) = all_pnts.block(0, endid + 1, 2, pointsnumber - endid - 1);
 				}
 				newall_pnts.block(1, 0, 1, newall_pnts.cols()) *= ra * if_reverse;
-				triangulate(newall_pnts, bnd, sqrt(3) * x_step * x_step / 4 * mu, aMesh);
+				triangulate(newall_pnts, bnd, sqrt(3) * x_step * x_step *0.25 * mu, aMesh);
 				double ra_inv = 1.0 / ra;
 				for (auto v = aMesh.vertices_begin(); v != aMesh.vertices_end(); v++)
 				{
 					auto p = aMesh.point(*v);
 					aMesh.set_point(*v, Mesh::Point{ p[0],p[1] * ra_inv,0 });
 				}
+				auto &Surface = faceshape[i].Surface;
+
+				//calculate the target edge length with respect to the error between mesh and surface		
+				double errorbounds = 0.0, testnum = std::min(200, (int)aMesh.n_vertices());
+				for (int j = 0; j < testnum; j++)
+				{
+					auto p = aMesh.point(aMesh.vertex_handle(j));
+					errorbounds += (Surface->PartialDerivativeUU(p[0], p[1])).norm() + 2 * (Surface->PartialDerivativeUV(p[0], p[1])).norm() + (Surface->PartialDerivativeVV(p[0], p[1])).norm();
+				}
+				errorbounds /= 2 * testnum;
+				errorbounds = std::max(errorbounds, 0.00001);
+				double target_h = std::sqrt(epsratio / errorbounds);
+				dprint(aMesh.n_vertices(), target_h, x_step);
+				if (target_h < x_step)
+				{
+					triangulate(newall_pnts, bnd, sqrt(3) * target_h * target_h *0.25, aMesh);
+					for (auto tv : aMesh.vertices())
+					{
+						auto pos = aMesh.point(tv);
+						aMesh.set_point(tv, TriMesh::Point(pos[0], pos[1] * ra_inv, 0));					
+					}
+				}
 
 				//Remesh in domain
-				//Riemannremesh Remesh(faceshape[i].Surface, &aMesh);
-				//Remesh.remesh();
+				Riemannremesh Remesh(Surface, &aMesh);
+				Remesh.remesh();
 
 				Mesh::Point newp;
 				Mesh::VertexHandle vh1, vh2, vh3, vh4;
@@ -390,7 +440,7 @@ namespace CADMesher
 				//add boundary points
 				for (int j = 0; j < pointsnumber; j++)
 				{
-					newp = Mesh::Point(all_pnts(0, j), all_pnts(1, j), 0);
+					newp = Mesh::Point(all_pnts(0, j), all_pnts(1, j)*if_reverse, 0);
 					newmesh.add_vertex(newp);
 				}
 
@@ -400,13 +450,13 @@ namespace CADMesher
 					newp = Mesh::Point(offsetline(0, j), offsetline(1, j), 0);
 					newmesh.add_vertex(newp);
 				}
-
 				for (int j = pointsnumber - 2; j < aMesh.n_vertices(); j++)
 				{
 					auto p = aMesh.point(aMesh.vertex_handle(j));
 					newp = Mesh::Point(p[0], p[1], p[2]);
 					newmesh.add_vertex(newp);
 				}
+
 				//add offset faces
 				if (startid == beginid)
 				{
@@ -472,60 +522,6 @@ namespace CADMesher
 					facevhandle.clear();
 				}
 			}
-			/*newall_pnts = Subdomain(all_pnts, bnd, pointsnumber);
-			all_pnts.block(1, 0, 1, all_pnts.cols()) *= if_reverse;				
-			Mesh::VertexHandle vh1, vh2, vh3, vh4, vend3, vend4;
-			std::vector<Mesh::VertexHandle> facevhandle;
-			Mesh::Point newp;
-
-			//add boundary points
-			for (int j = 0; j < pointsnumber; j++)
-			{
-				newp = Mesh::Point(all_pnts(0, j), all_pnts(1, j), 0);
-				vh1 = newmesh.add_vertex(newp);
-			}
-
-			//add internal points
-			for (auto v : aMesh.vertices())
-			{
-				newp = Mesh::Point(aMesh.point(v));
-				vh1 = newmesh.add_vertex(newp);
-			}
-
-			//add boundary faces
-			int count = 0;
-			for (int j = 0; j < bnd.size(); j++)
-			{
-				vend3 = vh1 = newmesh.vertex_handle(count);
-				vend4 = vh4 = newmesh.vertex_handle(count + pointsnumber);
-				for (int k = 0; k < bnd[j].cols() - 1; k++)
-				{
-					vh2 = newmesh.vertex_handle(count + 1);
-					vh3 = newmesh.vertex_handle(count + pointsnumber + 1);
-					facevhandle = { vh1,vh2,vh3,vh4 };
-					newmesh.add_face(facevhandle);
-					facevhandle.clear();
-					vh1 = vh2;
-					vh4 = vh3;
-					count++;
-				}
-				facevhandle = { vh1,vend3,vend4,vh4 };
-				newmesh.add_face(facevhandle);
-				facevhandle.clear();
-				count++;
-			}
-
-			//add internal faces
-			for (auto f : aMesh.faces())
-			{
-				for (auto fv = aMesh.fv_begin(f); fv.is_valid(); fv++)
-				{
-					vh1 = newmesh.vertex_handle((*fv).idx() + pointsnumber);
-					facevhandle.push_back(vh1);
-				}
-				newmesh.add_face(facevhandle);
-				facevhandle.clear();
-			}*/
 			
 			//if (!OpenMesh::IO::write_mesh(newmesh, "two.obj"))
 			//{
@@ -556,31 +552,19 @@ namespace CADMesher
 					startid += cols;
 				}
 			}
-			//id = 0;
-			//for (int j = 0; j < wires.size(); j++)
-			//{
-			//	begin = id;
-			//	auto &edges = wires[j];
-			//	for (int k = 0; k < edges.size(); k++)
-			//	{
-			//		auto &aedge = edgeshape[edges[k]];
-			//		int cols = aedge.parameters.cols() - 1;
-			//		if (aedge.if_curvature)
-			//		{
-			//			if (k == edges.size() - 1) endid = begin;
-			//			else endid = id + cols;
-			//			for (int m = id; m < id + cols - 1; m++)
-			//			{
-			//				auto e = newmesh.edge_handle(newmesh.find_halfedge(newmesh.vertex_handle(m), newmesh.vertex_handle(m + 1)));
-			//				newmesh.data(e).flag2 = true;
-			//			}
-			//			auto e = newmesh.edge_handle(newmesh.find_halfedge(newmesh.vertex_handle(id + cols - 1), newmesh.vertex_handle(endid)));
-			//			newmesh.data(e).flag2 = true;
-			//		}
-			//		id += cols;
-			//	}
-			//}
 			
+			double k1, k2;
+			for (auto v : aMesh.vertices())
+			{
+				auto p = aMesh.point(v);
+				Surface->PrincipalCurvature(p[0], p[1], k1, k2);
+				if (isnan(k1*k2))
+				{
+					dprint("bug", v.idx());
+				}
+				aMesh.data(v).GaussCurvature = std::max(std::fabs(k1), std::fabs(k2));
+			}
+
 			for (auto tv : newmesh.vertices())
 			{
 				auto pos = newmesh.point(tv);

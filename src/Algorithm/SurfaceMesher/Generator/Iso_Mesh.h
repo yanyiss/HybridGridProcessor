@@ -24,6 +24,7 @@ namespace CADMesher
 		void ResetFeature();
 		void ResetFeature1();
 		void AdjustQuad(Mesh &model_mesh, double &offsetlen);
+		bool is_collapse(Mesh &model_mesh, OV &v1, OV &v2);
 
 		template <typename T>
 		std::string Write_Obj(T &aMesh)

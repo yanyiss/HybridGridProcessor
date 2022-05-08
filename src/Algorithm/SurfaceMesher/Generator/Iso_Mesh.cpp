@@ -10,7 +10,7 @@ namespace CADMesher
 	Iso_Mesh::Iso_Mesh(QString & fileName)
 	{
 		occ_reader = new OccReader(fileName);
-#if 1
+#if 0
 		occ_reader->Set_TriMesh();
 		//occ_reader->Surface_delete();
 		MergeModel();
@@ -22,15 +22,15 @@ namespace CADMesher
 		occ_reader->Set_PolyMesh();
 		MergeModel();
 		ResetFeature1();
-		TriangleMeshRemeshing trm(&(globalmodel.initial_polymesh));
-		trm.run();
-		//Write_Obj(globalmodel.initial_polymesh);
+		//TriangleMeshRemeshing trm(&(globalmodel.initial_polymesh));
+		//trm.run();
+		Write_Obj(globalmodel.initial_polymesh);
 #endif
 	}
 
 	void Iso_Mesh::MergeModel()
 	{
-#if 1
+#if 0
 		TriMesh &model_mesh = globalmodel.initial_trimesh;
 		auto &surface_meshes = occ_reader->Surface_TriMeshes;
 #else
@@ -370,8 +370,36 @@ namespace CADMesher
 			}
 		}
 
+	/*	auto v = model_mesh.vertex_handle(10);
+		std::vector<OH> sd;
+		for (auto vih : model_mesh.vih_range(v))
+		{
+			sd.push_back(vih);
+		}
+		auto he = sd[1];
+		auto a = model_mesh.point(model_mesh.from_vertex_handle(he));
+		auto b = model_mesh.point(model_mesh.to_vertex_handle(he));
+		dprint("here", a[0],a[1], a[2], b[0], b[1], b[2]);
+		if (model_mesh.is_collapse_ok(sd[1]))
+		{
+			dprint("hhh");
+			model_mesh.collapse(sd[1]);
+		}
+		a = model_mesh.point(model_mesh.from_vertex_handle(he));
+		b = model_mesh.point(model_mesh.to_vertex_handle(he));
+		dprint("here", a[0], a[1], a[2], b[0], b[1], b[2]);
+		model_mesh.garbage_collection();
+		bool dd = model_mesh.is_valid_handle(he);
+		dprint("here", dd);
+		a = model_mesh.point(model_mesh.from_vertex_handle(he));
+		b = model_mesh.point(model_mesh.to_vertex_handle(he));
+		dprint("here", a[0], a[1], a[2], b[0], b[1], b[2]);*/
+
+
+
 		//collapse the input edge ended by vertex on quad and remove abnormal quad
 		AdjustQuad(model_mesh, offsetlen);
+
 		//auto v = model_mesh.vertex_handle(1937);
 		//for (auto vf : model_mesh.vf_range(v))
 		//{
@@ -470,13 +498,16 @@ namespace CADMesher
 							v2 = model_mesh.from_vertex_handle(vih);
 							if (!model_mesh.is_collapse_ok(vih) || model_mesh.data(v2).flag2)
 								continue;
-							if (model_mesh.data(v2).flag1 && !model_mesh.data(v1).flag1)
+							if (model_mesh.data(v2).flag1 && !model_mesh.data(model_mesh.edge_handle(vih)).flag1)
 								continue;
 							if ((model_mesh.point(v2) - model_mesh.point(v1)).dot(offset_direction) < offsetlen)
 								VIH.push_back(vih);
 						}
-						if (VIH.size())
-							for (int i = 0; i < VIH.size(); i++) model_mesh.collapse(VIH[i]);
+						for (int i = 0; i < VIH.size(); i++)
+						{
+							if (is_collapse(model_mesh, v1, model_mesh.from_vertex_handle(VIH[i])));
+							model_mesh.collapse(VIH[i]);
+						}
 						model_mesh.data(v1).is_adjusted = true;
 					}
 					v1 = model_mesh.to_vertex_handle(he1);
@@ -489,92 +520,53 @@ namespace CADMesher
 							v2 = model_mesh.from_vertex_handle(vih);
 							if (!model_mesh.is_collapse_ok(vih) || model_mesh.data(v2).flag2)
 								continue;
-							if (model_mesh.data(v2).flag1 && !model_mesh.data(v1).flag1)
+							if (model_mesh.data(v2).flag1 && !model_mesh.data(model_mesh.edge_handle(vih)).flag1)
 								continue;
 							if ((model_mesh.point(v2) - model_mesh.point(v1)).dot(offset_direction) < offsetlen)
 								VIH.push_back(vih);
 						}
-						for (int i = 0; i < VIH.size(); i++) model_mesh.collapse(VIH[i]);
+						for (int i = 0; i < VIH.size(); i++)
+						{
+							if (is_collapse(model_mesh, v1, model_mesh.from_vertex_handle(VIH[i])))
+							model_mesh.collapse(VIH[i]);
+						}
 						model_mesh.data(v1).is_adjusted = true;
 					}
 				}
 			}
 			model_mesh.garbage_collection();
 
-			//remove abnomal quad
-			bool is_Ok = false;
-			while (is_Ok)
-			{
-				is_Ok = false;
-				for (auto te : model_mesh.edges())
-				{
-					if (!model_mesh.data(te).flag2) continue;
-					for (int i = 0; i < 2; i++)
-					{
-						if (i && model_mesh.is_boundary(te)) continue;
-						auto he = model_mesh.halfedge_handle(te, i);
-						he = model_mesh.opposite_halfedge_handle(model_mesh.next_halfedge_handle(model_mesh.next_halfedge_handle(he)));
-						auto f1 = model_mesh.face_handle(he);
-						v1 = model_mesh.to_vertex_handle(model_mesh.next_halfedge_handle(he));
-						if (!model_mesh.data(v1).flag2) continue;
-						auto he1 = model_mesh.next_halfedge_handle(he);
-						auto f2 = model_mesh.opposite_face_handle(he1);
-						bool is_remove = false;
-						if (model_mesh.is_valid_handle(f2) && f2.valence() == 3)
-						{
-							for (auto fv : model_mesh.fv_range(f2))
-							{
-								if (!model_mesh.data(fv).flag2)
-								{
-									is_remove = true;
-									break;
-								}
-							}
-						}
-						else
-						{
-							he1 = model_mesh.prev_halfedge_handle(he);
-							f2 = model_mesh.opposite_face_handle(he1);
-							if (model_mesh.is_valid_handle(f2) && f2.valence() == 3)
-							{
-								for (auto fv : model_mesh.fv_range(f2))
-								{
-									if (!model_mesh.data(fv).flag2)
-									{
-										is_remove = true;
-										break;
-									}
-								}
-							}
-						}
-						v1 = model_mesh.to_vertex_handle(model_mesh.next_halfedge_handle(he1));
-						model_mesh.delete_face(f1);
-						if (is_remove)
-						{
-							is_Ok = true;
-							he1 = model_mesh.opposite_halfedge_handle(he1);
-							v2 = model_mesh.to_vertex_handle(he1);
-							v3 = model_mesh.from_vertex_handle(he1);
-							v4 = model_mesh.to_vertex_handle(model_mesh.next_halfedge_handle(he1));
-							model_mesh.delete_face(f2);
-							facevhandle = { v2, v4, v1 };
-							model_mesh.add_face(facevhandle);
-							facevhandle = { v4, v3, v1 };
-							model_mesh.add_face(facevhandle);
-						}
-					}
-				}
-				model_mesh.garbage_collection();
-			}
-			
 			//inital is_ajusted
 			for (auto v : model_mesh.vertices())
 			{
 				model_mesh.data(v).is_adjusted = false;
 			}
-
 		}
 		
+	}
+
+	bool Iso_Mesh::is_collapse(Mesh &model_mesh, OV &v1, OV &v2)
+	{
+		OV v3, v4, v5;
+		std::vector<OV> facevhandle;
+		dprint("start!!");
+		for (auto voh : model_mesh.voh_range(v2))
+		{
+			v3 = model_mesh.to_vertex_handle(voh);
+			dprint(v1.idx(), v2.idx(), v3.idx());
+			if (!model_mesh.data(v3).flag2 || v3.idx() == v1.idx()) continue;
+			if (model_mesh.is_valid_handle(model_mesh.find_halfedge(v3, v1))) continue;
+			v4 = model_mesh.to_vertex_handle(model_mesh.next_halfedge_handle(voh));
+			v5 = model_mesh.to_vertex_handle(model_mesh.next_halfedge_handle(model_mesh.opposite_halfedge_handle(voh)));
+			if (model_mesh.data(v4).flag2 && model_mesh.data(v5).flag2) return false;
+			model_mesh.delete_face(model_mesh.face_handle(voh));
+			model_mesh.delete_face(model_mesh.opposite_face_handle(voh));
+			facevhandle = { v3, v4, v5 };
+			model_mesh.add_face(facevhandle);
+			facevhandle = { v4, v2, v5 };
+			model_mesh.add_face(facevhandle);
+		}
+		return true;
 	}
 
 	void Iso_Mesh::Open_File(std::ofstream &file_writer)

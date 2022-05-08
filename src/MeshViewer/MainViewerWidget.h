@@ -82,7 +82,7 @@ public slots:
 				MeshViewer->SetCADFileName(fileName);
 				CADMesher::globalmodel.clear();
 				CADMesher::Iso_Mesh iso_mesh(fileName);
-#if 1
+#if 0
 				Mesh me(CADMesher::globalmodel.initial_trimesh);
 				initMeshStatusAndNormal(me);
 				open_mesh_gui(me);
