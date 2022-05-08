@@ -118,7 +118,8 @@ protected:
 	virtual void draw_scene(int drawmode);
 	bool draw_new_mesh;
 
-protected:
+//protected:
+	public:
 	double selectedPoint[3];
 	std::vector<int> selectedVertex;
 	int lastestVertex;
