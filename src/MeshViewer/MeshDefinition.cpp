@@ -514,6 +514,24 @@ double meshMinAngle(TriMesh &mesh)
 	return angle;
 }
 
+double meshMinQuality(TriMesh &mesh)
+{
+	double c = 4 * std::sqrt(3);
+	double minQuality = 1;
+	for (auto tf : mesh.faces())
+	{
+		double h = 0, p = 0;
+		for (auto &tfe : mesh.fe_range(tf))
+		{
+			double l = mesh.calc_edge_length(tfe);
+			h = std::max(l, h);
+			p += l;
+		}
+		double q = c * mesh.calc_face_area(tf) / (p*h);
+		minQuality = std::min(q, minQuality);
+	}
+	return minQuality;
+}
 //the definition of single triangle quality in trimesh is from paper: Automatic and High-quality Surface Mesh Generation for CAD Models(Section 5.1)
 void printMeshQuality(TriMesh &mesh)
 {

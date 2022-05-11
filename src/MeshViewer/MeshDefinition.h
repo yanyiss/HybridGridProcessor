@@ -181,18 +181,23 @@ void compute_principal_curvature(Mesh* mesh_,
 
 #pragma region functions by yanyisheshou at GCL
 double meshMinAngle(TriMesh &mesh);
+double meshMinQuality(TriMesh &mesh);
 
 void printMeshQuality(TriMesh &mesh);
 
 template <typename T>
 void initMeshStatusAndNormal(T& m)
 {
-	m.request_vertex_status();
-	m.request_edge_status();
-	m.request_face_status();
-
-	m.request_face_normals();
-	m.request_vertex_normals();
+	if (!m.has_vertex_status())
+		m.request_vertex_status();
+	if (!m.has_edge_status())
+		m.request_edge_status();
+	if (!m.has_face_status())
+		m.request_face_status();
+	if (!m.has_face_normals())
+		m.request_face_normals();
+	if (!m.has_vertex_normals())
+		m.request_vertex_normals();
 
 	m.update_face_normals();
 	m.update_vertex_normals();

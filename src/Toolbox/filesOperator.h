@@ -28,3 +28,21 @@ void getFiles(std::string path, std::vector<std::string>& files)
 		_findclose(hFile);
 	}
 }
+
+#include <qstring.h>
+void truncateFileName(std::vector<std::string> &files)
+{
+	for (auto &file : files)
+	{
+		QString fileName = QString::fromStdString(file);
+		int id = fileName.lastIndexOf("/");
+		if (id == -1)
+			continue;
+		fileName = fileName.right(fileName.length() - id - 1);
+		id = fileName.lastIndexOf(".");
+		if (id == -1)
+			continue;
+		fileName.truncate(id);
+		file = fileName.toLatin1().data();
+	}
+}

@@ -115,7 +115,7 @@ namespace CADMesher
 			errorbounds = std::max(errorbounds, 0.00001);
 			double target_h = std::sqrt(epsratio / errorbounds);
 			//dprint(aMesh.n_vertices(), target_h, x_step);
-			if (target_h < x_step)
+			if (target_h < x_step && target_h > 0.25*x_step)
 			{
 				triangulate(all_pnts, bnd, sqrt(3) * target_h * target_h *0.25, aMesh);
 				for (auto tv : aMesh.vertices())
@@ -132,14 +132,14 @@ namespace CADMesher
 			//dprint("initial vertices:", aMesh.n_vertices());
 
 			//Remesh in domain		
-			/*Riemannremesh Remesh(Surface, &aMesh);
-			Remesh.remesh();*/
+			Riemannremesh Remesh(Surface, &aMesh);
+			Remesh.remesh();
 			//dprint("domain remesh done!");
 
-			if (!OpenMesh::IO::write_mesh(aMesh, "one.obj"))
+			/*if (!OpenMesh::IO::write_mesh(aMesh, "one.obj"))
 			{
 				std::cerr << "fail";
-			}
+			}*/
 
 			double k1, k2;
 			for (auto v : aMesh.vertices())
