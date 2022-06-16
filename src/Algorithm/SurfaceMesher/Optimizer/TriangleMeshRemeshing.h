@@ -8,7 +8,7 @@
 #include <numeric>
 #include "..\src\Dependency\CPS\CPS_AABBTree.h"
 #include "..\src\Algorithm\SurfaceMesher\Generator\basic_def.h"
-#define printRemeshingInfo
+//#define printRemeshingInfo
 
 namespace CADMesher
 {
@@ -22,9 +22,9 @@ namespace CADMesher
 			{
 				expected_length = meshAverageLength(*mesh);
 			}
-			high = 1.33*expected_length;
-			low = 0.8*expected_length;
+			boundaryNum = 0;
 			aabbtree = new ClosestPointSearch::AABBTree(*mesh);
+			//aabbtree = globalmodel.init_trimesh_tree;
 		};
 		TriangleMeshRemeshing(const TriangleMeshRemeshing &tmr) = delete;
 		~TriangleMeshRemeshing() { 
@@ -37,26 +37,29 @@ namespace CADMesher
 	private:
 		//main step
 		void split();
-		void split_one_edge(const OpenMesh::SmartEdgeHandle &te, int &splitnumber);
-		void collapse();
-		void equalize_valence();
+		bool split_one_edge(const OpenMesh::SmartEdgeHandle &te, bool ifRelaxCondition = false);
+		void collapse(bool ifEnhanced = false);
+		void equalize_valence(bool ifEnhanced = false);
 		void tangential_relaxation();
 		//auxiliary step
 		void adjustTargetLength();
 		void processAngle();
+		int processFeatureConstraintAngle(bool ifEnhanced = false);
+		void globalProject();
 		//geometry support
+		void initTargetLength();
 		O3d GravityPos(const OV &v);
+		O3d GravityPos(const OV &v, const std::vector<OpenMesh::Vec3d> &normal, const std::vector<double> &area);
 
 
 	private:
-		double high;
-		double low;
 		double expected_length;
 
 
 		timeRecorder tr;
 
-		double lowerAngleBound = 0.08;
+		double coerciveAngleBound = 0.06;
+		double lowerAngleBound = 0.1;
 		std::vector<double> initial_FaceTargetLength;
 
 		TriMesh *mesh = nullptr;

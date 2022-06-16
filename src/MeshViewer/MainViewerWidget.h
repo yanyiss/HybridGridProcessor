@@ -86,14 +86,12 @@ public slots:
 				CADMesher::Iso_Mesh iso_mesh(fileName);
 				tr.out("time of generating isotropic mesh:");
 				Mesh me(CADMesher::globalmodel.initial_trimesh);
+			    //Mesh me(CADMesher::globalmodel.initial_polymesh);
 				initMeshStatusAndNormal(me);
 				open_mesh_gui(me);
 				/*Mesh me;
 				bool read_OK = OpenMesh::IO::read_mesh(me, "step_to_obj.obj");
 				open_mesh_gui(me);*/
-#else
-				open_mesh_gui(CADMesher::globalmodel.initial_polymesh);
-#endif
 			}
 		}
 	}

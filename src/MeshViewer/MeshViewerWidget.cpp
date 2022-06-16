@@ -970,24 +970,34 @@ void MeshViewerWidget::draw_feature()
 	glEnd();
 
 #endif
+	//glColor3d(1, 0, 0);
+	//glPointSize(8);
+	//glBegin(GL_POINTS);
+	//auto v = mesh.vertex_handle(135);
+	//glVertex3dv(mesh.point(v).data());
+	//v = mesh.vertex_handle(17);
+	//glVertex3dv(mesh.point(v).data());
+	//glEnd();
+
+
 	//draw triangles with low quality
-	glColor3d(0.9, 0.1, 0.9);
-	glPointSize(8);
-	glBegin(GL_POINTS);
-	for (auto &tf : mesh.faces())
-	{
-		for (auto &tfh : mesh.fh_range(tf))
-		{
-			if (mesh.calc_sector_angle(tfh) < 0.08)
-			{
-				glVertex3dv(mesh.point(tfh.from()).data());
-				glVertex3dv(mesh.point(tfh.to()).data());
-				glVertex3dv(mesh.point(tfh.next().to()).data());
-				break;
-			}
-		}
-	}
-	glEnd();
+	//glColor3d(0.9, 0.1, 0.9);
+	//glPointSize(8);
+	//glBegin(GL_POINTS);
+	//for (auto &tf : mesh.faces())
+	//{
+	//	for (auto &tfh : mesh.fh_range(tf))
+	//	{
+	//		if (mesh.calc_sector_angle(tfh) < 0.08)
+	//		{
+	//			glVertex3dv(mesh.point(tfh.from()).data());
+	//			glVertex3dv(mesh.point(tfh.to()).data());
+	//			glVertex3dv(mesh.point(tfh.next().to()).data());
+	//			break;
+	//		}
+	//	}
+	//}
+	//glEnd();
 }
 //=======
 #include "../src/Algorithm/CheckBoard/CheckBoardGenerator.h"

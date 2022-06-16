@@ -42,16 +42,18 @@ public:
 	const std::vector<std::vector<double>> GetWeights(void) const { return weights; }
 	const std::vector<std::vector<Point>> GetControlPoints(void) const { return ctrlpoints; }
 	const std::vector<Point> & DataPoints(void) const { return datapoints; }
-	const int FindSpan(int n, int p, double u, std::vector<double> K) const;
+	const int FindSpan(int n, int p, double u, const std::vector<double> &K) const;
 
 	void PrincipalCurvature(const double u, const double v, double &k1, double &k2) const;  //计算主曲率
+	void NormalCurvature(const double u, const double v, const double x, const double y, double &k) const;  //计算法曲率
+
 
 	void setZero(double &t) const { t = 0; }
 	void setZero(Point &t)  const { t.setZero(); }
 	void setZero(Point4 &t) const { t.setZero(); }
 
 	template<typename T>
-	T DeBoor(std::vector<std::vector<T>> controlpoints, const double u, const double v) const
+	T DeBoor(const std::vector<std::vector<T>> &controlpoints, const double u, const double v) const
 	{
 		if (controlpoints.empty()) return T();
 		if (u < u_knots.front() || u > u_knots.back()) return T();
@@ -103,7 +105,7 @@ public:
 	}
 
 	template<typename T>
-	T Derivative(std::vector<std::vector<T>>PartialCtrpnts, const double u, const double v, const int k, const int l) const
+	T Derivative(const std::vector<std::vector<T>>& PartialCtrpnts, const double u, const double v, const int k, const int l) const
 	{
 		//if (controlpoints.empty()) return T();
 		if (u_degree < k || v_degree < l)
@@ -111,12 +113,16 @@ public:
 
 		if (u < u_knots.front() || u > u_knots.back()) return T();
 		if (v < v_knots.front() || v > v_knots.back()) return T();
+		auto ft = clock();
+		//static clock_t t1 = 0;
 		int m = u_knots.size() - u_degree - 2;
 		int n = v_knots.size() - v_degree - 2;
 		std::vector<double> du_knots(u_knots.begin() + k, u_knots.end() - k);
 		std::vector<double> dv_knots(v_knots.begin() + l, v_knots.end() - l);
 		int ru = FindSpan(m - k, u_degree - k, u, du_knots);
 		int rv = FindSpan(n - l, v_degree - l, v, dv_knots);
+		//t1 += clock() - ft;
+		//std::cout << t1 << std::endl;
 		std::vector<std::vector<T>> dev_ctrlpts(m + 1 - k, std::vector<T>(n + 1 - l));
 		for (int i = ru - u_degree + k; i <= ru; i++)
 		{

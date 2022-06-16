@@ -10,10 +10,10 @@ namespace CADMesher
 		for (int i = 0; i < faceshape.size(); i++)
 		{
 			dprint(i,"*******");
-			//if (i != 180) continue;
+			//if (i != 24) continue;
 			TriMesh &aMesh = Surface_TriMeshes[i];
 			auto &wires = faceshape[i].wires;
-			if (wires.empty())
+			if (wires.empty() || !faceshape[i].if_exisited)
 			{
 				continue;
 			}
@@ -66,7 +66,7 @@ namespace CADMesher
 			double if_reverse = aface.Orientation() ? -1.0 : 1.0;
 
 
-			double ra = (y_step < epsilonerror ? 1 : x_step / y_step) * if_reverse;
+			double ra = (y_step < epsilonerror ? 10 : x_step / y_step) * if_reverse;
 
 			for (int j = 0; j < wires.size(); j++)
 			{
@@ -105,56 +105,74 @@ namespace CADMesher
 			auto &Surface = faceshape[i].Surface;
 
 			//calculate the target edge length with respect to the error between mesh and surface		
-			double errorbounds = 0.0, testnum = std::min(200, (int)aMesh.n_vertices());
-			for (int j = 0; j < testnum; j++)
-			{
-				auto p = aMesh.point(aMesh.vertex_handle(j));
-				errorbounds += (Surface->PartialDerivativeUU(p[0], p[1])).norm() + 2 * (Surface->PartialDerivativeUV(p[0], p[1])).norm() + (Surface->PartialDerivativeVV(p[0], p[1])).norm();
-			}
-			errorbounds /= 2 * testnum;
-			errorbounds = std::max(errorbounds, 0.00001);
-			double target_h = std::sqrt(epsratio / errorbounds);
-			dprint(aMesh.n_vertices(), target_h, x_step);
-			if (target_h < x_step)
-			{
-				triangulate(all_pnts, bnd, sqrt(3) * target_h * target_h *0.25, aMesh);
-				for (auto tv : aMesh.vertices())
-				{
-					if (tv.idx() < pointsnumber)
-					{
-						aMesh.set_point(tv, TriMesh::Point(boundary(0, tv.idx()), boundary(1, tv.idx()), 0));
-						continue;
-					}
-					auto pos = aMesh.point(tv);
-					aMesh.set_point(tv, TriMesh::Point(pos[0], pos[1] * ra_inv, 0));
-				}
-			}
-			dprint("initial vertices:", aMesh.n_vertices());
+			//double target_h = 0.0;
+			//double pntgap = (double)aMesh.n_vertices() / std::min(200.0, (double)aMesh.n_vertices()), pntid=0;
+			//std::vector<double> errorvector;
+			//int testnum = 0, sumnum = 0;
+			//while (pntid <= (int)aMesh.n_vertices()-1)
+			//{
+			//	auto p = aMesh.point(aMesh.vertex_handle((int)pntid));
+			//	errorvector.push_back((Surface->PartialDerivativeUU(p[0], p[1])).norm() + 2 * (Surface->PartialDerivativeUV(p[0], p[1])).norm() + (Surface->PartialDerivativeVV(p[0], p[1])).norm());
+			//	pntid += pntgap;
+			//	testnum++;
+			//	double k1, k2;
+			//}
+			//std::sort(errorvector.begin(), errorvector.end());
+			//for (int j = (int)(0.2*testnum); j < (int)(0.9*testnum); j++)
+			//{
+			//	sumnum++;
+			//	target_h += std::sqrt(2*epsratio / errorvector[j]);
+			//}
+			//target_h /= sumnum;
+			//dprint(aMesh.n_vertices(), target_h, x_step);
+			//if (target_h < 2.5 * x_step && target_h > 0.4 * x_step)
+			//{
+			//	triangulate(all_pnts, bnd, sqrt(3) * target_h * target_h *0.25, aMesh);
+			//	for (auto tv : aMesh.vertices())
+			//	{
+			//		if (tv.idx() < pointsnumber)
+			//		{
+			//			aMesh.set_point(tv, TriMesh::Point(boundary(0, tv.idx()), boundary(1, tv.idx()), 0));
+			//			continue;
+			//		}
+			//		auto pos = aMesh.point(tv);
+			//		aMesh.set_point(tv, TriMesh::Point(pos[0], pos[1] * ra_inv, 0));
+			//	}
+			//}
 
+			dprint("initial vertices:", aMesh.n_vertices());
 			//Remesh in domain		
-			Riemannremesh Remesh(Surface, &aMesh);
-			Remesh.remesh();
+			//Riemannremesh Remesh(Surface, &aMesh);
+			//Remesh.remesh();
 			dprint("domain remesh done!");
 
-			double k1, k2;
-			for (auto v : aMesh.vertices())
-			{
-				auto p = aMesh.point(v);
-				Surface->PrincipalCurvature(p[0], p[1], k1, k2);
-				if (isnan(k1*k2))
-				{
-					dprint("bug", v.idx());
-				}
-				aMesh.data(v).GaussCurvature = std::max(std::fabs(k1), std::fabs(k2));
-			}
+			//double k1, k2;
+			//for (auto v : aMesh.vertices())
+			//{
+			//	auto p = aMesh.point(v);
+			//	Surface->PrincipalCurvature(p[0], p[1], k1, k2);
+			//	//dprint("v.idx()", k1, k2);
+			//	if (isnan(k1*k2))
+			//	{
+			//		dprint("bug", v.idx());
+			//	}
+			//	aMesh.data(v).GaussCurvature = std::max(std::fabs(k1), std::fabs(k2));
+			//}
 			dprint("GaussCurvature compute done!");
+			if (!OpenMesh::IO::write_mesh(aMesh, "one.obj"))
+			{
+				std::cerr << "fail";
+			}
 			for (auto tv : aMesh.vertices())
 			{
 				auto pos = aMesh.point(tv);
 				auto v = asurface->Value(pos[0], pos[1]);
 				aMesh.set_point(tv, TriMesh::Point(v.X(), v.Y(), v.Z()));
 			}
-
+			if (!OpenMesh::IO::write_mesh(aMesh, "two.obj"))
+			{
+				std::cerr << "fail";
+			}
 			//set flag1 and flag2
 			int id = 0, begin, endid;
 			for (int j = 0; j < wires.size(); j++)
@@ -208,7 +226,6 @@ namespace CADMesher
 		dprint("Piecewise TriMesh Done!");
 	}
 
-#if 0
 	void OccReader::Set_PolyMesh()
 	{
 		vector<ShapeFace> &faceshape = globalmodel.faceshape;
@@ -222,7 +239,7 @@ namespace CADMesher
 			Mesh &newmesh = Surface_PolyMeshes[i];
 			TriMesh aMesh;
 			auto &wires = faceshape[i].wires;
-			if (wires.empty())
+			if (wires.empty() || !faceshape[i].if_exisited)
 			{
 				continue;
 			}
@@ -273,7 +290,7 @@ namespace CADMesher
 			pointsnumber = 0;
 			int s = 0;
 			double if_reverse = aface.Orientation() ? -1.0 : 1.0;
-			double ra = (y_step < epsilonerror ? 1 : x_step / y_step) * if_reverse;
+			double ra = (y_step < epsilonerror ? 10 : x_step / y_step) * if_reverse;
 			for (int j = 0; j < wires.size(); j++)
 			{
 				auto &edges = wires[j];
@@ -313,11 +330,6 @@ namespace CADMesher
 						}
 						else id1 = startid - 1;
 						id2 = endid + 1;
-						//Eigen::Matrix2Xd para(2, aedge.parameters.cols()+2);
-						//para.col(0) = all_pnts.col(id1);
-						//para.block(0, 1, 2, aedge.parameters.cols() - 1) = aedge.parameters.block(0, 0, 2, aedge.parameters.cols() - 1);
-						//para.col(aedge.parameters.cols()) = all_pnts.col(endid);
-						//para.col(aedge.parameters.cols()+1) = all_pnts.col(id2);
 						offsetline = Subdomain(aedge.parameters, all_pnts.col(id1), all_pnts.col(id2));
 						Matrix2Xi bnd_offset(2, wireoffset - 2);
 						bnd_offset.block(0, 0, 2, wireoffset - 3) = bnd[j].block(0, 0, 2, wireoffset - 3);
@@ -351,30 +363,30 @@ namespace CADMesher
 				}
 
 				//calculate the target edge length with respect to the error between mesh and surface		
-				double errorbounds = 0.0, testnum = std::min(200, (int)aMesh.n_vertices());
-				for (int j = 0; j < testnum; j++)
-				{
-					auto p = aMesh.point(aMesh.vertex_handle(j));
-					errorbounds += (Surface->PartialDerivativeUU(p[0], p[1])).norm() + 2 * (Surface->PartialDerivativeUV(p[0], p[1])).norm() + (Surface->PartialDerivativeVV(p[0], p[1])).norm();
-				}
-				errorbounds /= 2 * testnum;
-				errorbounds = std::max(errorbounds, 0.00001);
-				double target_h = std::sqrt(epsratio / errorbounds);
-				dprint(aMesh.n_vertices(), target_h, x_step);
-				if (target_h < x_step)
-				{
-					triangulate(all_pnts, bnd, sqrt(3) * target_h * target_h *0.25, aMesh);
-					for (auto tv : aMesh.vertices())
-					{
-						if (tv.idx() < pointsnumber)
-						{
-							aMesh.set_point(tv, TriMesh::Point(boundary(0, tv.idx()), boundary(1, tv.idx()), 0));
-							continue;
-						}
-						auto pos = aMesh.point(tv);
-						aMesh.set_point(tv, TriMesh::Point(pos[0], pos[1] * ra_inv, 0));
-					}
-				}
+				//double errorbounds = 0.0, testnum = std::min(200, (int)aMesh.n_vertices());
+				//for (int j = 0; j < testnum; j++)
+				//{
+				//	auto p = aMesh.point(aMesh.vertex_handle(j));
+				//	errorbounds += (Surface->PartialDerivativeUU(p[0], p[1])).norm() + 2 * (Surface->PartialDerivativeUV(p[0], p[1])).norm() + (Surface->PartialDerivativeVV(p[0], p[1])).norm();
+				//}
+				//errorbounds /= 2 * testnum;
+				//errorbounds = std::max(errorbounds, 0.00001);
+				//double target_h = std::sqrt(epsratio / errorbounds);
+				//dprint(aMesh.n_vertices(), target_h, x_step);
+				//if (target_h < x_step)
+				//{
+				//	triangulate(all_pnts, bnd, sqrt(3) * target_h * target_h *0.25, aMesh);
+				//	for (auto tv : aMesh.vertices())
+				//	{
+				//		if (tv.idx() < pointsnumber)
+				//		{
+				//			aMesh.set_point(tv, TriMesh::Point(boundary(0, tv.idx()), boundary(1, tv.idx()), 0));
+				//			continue;
+				//		}
+				//		auto pos = aMesh.point(tv);
+				//		aMesh.set_point(tv, TriMesh::Point(pos[0], pos[1] * ra_inv, 0));
+				//	}
+				//}
 
 				//Remesh in domain
 				Riemannremesh Remesh(Surface, &aMesh);
@@ -410,25 +422,25 @@ namespace CADMesher
 				auto &Surface = faceshape[i].Surface;
 
 				//calculate the target edge length with respect to the error between mesh and surface		
-				double errorbounds = 0.0, testnum = std::min(200, (int)aMesh.n_vertices());
-				for (int j = 0; j < testnum; j++)
-				{
-					auto p = aMesh.point(aMesh.vertex_handle(j));
-					errorbounds += (Surface->PartialDerivativeUU(p[0], p[1])).norm() + 2 * (Surface->PartialDerivativeUV(p[0], p[1])).norm() + (Surface->PartialDerivativeVV(p[0], p[1])).norm();
-				}
-				errorbounds /= 2 * testnum;
-				errorbounds = std::max(errorbounds, 0.00001);
-				double target_h = std::sqrt(epsratio / errorbounds);
-				dprint(aMesh.n_vertices(), target_h, x_step);
-				if (target_h < x_step)
-				{
-					triangulate(newall_pnts, bnd, sqrt(3) * target_h * target_h *0.25, aMesh);
-					for (auto tv : aMesh.vertices())
-					{
-						auto pos = aMesh.point(tv);
-						aMesh.set_point(tv, TriMesh::Point(pos[0], pos[1] * ra_inv, 0));					
-					}
-				}
+				//double errorbounds = 0.0, testnum = std::min(200, (int)aMesh.n_vertices());
+				//for (int j = 0; j < testnum; j++)
+				//{
+				//	auto p = aMesh.point(aMesh.vertex_handle(j));
+				//	errorbounds += (Surface->PartialDerivativeUU(p[0], p[1])).norm() + 2 * (Surface->PartialDerivativeUV(p[0], p[1])).norm() + (Surface->PartialDerivativeVV(p[0], p[1])).norm();
+				//}
+				//errorbounds /= 2 * testnum;
+				//errorbounds = std::max(errorbounds, 0.00001);
+				//double target_h = std::sqrt(epsratio / errorbounds);
+				//dprint(aMesh.n_vertices(), target_h, x_step);
+				//if (target_h < x_step)
+				//{
+				//	triangulate(newall_pnts, bnd, sqrt(3) * target_h * target_h *0.25, aMesh);
+				//	for (auto tv : aMesh.vertices())
+				//	{
+				//		auto pos = aMesh.point(tv);
+				//		aMesh.set_point(tv, TriMesh::Point(pos[0], pos[1] * ra_inv, 0));					
+				//	}
+				//}
 
 				//Remesh in domain
 				Riemannremesh Remesh(Surface, &aMesh);
@@ -576,7 +588,6 @@ namespace CADMesher
 
 		dprint("Piecewise PolyMesh Done!");
 	}
-#endif
 
 	Matrix2Xd OccReader::Subdomain(Matrix2Xd &parameters, Matrix2Xd preedgepara, Matrix2Xd nextedgepara)
 	{
@@ -627,7 +638,6 @@ namespace CADMesher
 		}
 		return offsetline;
 	}
-
 
 	void OccReader::ComputeFaceAndEdge()
 	{
@@ -758,6 +768,99 @@ namespace CADMesher
 			"\n\nCompute Topology Done!");
 	}
 
+	void OccReader::narrow_surface()
+	{
+		//detect the narrow surface, consider only rectangle surface
+		auto &faceshape = globalmodel.faceshape;
+		auto &edgeshape = globalmodel.edgeshape;
+		for (int i = 0; i < faceshape.size(); i++)
+		{
+			//if (i) continue;
+			auto &wire = (faceshape[i]).wires;
+			if (wire.empty() || wire.size() > 1) continue;
+			auto &edges = wire.front();
+			if (edges.size() != 4) continue;
+			std::vector<gp_Pnt> corners;
+			for (int j = 0; j < 4; j++)
+			{
+				auto &aedge = edgeshape[edges[j]].edge;
+				if (aedge.Orientation() == TopAbs_FORWARD) corners.push_back(BRep_Tool::Pnt(TopExp::FirstVertex(aedge)));
+				else corners.push_back(BRep_Tool::Pnt(TopExp::LastVertex(aedge)));
+			}
+			auto &p1 = corners[0], &p2 = corners[1], p3 = corners[2], p4 = corners[3];
+			auto e1 = Point(p2.X() - p1.X(), p2.Y() - p1.Y(), p2.Z() - p1.Z());
+			auto e2 = Point(p3.X() - p2.X(), p3.Y() - p2.Y(), p3.Z() - p2.Z());
+			auto e3 = -Point(p4.X() - p3.X(), p4.Y() - p3.Y(), p4.Z() - p3.Z());
+			auto e4 = -Point(p1.X() - p4.X(), p1.Y() - p4.Y(), p1.Z() - p4.Z());
+			//dprint("jiuyg:", (e1.normalized().dot(e3.normalized())), (e2.normalized().dot(e4.normalized())));
+			if ((e1.normalized().dot(e3.normalized())) < 0.8 || (e2.normalized().dot(e4.normalized())) < 0.8) continue;
+			double length = edgeshape[edges[0]].length, width = edgeshape[edges[1]].length;
+			//dprint("kiu:", length, width);
+			int id0, id1;
+			if (length > 1e4*width) { id0 = 0; id1 = 1; }
+			else if (width > 1e4*length) { id0 = 1; id1 = 0; }
+			else continue;
+
+#if 1
+			faceshape[i].if_exisited = false;
+			ShapeEdge &m0 = edgeshape[edgeshape[edges[id0]].reversed_edge];
+			ShapeEdge &m1 = edgeshape[edgeshape[edges[id0 + 2]].reversed_edge];
+			m0.reversed_edge = m1.id;
+			m1.reversed_edge = m0.id;
+			m0.secondary_face = m1.main_face;
+			m1.secondary_face = m0.main_face;
+
+			edgeshape[edges[id1]].if_exisited = false;
+			if (edgeshape[edges[id1]].reversed_edge != -1)
+				edgeshape[edgeshape[edges[id1]].reversed_edge].if_exisited = false;
+			edgeshape[edges[id1 + 2]].if_exisited = false;
+			if (edgeshape[edges[id1 + 2]].reversed_edge != -1)
+				edgeshape[edgeshape[edges[id1 + 2]].reversed_edge].if_exisited = false;
+			edgeshape[edges[id0]].if_exisited = false;
+			edgeshape[edges[id0 + 2]].if_exisited = false;
+
+			int er0 = edgeshape[edges[id1]].reversed_edge;
+			if (er0 != -1)
+			{
+				ShapeFace &f0 = faceshape[edgeshape[edges[id1]].secondary_face];
+				for (auto &edges : f0.wires)
+				{
+					int foundid = -1;
+					for (int j = 0; j < edges.size(); ++j)
+					{
+						if (edges[j] == er0)
+							foundid = j;
+					}
+					if (foundid != -1)
+					{
+						edges.erase(edges.begin() + foundid);
+						break;
+					}
+				}
+			}
+			int er1 = edgeshape[edges[id1 + 2]].reversed_edge;
+			if (er1 != -1)
+			{
+				ShapeFace &f1 = faceshape[edgeshape[edges[id1 + 2]].secondary_face];
+				for (auto &edges : f1.wires)
+				{
+					int foundid = -1;
+					for (int j = 0; j < edges.size(); ++j)
+					{
+						if (edges[j] == er1)
+							foundid = j;
+					}
+					if (foundid != -1)
+					{
+						edges.erase(edges.begin() + foundid);
+						break;
+					}
+				}
+			}
+#endif
+		}
+	}
+
 	void OccReader::Discrete_Edge()
 	{
 		vector<ShapeFace> &faceshape = globalmodel.faceshape;
@@ -771,6 +874,7 @@ namespace CADMesher
 			/*static int ti = 0;
 			dprint(ti++);*/
 			auto &aedge = edge->edge;
+			if (!edge->if_exisited) continue;
 			auto &mainface = faceshape[edge->main_face].face;
 			TopLoc_Location loc;
 			Handle(Geom_Surface) asurface = BRep_Tool::Surface(mainface, loc);
@@ -788,7 +892,7 @@ namespace CADMesher
 				acurve->D1(a*GL_x[i] + b, P, d1);
 				curve_length += a * GL_c[i] * d1.Magnitude();
 			}
-
+			edge->length = curve_length;
 			int segment_number = std::max(BRep_Tool::IsClosed(aedge) ? 4 : 4, int(curve_length / expected_edge_length));
 			edge->parameters.resize(2, segment_number + 1);
 			Handle_Geom2d_Curve thePCurve = BRep_Tool::CurveOnSurface(aedge, mainface, first, last);
@@ -825,6 +929,7 @@ namespace CADMesher
 
 		for (int i = 0; i < faceshape.size(); i++)
 		{
+			if (!faceshape[i].if_exisited) continue;
 			TopLoc_Location loca;
 			opencascade::handle<Geom_Surface> geom_surface = BRep_Tool::Surface(faceshape[i].face, loca);
 			opencascade::handle<Standard_Type> type = geom_surface->DynamicType();
@@ -958,6 +1063,7 @@ namespace CADMesher
 				}
 				else
 					faceshape[i].Surface = new BSplineSurface(geom_bsplinesurface->UDegree(), geom_bsplinesurface->VDegree(), u, v, cp);
+				//dprint(i, cp.size(), cp[0].size(), geom_bsplinesurface->UDegree(), geom_bsplinesurface->VDegree());
 				//gp_Vec u2, v2, uu, uv, vv;
 				//gp_Pnt oringe;
 				////double ut = u.back()-(u.back()-u.front())*0.5, vt = v.back()-(v.back()-v.front())*0.5;
@@ -975,6 +1081,7 @@ namespace CADMesher
 				//dprint("D2U:", uu.X(), uu.Y(), uu.Z(), uu1(0), uu1(1), uu1(2));
 				//dprint("D2V:", vv.X(), vv.Y(), vv.Z(), vv1(0), vv1(1), vv1(2));
 				//dprint("D2UV:", uv.X(), uv.Y(), uv.Z(), uv1(0), uv1(1), uv1(2));
+				//dprint(i, geom_bsplinesurface->UDegree(), geom_bsplinesurface->VDegree(), geom_bsplinesurface->Weights());
 			}
 			else if (type == STANDARD_TYPE(Geom_SurfaceOfRevolution))
 			{
@@ -1056,6 +1163,7 @@ namespace CADMesher
 		for (int i = 0; i < edgeshape.size(); i++)
 		{
 			auto &edge = edgeshape[i];
+			if (!edge.if_exisited) continue;
 			auto &facer = faceshape[edge.main_face].Surface;
 			auto &pnts = edge.parameters;
 			Point4 UV = facer->Getbounds();
@@ -1079,23 +1187,25 @@ namespace CADMesher
 		auto &face = globalmodel.faceshape;
 		for (int i = 0; i < edge.size(); i++)
 		{
-			//dprint("kk", i);
+			//if (i != 11) continue;
 			auto &aedge = edge[i];
+			if (!aedge.if_exisited) continue;
+			//dprint(i, aedge.main_face, aedge.secondary_face);
 			if (aedge.reversed_edge == -1)
 			{
 				aedge.if_C0 = true;
 				continue;
 			}	
 			if (aedge.if_C0) continue;
-			double C0 = 0.9;
+			double C0 = 0.92;
 			int single_flag = 0;
-			//dprint(i, aedge.main_face, aedge.secondary_face);
 			auto &face1 = face[aedge.main_face].Surface;
 			auto &face2 = face[aedge.secondary_face].Surface;
 			auto &pnts1 = aedge.parameters;
 			auto &pnts2 = edge[aedge.reversed_edge].parameters;
 			for(int j = 0; j < pnts1.cols(); j++)
 			{
+				if (j - single_flag > pnts1.cols()*0.4) break;
 				double u = pnts1(0, j), v = pnts1(1, j);
 				Point ru = face1->PartialDerivativeU(u, v);
 				Point rv = face1->PartialDerivativeV(u, v);
@@ -1103,24 +1213,20 @@ namespace CADMesher
 				if ((face[aedge.main_face].face).Orientation() == TopAbs_REVERSED) n1 = -n1;
 
 				u = pnts2(0, pnts1.cols() - 1 - j), v = pnts2(1, pnts1.cols() - 1 - j);
-				//dprint("jkji");
 				ru = face2->PartialDerivativeU(u, v);
-				//dprint("jj", j);
 				rv = face2->PartialDerivativeV(u, v);
-				//dprint("mm", j);
 				Point n2 = (ru.cross(rv)).normalized();
 				if ((face[aedge.secondary_face].face).Orientation() == TopAbs_REVERSED) n2 = -n2;
-				//dprint("the dot:", n1[0], n1[1], n1[2], n2[0], n2[1], n2[2], n1.dot(n2));
 				if (n1.dot(n2) < C0) single_flag++;
 			}
-			//dprint(pnts1.cols(), single_flag);
 			if (single_flag > pnts1.cols()*0.6)
 			{
-				//dprint("non_trim:", i);
 				aedge.if_C0 = true;
 				edge[aedge.reversed_edge].if_C0 = true;
 			}
 		}
+
+		//edge[3].if_C0 = true;
 		dprint("C0 feature done!");
 	}
 
@@ -1128,32 +1234,38 @@ namespace CADMesher
 	{
 		auto &edge = globalmodel.edgeshape;
 		auto &face = globalmodel.faceshape;
+		double min_curv = 1/expected_edge_length ;
 		for (int i = 0; i < edge.size(); i++)
 		{
-			//dprint("edge", i);
+			//if (i != 3) continue;
 			auto &aedge = edge[i];
+			if (!aedge.if_exisited) continue;
 			if (!aedge.if_curvature) continue;
-			if (aedge.if_C0 )
+			if ((aedge.parameters).cols() < 10)
+			{
+				aedge.if_curvature = false;
+				continue;
+			}
+			if (aedge.if_C0 && aedge.reversed_edge != -1)
 			{
 				aedge.if_curvature = false;
 				continue;
 			}
 			auto &facer = face[aedge.main_face].Surface;
-			//dprint("surface_id:", aedge.main_face, aedge.reversed_edge);
 			auto &pnts = aedge.parameters;
 			double u1 = pnts(0, 0), v1 = pnts(1, 0), u2 = pnts(0, pnts.cols() - 1), v2 = pnts(1, pnts.cols() - 1);
 			Eigen::Vector2d step(v1 - v2, u2 - u1);
-			step.normalize();
+			step /= (pnts.cols() - 1)*4;
+			if ((face[aedge.main_face].face).Orientation() == TopAbs_REVERSED) step = -step;
 			double base_stepu = step(0), base_stepv = step(1);
-			//dprint(u1, v1, u2, v2, base_stepu, base_stepv);
 			Point4 UV = facer->Getbounds();
 			double umin = UV(0), umax = UV(1), vmin = UV(2), vmax = UV(3);
-			//dprint(umin, umax, vmin, vmax);
+			//dprint(min_curv, umin, umax, vmin, vmax);
 			Eigen::Matrix2d Weingarten, value, vec;
 			int single_flag = 0;
 			for (int j = 1; j < pnts.cols()-1; j++)
-			{				
-				//dprint("point", j);
+			{			
+				if (j - 1 - single_flag > (pnts.cols() - 2)*0.4) break;
 				double stepu = base_stepu, stepv = base_stepv;
 				int count = 0;
 				while (true) 
@@ -1162,7 +1274,6 @@ namespace CADMesher
 					v1 = pnts(1, j);
 					for (int m = 0; m < 15; m++)
 					{
-						//dprint(u1, v1);
 						u1 += stepu;
 						v1 += stepv;
 						if (m==14 || u1 < umin || u1 > umax || v1 < vmin || v1 > vmax)
@@ -1182,32 +1293,54 @@ namespace CADMesher
 				stepv *= count*0.06;
 				u1 = pnts(0, j);
 				v1 = pnts(1, j);
+				//Point start_nomal = ((facer->PartialDerivativeU(u1, v1)).cross(facer->PartialDerivativeV(u1, v1))).normalized(), end_nomal;
 				std::vector<double> curvature;
-				double K1, K2;
+				double K, K1;
 				for (int m = 0; m < 15; m++)
 				{				
-					facer->PrincipalCurvature(u1, v1, K1, K2);
-					//dprint(j, u1, v1, K1);
-					curvature.push_back(K1);
+					facer->NormalCurvature(u1, v1, stepu, stepv, K);
+					//dprint(j, u1, v1, K);
+					curvature.push_back(K);
+					//if (m == 14)
+					//{
+					//	end_nomal = ((facer->PartialDerivativeU(u1, v1)).cross(facer->PartialDerivativeV(u1, v1))).normalized();
+					//}
 					u1 += stepu;
 					v1 += stepv;
 				}
-				K1 = curvature.front();
+				K = curvature.front();
 				std::sort(curvature.begin(), curvature.end());
-				//if (curvature.back() - curvature[curvature.size() - 2] > 4) curvature.pop_back();
-				if (curvature.back() - curvature.front() > 4 && K1 > curvature[10])
+				//dprint("dot", start_nomal.dot(end_nomal));
+				if (curvature.back() < 1.5*min_curv || curvature[12] < 0.1*min_curv) continue;
+				if (curvature.back() - curvature.front() > min_curv)
 				{
+					//dprint("jiuyy", j);
 					single_flag++;
-					//dprint("juidjfhrythg", j);
 				}
 			}
+			//dprint(single_flag, pnts.cols() - 2);
 			if (single_flag <= (pnts.cols()-2)*0.6)
 			{
 				aedge.if_curvature = false;
-				edge[aedge.reversed_edge].if_curvature = false;
+				if (aedge.reversed_edge != -1) edge[aedge.reversed_edge].if_curvature = false;			
 			}
+			else if(aedge.reversed_edge == -1) aedge.if_C0 = false;
 		}
 		dprint("curvature feature done!");
+	}
+
+	void OccReader::curvature_discrete()
+	{
+		auto &edge = globalmodel.edgeshape;
+		auto &face = globalmodel.faceshape;
+		for (int i = 0; i < edge.size(); i++)
+		{
+			auto &aedge = edge[i];
+			if (!aedge.if_exisited) continue;
+			if (!aedge.if_curvature) continue;
+			auto f = face[aedge.main_face];
+			dprint(i, aedge.main_face, f.wires.size(), f.wires[0].size());
+		}
 	}
 }
 

@@ -180,19 +180,39 @@ void compute_principal_curvature(Mesh* mesh_,
 
 
 #pragma region functions by yanyisheshou at GCL
-double meshMinAngle(TriMesh &mesh);
+class TriMeshQualityHelper
+{
+public:
+	TriMeshQualityHelper(TriMesh *m) :mesh(m) { update(); };
+	~TriMeshQualityHelper() {};
+private:
+	TriMesh *mesh;
+	double minAngle, maxAngle, avgAngle, minQuality, avgQuality;
 
-void printMeshQuality(TriMesh &mesh);
+public:
+	void update();
+	void print();
+	double getMinAngle() { return minAngle; }
+	double getMaxAngle() { return maxAngle; }
+	double getAvgAngle() { return avgAngle; }
+	//the definition of single triangle quality in trimesh is from paper: Automatic and High-quality Surface Mesh Generation for CAD Models(Section 5.1)
+	double getMinQuality() { return minQuality; }
+	double getAvgQuality() { return avgQuality; }
+};
 
 template <typename T>
 void initMeshStatusAndNormal(T& m)
 {
-	m.request_vertex_status();
-	m.request_edge_status();
-	m.request_face_status();
-
-	m.request_face_normals();
-	m.request_vertex_normals();
+	if (!m.has_vertex_status())
+		m.request_vertex_status();
+	if (!m.has_edge_status())
+		m.request_edge_status();
+	if (!m.has_face_status())
+		m.request_face_status();
+	if (!m.has_face_normals())
+		m.request_face_normals();
+	if (!m.has_vertex_normals())
+		m.request_vertex_normals();
 
 	m.update_face_normals();
 	m.update_vertex_normals();

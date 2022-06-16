@@ -35,9 +35,11 @@ namespace CADMesher
 
 			ComputeFaceAndEdge();
 			Discrete_Edge();
+			narrow_surface();
 			Face_type();
 			C0_Feature();
 			curvature_feature();
+			curvature_discrete();
 		}
 		OccReader(const OccReader& or) = delete;
 		~OccReader() {
@@ -47,6 +49,7 @@ namespace CADMesher
 				vector<ShapeFace> &faceshape = globalmodel.faceshape;
 				for (int i = 0; i < faceshape.size(); i++)
 				{
+					if (!faceshape[i].if_exisited) continue;
 					delete faceshape[i].Surface;
 					faceshape[i].Surface = nullptr;
 				}
@@ -65,11 +68,13 @@ namespace CADMesher
 		vector<PolyMesh> Surface_PolyMeshes;
 
 		void ComputeFaceAndEdge();
+		void narrow_surface();
 		void Discrete_Edge();
 		void Face_type();
 		void C0_Feature();
 		void curvature_feature();
 		void Set_TriMesh();
+		void curvature_discrete();
 
 		void Set_PolyMesh();
 		Matrix2Xd Subdomain(Matrix2Xd &parameters, Matrix2Xd prepnt, Matrix2Xd nextpnt);

@@ -29,12 +29,14 @@ namespace CADMesher
 	using std::vector;
 	struct ShapeFace
 	{
+		bool if_exisited;
 		int id;
 		TopoDS_Face face;
 		vector<vector<int>> wires;
 		GeometryType *Surface;
 		ShapeFace(int id_, TopoDS_Face face_)
 		{
+			if_exisited = true;
 			id = id_;
 			face = face_;
 		}
@@ -43,6 +45,7 @@ namespace CADMesher
 	struct ShapeEdge
 	{
 		int id;
+		bool if_exisited;
 		bool if_merged;
 		bool if_splitted;
 		bool if_C0;
@@ -56,6 +59,7 @@ namespace CADMesher
 		Matrix2Xd parameters;
 		int begin_id;
 		int end_id;
+		double length;
 
 		int next_edge;
 		bool if_visited;
@@ -63,6 +67,7 @@ namespace CADMesher
 		{
 			id = id_;
 			edge = edge_;
+			if_exisited = true;
 			if_merged = false;
 			if_splitted = false;
 			if_curvature = true;
