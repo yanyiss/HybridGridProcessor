@@ -30,19 +30,25 @@ void getFiles(std::string path, std::vector<std::string>& files)
 }
 
 #include <qstring.h>
-void truncateFileName(std::vector<std::string> &files)
+void truncateFilePath(std::string &file)
 {
-	for (auto &file : files)
+	QString fileName = QString::fromStdString(file);
+	int id = fileName.lastIndexOf("/");
+	if (id == -1)
 	{
-		QString fileName = QString::fromStdString(file);
-		int id = fileName.lastIndexOf("/");
+		id = fileName.lastIndexOf("\\");
 		if (id == -1)
-			continue;
-		fileName = fileName.right(fileName.length() - id - 1);
-		id = fileName.lastIndexOf(".");
-		if (id == -1)
-			continue;
-		fileName.truncate(id);
-		file = fileName.toLatin1().data();
+			return;
 	}
+	file = fileName.right(fileName.length() - id - 1).toLatin1().data();
+}
+
+void truncateFileExtension(std::string &file)
+{
+	QString fileName = QString::fromStdString(file);
+	int id = fileName.lastIndexOf(".");
+	if (id == -1)
+		return;
+	fileName.truncate(id);
+	file = fileName.toLatin1().data();
 }

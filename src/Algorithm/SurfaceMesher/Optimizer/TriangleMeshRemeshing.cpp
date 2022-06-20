@@ -4,22 +4,48 @@ namespace CADMesher
 {
 	void TriangleMeshRemeshing::run()
 	{
+#if 0
 		for (auto &tv : mesh->vertices())
 		{
 			if (tv.valence() <= 2 && !tv.is_boundary() || isnan(mesh->data(tv).GaussCurvature))
 			{
 				int p = 0;
 			}
+			int p = 0;
 			mesh->data(tv).set_targetlength(mesh->data(tv).GaussCurvature > 1.0e-4 ?
 				expected_length * 2 / (6 + Log10(mesh->data(tv).GaussCurvature)) : expected_length);
 		}
-		printMeshQuality(*mesh);
+#else
+		initTargetLength();
+#endif
+		
+		TriMeshQualityHelper tmqh(mesh);
+		tmqh.print();
 		dprint("\nMesh vertices number in initialization:", mesh->n_vertices());
-		mesh->delete_isolated_vertices();
-		mesh->garbage_collection();
+		//mesh->delete_isolated_vertices();
+		//mesh->garbage_collection();
 
 		tr.refresh();
+
 		int itertimes = 0;
+		/*for (; itertimes < iterPeriod[0]; ++itertimes)
+		{
+			tr.mark();
+			split();
+			collapse();
+
+			dprint("mesh vertices number:", mesh->n_vertices());
+#ifdef printRemeshingInfo
+			tmqh.update();
+			tmqh.print();
+			tr.pastMark("the " + std::to_string(itertimes + 1) + "-th iteration time:");
+			dprint();
+#endif
+		}*/
+		//return;
+
+		dprint("global remeshing");
+		itertimes = 0;
 		for (; itertimes < 5; ++itertimes)
 		{
 			tr.mark();
@@ -30,16 +56,25 @@ namespace CADMesher
 
 			dprint("mesh vertices number:", mesh->n_vertices());
 #ifdef printRemeshingInfo
-			printMeshQuality(*mesh);
+			tmqh.update();
+			tmqh.print();
 			tr.pastMark("the " + std::to_string(itertimes + 1) + "-th iteration time:");
 			dprint();
 #endif
 		}
-		for (; itertimes < 10; ++itertimes)
+		//globalProject();
+
+		dprint("remeshing while eliminating small angle");
+		itertimes = 0;
+		for (; itertimes < 5; ++itertimes)
 		{
 			tr.mark();
 			if (processFeatureConstraintAngle() < 20)
-				break;
+			{
+				tmqh.update();
+				if(tmqh.getAvgQuality() > 0.92)
+					break;
+			}
 			adjustTargetLength();
 			split();
 			collapse(true);
@@ -48,54 +83,16 @@ namespace CADMesher
 
 			dprint("mesh vertices number:", mesh->n_vertices());
 #ifdef printRemeshingInfo
-			printMeshQuality(*mesh);
+			tmqh.update();
+			tmqh.print();
 			tr.pastMark("the " + std::to_string(itertimes + 1) + "-th iteration time:");
 			dprint();
 #endif
 		}
-		int maxItr = 0;
-		while (processFeatureConstraintAngle() && ++maxItr < 10);
-		/*processFeatureConstraintAngle();
-		processFeatureConstraintAngle();*/
-		/*adjustTargetLength();
-		split();
-		collapse(true);*/
-		//equalize_valence(true);
-		//tangential_relaxation();
 
-#if 0
-		bool ifEnhanced = false;
-		for (int i = 0; i < 20; i++)
-		{
-			tr.mark();
-
-			split();
-			collapse(ifEnhanced);
-			equalize_valence();
-
-			if (i > 4)
-			{
-				//ifEnhanced = true;
-				processAngle();
-			}
-			/*auto mA = meshMinAngle(*mesh);
-			if (mA > lowerAngleBound)
-			{
-				dprint("iteration times:", i + 1);
-				break;
-			}*/
-			tangential_relaxation();
-
-			dprint("\niteration times:", i + 1);
-			dprint("mesh vertices number:", mesh->n_vertices());
-#ifdef printRemeshingInfo
-			dprint("mesh vertices number:", mesh->n_vertices());
-			printMeshQuality(*mesh);
-			tr.pastMark("the " + std::to_string(i + 1) + "-th iteration time:");
-#endif
-
-		}
-#endif
+		dprint("aggressively eliminating small angle");
+		itertimes = 0;
+		while (processFeatureConstraintAngle(true) && ++itertimes < 10);
 
 		for (auto &tv : mesh->vertices())
 		{
@@ -106,7 +103,8 @@ namespace CADMesher
 			}
 		}
 
-		printMeshQuality(*mesh);
+		tmqh.update();
+		tmqh.print();
 #ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
 		if (polymeshInput)
 		{
@@ -148,7 +146,7 @@ namespace CADMesher
 			return false;
 		//dprint(te.idx(), te.v0().idx(), te.v1().idx());
 		OV newvert = mesh->add_vertex(mesh->calc_edge_midpoint(te));
-		mesh->data(newvert).set_targetlength(0.5*(t0 + t1));
+		mesh->data(newvert).set_targetlength(std::min(0.5*(t0 + t1), 1.5 * std::min(t0, t1)));
 		//bool flag = mesh->data(te).get_edgeflag();
 		bool flag1 = mesh->data(te).flag1;
 		bool flag2 = mesh->data(te).flag2;
@@ -484,7 +482,7 @@ namespace CADMesher
 #endif
 	}
 
-	int TriangleMeshRemeshing::processFeatureConstraintAngle()
+	int TriangleMeshRemeshing::processFeatureConstraintAngle(bool ifEnhanced)
 	{
 		auto edgeFlag = [&](OpenMesh::SmartEdgeHandle &e)
 		{
@@ -567,7 +565,7 @@ namespace CADMesher
 #endif
 			return findNumber;
 		}
-
+		//return findNumber;
 		//处理有一个角小于阈值的情况
 		for (auto &th : mesh->halfedges())
 		{
@@ -578,12 +576,17 @@ namespace CADMesher
 			{
 				//dprint(th.to().idx(), th.prev().opp().prev().from().idx(), th.to().valence(), th.prev().opp().prev().from().valence(), th.from());
 				//dprint(mesh->calc_sector_angle(th), mesh->calc_sector_angle(th.next()), mesh->calc_sector_angle(th.prev()));
-				if (th.to().valence() == 3)
-					CB = th.next().opp().prev();
-				else if (th.prev().opp().prev().from().valence() == 3)
-					CB = th.prev().opp().prev().opp().prev();
-				if (mesh->is_collapse_ok(CB.prev()) && !mesh->is_boundary(CB.prev().edge()))
-					goto goto20220511;
+				if (ifEnhanced)
+				{
+					if (th.to().valence() == 3)
+						CB = th.next().opp().prev();
+					else if (th.prev().opp().prev().from().valence() == 3)
+						CB = th.prev().opp().prev().opp().prev();
+					if (mesh->is_collapse_ok(CB.prev()) && !mesh->is_boundary(CB.prev().edge()))
+						goto goto20220511;
+					else
+						continue;
+				}
 				else
 					continue;
 			}
@@ -608,7 +611,7 @@ namespace CADMesher
 					mesh->data(temp.edge()).flag1 = true;
 				if (mesh->data(temp.prev().edge()).flag2)
 					mesh->data(temp.edge()).flag2 = true;
-				if (edgeFlag(CB.edge()) || edgeFlag(CB.next().edge()) || edgeFlag(CB.prev().edge()))
+				if (edgeFlag(CB.edge()) || edgeFlag(CB.next().edge()) || edgeFlag(CB.prev().edge()) || edgeFlag(temp.edge()) || edgeFlag(temp.prev().edge()))
 					mesh->data(CB.from()).set_vertflag(true);
 				mesh->collapse(CB.prev());
 				++processNumber;
@@ -944,6 +947,32 @@ namespace CADMesher
 #endif
 	}
 
+	void TriangleMeshRemeshing::globalProject()
+	{
+		//vector<unsigned> &triangle_surface_index = globalmodel.triangle_surface_index;
+		//vector<vector<unsigned>> vertex_surface_index(globalmodel.faceshape.size());
+		//for (auto tv : mesh_->vertices()) {
+		//	OpenMesh::Vec3d p = mesh_->point(tv);
+		//	CGAL_AABB_Tree::Point_and_primitive_id point_primitive = AABB_tree->closest_point_and_primitive(CGAL_double_3_Point(p[0], p[1], p[2]));
+		//	CGAL_Triangle_Iterator it = point_primitive.second;
+		//	unsigned face_id = std::distance(triangle_vectors.begin(), it);
+		//	vertex_surface_index[triangle_surface_index[face_id]].push_back(tv.idx());
+		//}
+		///*print(vertex_surface_index[67].size());
+		//for (int i = 0; i < vertex_surface_index[67].size(); i++)
+		//	std::cout << vertex_surface_index[67][i] << ",";*/
+		//MeshProjectToSurface(mesh_, vertex_surface_index, &globalmodel);
+		vector<unsigned> &triangle_surface_index = globalmodel.triangle_surface_index;
+		vector<vector<unsigned>> vertex_surface_index(globalmodel.faceshape.size());
+		for (auto &tv : mesh->vertices())
+		{
+			auto cdf = aabbtree->closest_distance_and_face_handle(mesh->point(tv));
+			vertex_surface_index[triangle_surface_index[cdf.second.idx()]].push_back(tv.idx());
+
+		}
+		MeshProjectToSurface(mesh, vertex_surface_index, &globalmodel);
+	}
+
 	O3d TriangleMeshRemeshing::GravityPos(const OV &v)
 	{
 		OpenMesh::Vec3d posSum(0, 0, 0);
@@ -953,7 +982,7 @@ namespace CADMesher
 		}
 		posSum /= mesh->valence(v);
 
-#if 1
+#if 0
 		return posSum;
 #else
 		OpenMesh::Vec3d n(0, 0, 0);
@@ -976,7 +1005,7 @@ namespace CADMesher
 		}
 		posSum /= mesh->valence(v);
 
-#if 1
+#if 0
 		return posSum;
 #else
 		OpenMesh::Vec3d n(0, 0, 0);
@@ -987,6 +1016,52 @@ namespace CADMesher
 		if (n.sqrnorm() > epsilonerror)
 			n.normalize();
 		return posSum - (posSum - mesh->point(v)).dot(n)*n;
+#endif
+	}
+
+	void TriangleMeshRemeshing::initTargetLength()
+	{
+		//double kMin = 1.0e-2;
+		//double kMax = 1.0e1;
+		////expected_length *= 2;
+		//double error = (6 / kMin + std::sqrt(36 / (kMin*kMin) - 12 * expected_length*expected_length)) / 6.0;
+		//double lowerLengthBound = std::sqrt(3 * error*(2 / kMax - error));
+		////double kMin = sqrt(3) / expected_length;
+		/*double l = meshAverageLength(*mesh);
+		for (auto tv : mesh->vertices())
+		{
+			mesh->data(tv).set_targetlength(l);
+		}*/
+
+#if 1
+		double error = 0.01*expected_length;
+		double minL = 0.1*expected_length;
+		double maxL = expected_length;
+
+		double kMin = 6 * error / (maxL*maxL + 3 * error*error);
+		double kMax = 6 * error / (minL*minL + 3 * error*error);
+
+
+		for (auto &tv : mesh->vertices())
+		{
+			if (tv.valence() <= 2 && !tv.is_boundary() || isnan(mesh->data(tv).GaussCurvature))
+			{
+				int p = 0;
+			}
+			int p = 0;
+			/*mesh->data(tv).set_targetlength(mesh->data(tv).GaussCurvature > 1.0e-4 ?
+				expected_length * 2 / (6 + Log10(mesh->data(tv).GaussCurvature)) : expected_length);*/
+			//mesh->data(tv).set_targetlength()
+			double gc = mesh->data(tv).GaussCurvature;
+			if (gc <= kMin * 1.001)
+				mesh->data(tv).set_targetlength(maxL);
+			else if (gc > kMax)
+				mesh->data(tv).set_targetlength(minL);
+			else
+				mesh->data(tv).set_targetlength(std::sqrt(3 * error*(2 / gc - error)));
+			dprint(gc, mesh->data(tv).get_targetlength());
+		}
+		int p = 0;
 #endif
 	}
 

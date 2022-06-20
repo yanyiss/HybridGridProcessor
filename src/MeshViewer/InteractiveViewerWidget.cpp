@@ -300,7 +300,9 @@ void InteractiveViewerWidget::pick_vertex(int x,int y)
 {
 	int r = find_vertex_using_selected_point();
 	lastestVertex = r;
-	printf("Select Vertex : %d\n", r);
+	//printf("Select Vertex : %d\n", r);
+	dprint("Select Vertex:", r, "\tCurvature:", mesh.data(mesh.vertex_handle(r)).GaussCurvature,
+		"\tLength:",mesh.data(mesh.vertex_handle(r)).get_targetlength());
 
 	std::vector<int>::iterator it;
 	if( (it = std::find(selectedVertex.begin(),selectedVertex.end(), r)) == selectedVertex.end() )
@@ -649,13 +651,11 @@ void InteractiveViewerWidget::showDebugTest()
 #if 0
 		std::string path = "..\\model\\CAD\\step files lib";
 #else
-		std::string path = "..\\model\\CAD";
+		std::string path = "..\\model\\models from partya";
 #endif
 		getFiles(path, allFileName);
-		truncateFileName(allFileName);
 		std::ofstream fileWriter;
-		fileWriter.open("..\\model\\Isotropic\\IsoMeshLog.txt", std::ios::out);
-
+		fileWriter.open("C:\\Git Rep\\HybridGridProcessor\\model\\Isotropic Mesh\\IsoMeshLog.txt", std::ios::out);
 		using namespace CADMesher;
 		int i = 0;
 		for (; i < allFileName.size();)
@@ -664,14 +664,23 @@ void InteractiveViewerWidget::showDebugTest()
 			dprint("\n\n\nfile index:\t", i++, "\nfileName:\t", fileName);
 			globalmodel.clear();
 			Iso_Mesh iso_mesh(QString::fromStdString(fileName));
-			if (!OpenMesh::IO::write_mesh(globalmodel.initial_trimesh, "..\\model\\Isotropic Mesh" + fileName + "_iso.obj"));
+			timeRecorder tr;
+			TriangleMeshRemeshing trm(&(globalmodel.initial_trimesh));
+			trm.run();
+			double iso_time = tr.out();
+
+			truncateFilePath(fileName);
+			truncateFileExtension(fileName);
+			if (!OpenMesh::IO::write_mesh(globalmodel.initial_trimesh, "C:\\Git Rep\\HybridGridProcessor\\model\\Isotropic Mesh\\" + fileName + "_iso.obj"));
 			{
 				std::cerr << "fail";
 			}
-
+			TriMeshQualityHelper tmqh(&globalmodel.initial_trimesh);
 			fileWriter << fileName << std::endl;
-			fileWriter << "output mesh quantity: " << globalmodel.initial_trimesh.n_vertices() << std::endl;
-			fileWriter << "output mesh quality: " << meshMinAngle(globalmodel.initial_trimesh) << " " << meshMinQuality(globalmodel.initial_trimesh) << std::endl;
+			fileWriter << "quantity: " << globalmodel.initial_trimesh.n_vertices() << std::endl;
+			fileWriter << "min, max, avg angle: " << tmqh.getMinAngle() << "," << tmqh.getMaxAngle() << "," << tmqh.getAvgAngle() << std::endl;
+			fileWriter << "min, avg quality: " << tmqh.getMinQuality() << "," << tmqh.getAvgQuality() << std::endl;
+			fileWriter << "remeshing times:" << iso_time << "\n\n";
 		}
 		fileWriter.close();
 	}

@@ -4,13 +4,14 @@
 #include<algorithm>
 #include "..\src\Algorithm\SurfaceMesher\Optimizer\TriangleMeshRemeshing.h"
 
+#define USETRI
 
 namespace CADMesher
 {
 	Iso_Mesh::Iso_Mesh(QString & fileName)
 	{
 		occ_reader = new OccReader(fileName);
-#if 1
+#ifdef USETRI
 		occ_reader->Set_TriMesh();
 		//occ_reader->Surface_delete();
 		MergeModel();
@@ -30,7 +31,7 @@ namespace CADMesher
 
 	void Iso_Mesh::MergeModel()
 	{
-#if 1
+#ifdef USETRI
 		TriMesh &model_mesh = globalmodel.initial_trimesh;
 		auto &surface_meshes = occ_reader->Surface_TriMeshes;
 #else
@@ -42,6 +43,7 @@ namespace CADMesher
 		model_mesh.clear();
 		for (auto &face : faceshape)
 		{
+			if (!face.if_exisited) continue;
 			auto &wires = face.wires;
 			for (auto &edges : wires)
 			{
@@ -105,14 +107,14 @@ namespace CADMesher
 			vector<Mesh::VertexHandle> vhandle;
 			Mesh::VertexHandle vh;
 			vhandle.reserve(frac_mesh.n_vertices());
-			for (auto tv : frac_mesh.vertices())
+			for (auto &tv : frac_mesh.vertices())
 			{
 				auto v = frac_mesh.point(tv);
 				vh = model_mesh.add_vertex(Mesh::Point(v[0], v[1], v[2]));
 				model_mesh.data(vh).GaussCurvature = frac_mesh.data(tv).GaussCurvature;
 				vhandle.push_back(vh);
 			}
-			for (auto tf : frac_mesh.faces())
+			for (auto &tf : frac_mesh.faces())
 			{
 				vector<TriMesh::VertexHandle> pos;
 				/*for (auto tfv = frac_mesh.cfv_begin(tf); tfv != frac_mesh.cfv_end(tf); tfv++)
@@ -124,7 +126,7 @@ namespace CADMesher
 				model_mesh.add_face(pos);
 				triangle_surface_index.push_back(i);
 			}
-			for (auto e : frac_mesh.edges())
+			for (auto &e : frac_mesh.edges())
 			{
 				if (frac_mesh.data(e).flag1)
 				{
@@ -155,7 +157,15 @@ namespace CADMesher
 			pointsnum = model_mesh.n_vertices();
 		}
 
-		for (auto te : model_mesh.edges())
+#ifdef USETRI
+		globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(model_mesh);
+#else
+		TriMesh temp(model_mesh);
+		globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(temp);
+#endif // USETRI
+
+
+		for (auto &te : model_mesh.edges())
 		{
 			if (model_mesh.is_boundary(te))
 				model_mesh.data(te).set_edgeflag(true);
@@ -166,7 +176,7 @@ namespace CADMesher
 		for (int i = 0; i < edgeshape.size(); i++)
 		{
 			auto &edge0 = edgeshape[i];
-			if (edge0.if_merged || edge0.reversed_edge == -1) continue;
+			if (!edge0.if_exisited || edge0.if_merged || edge0.reversed_edge == -1) continue;
 			auto &edge1 = edgeshape[edgeshape[i].reversed_edge];
 			edge0.if_merged = true;
 			edge1.if_merged = true;
@@ -185,6 +195,7 @@ namespace CADMesher
 				model_mesh.add_face(model_mesh.vertex_handle(m1), model_mesh.vertex_handle(n0), model_mesh.vertex_handle(m1 + 1));
 			}
 			int length = edge0.parameters.cols();
+
 			model_mesh.add_face(model_mesh.vertex_handle(m0 + 1), model_mesh.vertex_handle(n1), model_mesh.vertex_handle(m1 + length - 2));
 			model_mesh.add_face(model_mesh.vertex_handle(m1 + 1), model_mesh.vertex_handle(n0), model_mesh.vertex_handle(m0 + length - 2));
 			for (int j = 1; j < length - 2; j++)

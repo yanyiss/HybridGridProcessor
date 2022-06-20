@@ -142,28 +142,12 @@ void triangulate(const Eigen::Matrix2Xd &all_pts, const std::vector<Eigen::Matri
 	sum = E.size() - 1;
 	in.numberofholes = sum;
 	in.holelist = (double*)calloc(sum * 2, sizeof(double));
-	//由x坐标跨度判断外边界的序号，记为outer_flag
-	std::vector<double> x_scale;
-	for (int i = 0; i < E.size(); i++) {
-		auto &e = E[i];
-		double x_max = DBL_MIN;
-		double x_min = DBL_MAX;
-		for (int j = 0; j < e.cols(); j++) {
-			double p = all_pts(0, e(0, j));
-			x_max = std::max(x_max, p);
-			x_min = std::min(x_min, p);
-		}
-		x_scale.push_back(x_max - x_min);
-	}
-	int outerflag = -1;
-	double x_scale_max = DBL_MIN;
-	for (int i = 0; i < x_scale.size(); i++) {
-		if (x_scale[i] > x_scale_max) {
-			x_scale_max = x_scale[i];
-			outerflag = i;
-		}
-	}
 
+	int outerflag = outerFlag(all_pts, E);
+	/*if (outerflag != 0)
+	{
+		system("pause");
+	}*/
 	//根据逆向多边形外角和为360度判断外边界，记为outer_flag
 	int itertimes = 0;
 	for (int i = 0; i < E.size(); i++) {
@@ -222,4 +206,30 @@ void triangulate(const Eigen::Matrix2Xd &all_pts, const std::vector<Eigen::Matri
 	free(out.segmentlist);
 	free(out.segmentmarkerlist);
 	free(out.pointmarkerlist);
+}
+
+int outerFlag(const Eigen::Matrix2Xd &all_pts, const std::vector<Eigen::Matrix2Xi> &E)
+{
+	//由x坐标跨度判断外边界的序号，记为outer_flag
+	std::vector<double> x_scale;
+	for (int i = 0; i < E.size(); i++) {
+		auto &e = E[i];
+		double x_max = DBL_MIN;
+		double x_min = DBL_MAX;
+		for (int j = 0; j < e.cols(); j++) {
+			double p = all_pts(0, e(0, j));
+			x_max = std::max(x_max, p);
+			x_min = std::min(x_min, p);
+		}
+		x_scale.push_back(x_max - x_min);
+	}
+	int outerflag = -1;
+	double x_scale_max = DBL_MIN;
+	for (int i = 0; i < x_scale.size(); i++) {
+		if (x_scale[i] > x_scale_max) {
+			x_scale_max = x_scale[i];
+			outerflag = i;
+		}
+	}
+	return outerflag;
 }

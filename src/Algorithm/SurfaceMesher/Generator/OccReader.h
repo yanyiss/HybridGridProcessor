@@ -34,6 +34,7 @@ namespace CADMesher
 			dprint(filetype + "file read finished\n");
 
 			ComputeFaceAndEdge();
+			narrow_surface();
 			Discrete_Edge();
 			Face_type();
 			C0_Feature();
@@ -47,6 +48,7 @@ namespace CADMesher
 				vector<ShapeFace> &faceshape = globalmodel.faceshape;
 				for (int i = 0; i < faceshape.size(); i++)
 				{
+					if (!faceshape[i].if_exisited) continue;
 					delete faceshape[i].Surface;
 					faceshape[i].Surface = nullptr;
 				}
@@ -65,7 +67,10 @@ namespace CADMesher
 		vector<PolyMesh> Surface_PolyMeshes;
 
 		void ComputeFaceAndEdge();
+		void narrow_surface();
 		void Discrete_Edge();
+		bool ProcessTangentialBoundary(int fid, int bid);
+		void ClearBoundary(TriMesh &tm);
 		void Face_type();
 		void C0_Feature();
 		void curvature_feature();
@@ -73,8 +78,8 @@ namespace CADMesher
 		void Set_PolyMesh();
 		Matrix2Xd Subdomain(Matrix2Xd &parameters, Matrix2Xd prepnt, Matrix2Xd nextpnt);
 	private:
-		double initialRate = 0.006;
-		double degeneratedRate = 0.01;
+		double initialRate = 0.01;
+		//double degeneratedRate = 0.02;
 	};
 }
 #endif // !OCCREADER_H

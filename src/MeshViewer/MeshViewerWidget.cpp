@@ -885,30 +885,49 @@ void MeshViewerWidget::draw_mesh_pointset() const
 #include "../src/Algorithm/SurfaceMesher/Optimizer/TriangleMeshRemeshing.h"
 void MeshViewerWidget::draw_IsotropicMesh()
 {
-	if (ifUpdateMesh)
-	{
-//#if 0
-		timeRecorder tr;
+//	if (ifUpdateMesh)
+//	{
+////#if 0
+//		timeRecorder tr;
+//		CADMesher::TriangleMeshRemeshing *tmr = new CADMesher::TriangleMeshRemeshing(&(CADMesher::globalmodel.initial_trimesh));
+//		tmr->run();
+//		tr.out("Isotropic Remesing Time:");
+////#else
+////		initMeshStatusAndNormal(CADMesher::globalmodel.initial_trimesh);
+////		CADMesher::TriangleMeshRemeshing *tmr = new CADMesher::TriangleMeshRemeshing(&CADMesher::globalmodel.initial_trimesh);
+////		tmr->run();
+////		mesh = Mesh(CADMesher::globalmodel.initial_trimesh);
+////#endif
+//		delete tmr;
+//		ifUpdateMesh = false; 
+//		
+//		std::string cfn = CADFileName.toLatin1().data();
+//		bool if_saveOK = OpenMesh::IO::write_mesh(mesh, "../model/CAD/Isotropic Mesh/" + cfn + "_iso.obj");
+//		if (if_saveOK)
+//			dprint("The isotropic mesh has been saved in \"Isotropic Mesh\" folder");
+//		else
+//			dprint("Save isotropic mesh failed");
+//
+//	}
+
+	//用于remesh普通三角网格
+	static bool once = true;
+	if (once) {
+		for (auto te : mesh.edges())
+		{
+			auto n0 = mesh.calc_face_normal(te.h0().face());
+			auto n1 = mesh.calc_face_normal(te.h1().face());
+			if (n0.dot(n1) < 0.8) {
+				mesh.data(te).flag1 = true;
+				mesh.data(te.v0()).set_vertflag(true);
+				mesh.data(te.v1()).set_vertflag(true);
+			}
+		}
 		CADMesher::TriangleMeshRemeshing *tmr = new CADMesher::TriangleMeshRemeshing(&mesh);
 		tmr->run();
-		tr.out("Isotropic Remesing Time:");
-//#else
-//		initMeshStatusAndNormal(CADMesher::globalmodel.initial_trimesh);
-//		CADMesher::TriangleMeshRemeshing *tmr = new CADMesher::TriangleMeshRemeshing(&CADMesher::globalmodel.initial_trimesh);
-//		tmr->run();
-//		mesh = Mesh(CADMesher::globalmodel.initial_trimesh);
-//#endif
-		delete tmr;
-		ifUpdateMesh = false; 
-		
-		std::string cfn = CADFileName.toLatin1().data();
-		bool if_saveOK = OpenMesh::IO::write_mesh(mesh, "../model/CAD/Isotropic Mesh/" + cfn + "_iso.obj");
-		if (if_saveOK)
-			dprint("The isotropic mesh has been saved in \"Isotropic Mesh\" folder");
-		else
-			dprint("Save isotropic mesh failed");
+		OpenMesh::IO::write_mesh(mesh, "C:/Git Rep/VolumeMeshFramework/VolumeMeshProcessing_Base/surface.obj");
+		once = false;
 	}
-
 }
 
 #include "../src/Algorithm/SurfaceMesher/Optimizer/AnisotropicMeshRemeshing.h"
@@ -988,6 +1007,39 @@ void MeshViewerWidget::draw_feature()
 		}
 	}
 	glEnd();
+
+	////draw curvature distribution
+	//glColor3d(0, 0, 1);
+	//for (auto &tv : mesh.vertices())
+	//{
+	//	double gc = mesh.data(tv).GaussCurvature;
+	//	if (gc < 1.0e-4)
+	//		gc = 0;
+	//	else if (gc > 100)
+	//		gc = 1;
+	//	else
+	//		gc = (4 + log10(gc)) / 6.0;
+
+	//	glPointSize(gc*10+1);
+	//	glBegin(GL_POINTS);
+	//	glVertex3dv(mesh.point(tv).data());
+	//	glEnd();
+	//}
+
+	/*int pN = 0;
+	glColor3d(0.1, 0.1, 0.1);
+	glPointSize(20);
+	glBegin(GL_POINTS);
+	for (auto &tv : mesh.vertices())
+	{
+		if (tv.valence() <= 2 || tv.is_boundary())
+		{
+			++pN;
+			glVertex3dv(mesh.point(tv).data());
+		}
+	}
+	glEnd();
+	dprint("problem number:", pN);*/
 }
 //=======
 #include "../src/Algorithm/CheckBoard/CheckBoardGenerator.h"

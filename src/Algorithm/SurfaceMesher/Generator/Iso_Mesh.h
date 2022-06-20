@@ -19,6 +19,7 @@ namespace CADMesher
 
 
 	public:
+
 		void MergeModel();
 		int EndId(vector<ShapeEdge> &edgeshape, int edge_id);
 		void ResetFeature();

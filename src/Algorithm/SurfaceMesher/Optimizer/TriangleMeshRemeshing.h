@@ -23,11 +23,11 @@ namespace CADMesher
 				expected_length = meshAverageLength(*mesh);
 			}
 			boundaryNum = 0;
-			aabbtree = new ClosestPointSearch::AABBTree(*mesh);
+			aabbtree = globalmodel.init_trimesh_tree;
 		};
 		TriangleMeshRemeshing(const TriangleMeshRemeshing &tmr) = delete;
 		~TriangleMeshRemeshing() { 
-			if (aabbtree) { delete aabbtree; aabbtree = nullptr; } 
+			//if (aabbtree) { delete aabbtree; aabbtree = nullptr; } 
 		}
 
 	public:
@@ -43,8 +43,10 @@ namespace CADMesher
 		//auxiliary step
 		void adjustTargetLength();
 		void processAngle();
-		int processFeatureConstraintAngle();
+		int processFeatureConstraintAngle(bool ifEnhanced = false);
+		void globalProject();
 		//geometry support
+		void initTargetLength();
 		O3d GravityPos(const OV &v);
 		O3d GravityPos(const OV &v, const std::vector<OpenMesh::Vec3d> &normal, const std::vector<double> &area);
 

@@ -76,7 +76,7 @@ void Riemannremesh::collapse()
 	TriMesh::EdgeHandle e;
 	TriMesh::HalfedgeHandle he;
 	TriMesh::VertexHandle p1, p2;
-	bool is_collapse = true;
+	
 	for (int i = mesh->n_edges() - 1; i >= 0; i--)
 	{
 		if (i > mesh->n_edges() - 1) continue;
@@ -93,6 +93,8 @@ void Riemannremesh::collapse()
 			p2 = mesh->to_vertex_handle(he);
 		}
 		if (Riemannlen(p1, p2) >= lowlength) continue;
+
+		bool is_collapse = true;
 		for (auto vf : mesh->vf_range(p1))
 		{
 			int count = 0;
