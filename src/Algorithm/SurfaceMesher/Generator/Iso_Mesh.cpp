@@ -12,7 +12,8 @@ namespace CADMesher
 	{
 		occ_reader = new OccReader(fileName);
 #ifdef USETRI
-		occ_reader->Set_TriMesh();
+		//occ_reader->Set_TriMesh();
+		occ_reader->tempTest();
 		//occ_reader->Surface_delete();
 		MergeModel();
 		ResetFeature();
@@ -21,7 +22,9 @@ namespace CADMesher
 		//Write_Obj(globalmodel.initial_trimesh);
 #else 
 		occ_reader->Set_PolyMesh();
+		dprint(globalmodel.initial_polymesh.n_vertices());
 		MergeModel();
+		dprint(globalmodel.initial_polymesh.n_vertices());
 		ResetFeature1();
 		TriangleMeshRemeshing trm(&(globalmodel.initial_polymesh));
 		trm.run();
@@ -338,6 +341,23 @@ namespace CADMesher
 			model_mesh.data(te.v0()).set_vertflag(true);
 			model_mesh.data(te.v1()).set_vertflag(true);
 		}
+
+		for (auto te : model_mesh.edges())
+		{
+			if (model_mesh.is_boundary(te))
+			{
+				model_mesh.data(te).flag1 = true;
+				model_mesh.data(te.v0()).set_vertflag(true);
+				model_mesh.data(te.v1()).set_vertflag(true);
+			}
+		}
+
+		for (int i = 71; i < 266; ++i)
+		{
+			//dprint(tm->find_halfedge(tm->vertex_handle(i), tm->vertex_handle(i + 1)).is_valid());
+			model_mesh.data(model_mesh.find_halfedge(model_mesh.vertex_handle(i), model_mesh.vertex_handle(i + 1))).if_enhanced = true;
+		}
+		model_mesh.data(model_mesh.find_halfedge(model_mesh.vertex_handle(266), model_mesh.vertex_handle(71))).if_enhanced = true;
 		dprint("Reset Feature Done!");
 	}
 

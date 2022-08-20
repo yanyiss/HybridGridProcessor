@@ -6,25 +6,15 @@
 #include <ctime>
 #include <Eigen/Dense>
 #include <numeric>
-#include "..\src\Dependency\CPS\CPS_AABBTree.h"
 #include "..\src\Algorithm\SurfaceMesher\Generator\basic_def.h"
-//#define printRemeshingInfo
+#define printRemeshingInfo
 
 namespace CADMesher
 {
 	class TriangleMeshRemeshing
 	{
 	public:
-		explicit TriangleMeshRemeshing(TriMesh *mesh_, double target_length = -1)
-			:mesh(mesh_), expected_length(target_length)
-		{
-			if (expected_length <= 0)
-			{
-				expected_length = meshAverageLength(*mesh);
-			}
-			boundaryNum = 0;
-			aabbtree = globalmodel.init_trimesh_tree;
-		};
+		explicit TriangleMeshRemeshing(TriMesh *mesh_, double target_length = -1);
 		TriangleMeshRemeshing(const TriangleMeshRemeshing &tmr) = delete;
 		~TriangleMeshRemeshing() { 
 			//if (aabbtree) { delete aabbtree; aabbtree = nullptr; } 
@@ -42,9 +32,9 @@ namespace CADMesher
 		void tangential_relaxation();
 		//auxiliary step
 		void adjustTargetLength();
-		void processAngle();
 		int processFeatureConstraintAngle(bool ifEnhanced = false);
 		void globalProject();
+		void enhanceBasedFeature(bool d);
 		//geometry support
 		void initTargetLength();
 		O3d GravityPos(const OV &v);
@@ -54,9 +44,9 @@ namespace CADMesher
 	private:
 		double expected_length;
 
-
 		timeRecorder tr;
 
+		double growth = 1.1;
 		double coerciveAngleBound = 0.06;
 		double lowerAngleBound = 0.1;
 		std::vector<double> initial_FaceTargetLength;

@@ -1,5 +1,5 @@
 #pragma once
-
+#define USE_AVX
 #ifdef USE_AVX
 #include <immintrin.h>
 

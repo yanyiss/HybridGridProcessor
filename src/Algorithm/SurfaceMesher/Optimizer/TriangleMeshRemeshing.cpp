@@ -2,58 +2,46 @@
 
 namespace CADMesher
 {
+	TriangleMeshRemeshing::TriangleMeshRemeshing(TriMesh* mesh_, double target_length)
+		:mesh(mesh_), expected_length(target_length)
+	{
+		if (expected_length <= 0)
+		{
+			expected_length = meshAverageLength(*mesh);
+		}
+		aabbtree = globalmodel.init_trimesh_tree;
+		boundaryNum = 0;
+	}
+
 	void TriangleMeshRemeshing::run()
 	{
-#if 0
-		for (auto &tv : mesh->vertices())
-		{
-			if (tv.valence() <= 2 && !tv.is_boundary() || isnan(mesh->data(tv).GaussCurvature))
-			{
-				int p = 0;
-			}
-			int p = 0;
-			mesh->data(tv).set_targetlength(mesh->data(tv).GaussCurvature > 1.0e-4 ?
-				expected_length * 2 / (6 + Log10(mesh->data(tv).GaussCurvature)) : expected_length);
-		}
-#else
-		initTargetLength();
-#endif
-		
+		//tmqh用来监控网格的质量
 		TriMeshQualityHelper tmqh(mesh);
 		tmqh.print();
 		dprint("\nMesh vertices number in initialization:", mesh->n_vertices());
-		//mesh->delete_isolated_vertices();
-		//mesh->garbage_collection();
-
+		//tr用来监控算法时间
 		tr.refresh();
 
-		int itertimes = 0;
-		/*for (; itertimes < iterPeriod[0]; ++itertimes)
-		{
-			tr.mark();
-			split();
-			collapse();
+		//remesh算法分为三个阶段：
+		//1.提高网格平均质量
+		//2.消除大部分小角，并且继续优化网格平均质量
+		//3.消除所有小角
 
-			dprint("mesh vertices number:", mesh->n_vertices());
-#ifdef printRemeshingInfo
-			tmqh.update();
-			tmqh.print();
-			tr.pastMark("the " + std::to_string(itertimes + 1) + "-th iteration time:");
-			dprint();
-#endif
-		}*/
-		//return;
-
+		initTargetLength();//根据曲率设置目标边长
+		enhanceBasedFeature(true); //return;
+		//提高网格平均质量
+		tangential_relaxation();//把顶点移动到周围点的中心
 		dprint("global remeshing");
-		itertimes = 0;
+		int itertimes = 0;
 		for (; itertimes < 5; ++itertimes)
 		{
 			tr.mark();
-			split();
-			collapse();
-			equalize_valence();
-			tangential_relaxation();
-
+			adjustTargetLength();
+			split();//将长边分割为短边
+			collapse();//去除、删除短边
+			equalize_valence();//平衡度数（一个顶点的边数）
+			tangential_relaxation();//把顶点移动到周围点的中心
+			enhanceBasedFeature(false);
 			dprint("mesh vertices number:", mesh->n_vertices());
 #ifdef printRemeshingInfo
 			tmqh.update();
@@ -62,24 +50,32 @@ namespace CADMesher
 			dprint();
 #endif
 		}
-		//globalProject();
+		/*for (auto tv : mesh->vertices())
+			mesh->data(tv).vff = false;*/
+		
+		tr.mark();
+		globalProject();//点到曲面的投影
+		tr.pastMark("project to the origin surface time:");
 
+		//消除大部分小角，并且继续优化网格质量
 		dprint("remeshing while eliminating small angle");
 		itertimes = 0;
 		for (; itertimes < 5; ++itertimes)
 		{
 			tr.mark();
-			if (processFeatureConstraintAngle() < 20)
+			if (processFeatureConstraintAngle() < 20)//处理最小角
 			{
 				tmqh.update();
-				if(tmqh.getAvgQuality() > 0.92)
+				if(tmqh.getAvgQuality() > 0.88)
 					break;
 			}
+
 			adjustTargetLength();
 			split();
 			collapse(true);
 			equalize_valence(true);
-			tangential_relaxation();
+			tangential_relaxation();//把顶点移动到周围点的中心
+			enhanceBasedFeature(false);
 
 			dprint("mesh vertices number:", mesh->n_vertices());
 #ifdef printRemeshingInfo
@@ -90,25 +86,22 @@ namespace CADMesher
 #endif
 		}
 
+		tr.mark();
+		globalProject();
+		tr.pastMark("project to the origin surface time:");
+
+		//return;
+		//消除所有小角
 		dprint("aggressively eliminating small angle");
 		itertimes = 0;
-		while (processFeatureConstraintAngle(true) && ++itertimes < 10);
-
-		for (auto &tv : mesh->vertices())
-		{
-			if (tv.valence() <= 2 && !tv.is_boundary())
-			{
-				int p = 0;
-				dprint(tv.idx(), tv.valence());
-			}
-		}
+		while (processFeatureConstraintAngle(true) && ++itertimes < 5);
 
 		tmqh.update();
 		tmqh.print();
 #ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
 		if (polymeshInput)
 		{
-			assembleMesh();
+			assembleMesh();//将非三角形装配入网格
 		}
 #endif
 		dprint("Remeshing Done!\n");
@@ -165,19 +158,11 @@ namespace CADMesher
 			mesh->data(mesh->edge_handle(mesh->find_halfedge(vert[1], newvert))).flag2 = true;
 		}
 		return true;
-		/*else
-		{
-			mesh->set_point(newvert, aabbtree->closest_point(GravityPos(newvert)));
-		}*/
 	}
 
 	void TriangleMeshRemeshing::collapse(bool ifEnhanced)
 	{
 		int collapsenumber = 0;
-		auto edgeFlag = [&](OpenMesh::SmartEdgeHandle &e)
-		{
-			return mesh->data(e).flag1 || mesh->data(e).flag2;
-		};
 		for (auto the : mesh->halfedges()) {
 			if (!mesh->is_collapse_ok(the) || mesh->is_boundary(the.from()) && !mesh->is_boundary(the.to()))
 			{
@@ -189,10 +174,6 @@ namespace CADMesher
 				continue;
 			}
 #endif
-			/*if (mesh->data(the.edge()).flag1 || mesh->data(the.edge()).flag2)
-				continue;
-			if (mesh->is_boundary(the))
-				continue;*/
 
 			OV fromvert = mesh->from_vertex_handle(the);
 			if (mesh->data(fromvert).get_vertflag())
@@ -209,16 +190,14 @@ namespace CADMesher
 
 #if 1
 			//特征线上移动点
-			//if (mesh->data(the.edge()).get_edgeflag())
-			if (edgeFlag(the.edge()))
+			if (mesh->data(the.edge()).get_edgeflag())
 			{
 				if (x >= 0.666 * min_of_t0_t1) continue;
 				int count = 0;
 				OV v = fromvert;
 				for (auto &tvoh : mesh->voh_range(fromvert)) 
 				{
-					//if (!mesh->data(tvoh.edge()).get_edgeflag()) continue;
-					if (!edgeFlag(tvoh.edge())) continue;
+					if (!mesh->data(tvoh.edge()).get_edgeflag()) continue;
 					if (tvoh.to() == tovert) continue;
 					++count;
 					v = tvoh.to();
@@ -254,16 +233,6 @@ namespace CADMesher
 				}
 				continue;
 			}
-			//if (mesh->data(mesh->edge_handle(the)).get_edgeflag()) continue;
-			//移除短边
-			/*if (mesh->data(fromvert).get_vertflag()) 
-			{
-				if (mesh->data(tovert).get_vertflag() && x < min_of_t0_t1*0.1)
-				{
-					mesh->collapse(the);
-				}
-				continue;
-			}*/
 #else
 			if (mesh->data(the.edge()).flag1 || mesh->data(the.edge()).flag2)
 				continue;
@@ -274,7 +243,7 @@ namespace CADMesher
 
 			if (ifEnhanced)
 			{
-				//stop if collapsing results in long edges
+				//若collapse后出现长边，则退出
 				for (OV thev : mesh->vv_range(fromvert))
 					if ((pos - mesh->point(thev)).norm() > 1.33 * min_of_t0_t1)
 						goto goto20210523;
@@ -282,7 +251,7 @@ namespace CADMesher
 					if ((pos - mesh->point(thev)).norm() > 1.33 * min_of_t0_t1)
 						goto goto20210523;
 
-				//stop if collapsing results in small angles
+				//若collapse后出现小角，则退出
 				auto t_f = the.opp();
 				auto he = the.prev().opp().prev();
 				while (he != t_f) {
@@ -296,9 +265,48 @@ namespace CADMesher
 					if (acos(-p20.dot(p01)) < lowerAngleBound) goto goto20210523;
 					he = he.opp().prev();
 				}
+
 			}
-			//stop if collapsing results in selfintersection
-			//to be completed
+
+			//若collapse后出现翻折三角形，则退出
+			/*bool ifDetect = false;
+			for (auto tvv : mesh->vv_range(the.from()))
+				if (mesh->data(tvv).get_vertflag())
+					ifDetect = true;
+			if (ifDetect)*/
+			{
+				auto& fromPos = mesh->point(the.from());
+				//auto& pos = mesh->point(the.to());
+				OH flipH = the.prev().opp();
+				int endId = the.opp().next().idx();
+				while (flipH.idx() != endId)
+				{
+					auto& p0 = mesh->point(mesh->to_vertex_handle(flipH));
+					auto& p1 = mesh->point(mesh->to_vertex_handle(mesh->next_halfedge_handle(flipH)));
+					if ((p0 - fromPos).cross(p1 - fromPos).dot((p0 - pos).cross(p1 - pos)) < 0)
+						goto goto20210523;
+					flipH = mesh->opposite_halfedge_handle(mesh->prev_halfedge_handle(flipH));
+				}
+				//若tovert无标记，则collapse后的点坐标pos是边的中点，此时tovert周围可能出现翻折三角形
+				if (!mesh->data(tovert).get_vertflag())
+				{
+					auto& toPos = mesh->point(the.to()); 
+					flipH = the.opp().prev();
+					endId = the.next().opp().idx();
+					while (flipH.idx() != endId)
+					{
+						auto& p0 = mesh->point(mesh->from_vertex_handle(flipH));
+						auto& p1 = mesh->point(mesh->from_vertex_handle(mesh->prev_halfedge_handle(flipH)));
+						if ((p0 - toPos).cross(p1 - toPos).dot((p0 - pos).cross(p1 - pos)) < 0)
+						{
+							//pos = toPos;
+							//break;
+							goto goto20210523;
+						}
+						flipH = mesh->prev_halfedge_handle(mesh->opposite_halfedge_handle(flipH));
+					}
+				}
+			}
 
 			mesh->set_point(tovert, pos);
 			mesh->collapse(the);
@@ -318,40 +326,6 @@ namespace CADMesher
 		auto va = [&](OV v) {return mesh->valence(v) + (mesh->is_boundary(v) ? 2 : 0); };
 		double cosLowerAngleBound = cos(lowerAngleBound);
 
-		/*double PiDividedByThree = PI * 0.3333;
-		double temp = PiDividedByThree - lowerAngleBound; temp *= temp;
-		auto penaltyFunction = [&](double a)
-		{
-			double t = a - PiDividedByThree; t *= t;
-			return t > temp ? t * t : t;
-		};
-		auto opt = [&](OpenMesh::SmartHalfedgeHandle &he) {
-			return penaltyFunction(mesh->calc_sector_angle(he)) + penaltyFunction(mesh->calc_sector_angle(he.prev()))
-				+ penaltyFunction(mesh->calc_sector_angle(he.next()));
-		};*/
-
-//		//除去度为3的顶点
-//		for (auto &tv : mesh->vertices())
-//		{
-//			if (mesh->valence(tv) == 3)
-//			{
-//				for (auto &tve : mesh->ve_range(tv))
-//				{
-//					if (tve.is_boundary())
-//						continue;
-//#ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
-//					if (polymeshInput && tve.v0().idx() < boundaryNum && tve.v1().idx() < boundaryNum)
-//					{
-//						continue;
-//					}
-//#endif
-//					split_one_edge(tve, true);
-//					break;
-//				}
-//			}
-//		}
-//		mesh->garbage_collection();
-
 		int equalizenumber = 0;
 		for (auto te : mesh->edges()) {
 			if (!mesh->is_flip_ok(te) || mesh->data(te).flag1 || mesh->data(te).flag2)
@@ -362,7 +336,15 @@ namespace CADMesher
 			int v1 = va(h0.to());
 			int u0 = va(mesh->opposite_vh(h0));
 			int u1 = va(mesh->opposite_vh(h1));
-			if (fabs(v0 - 6) + fabs(v1 - 6) + fabs(u0 - 6) + fabs(u1 - 6) <= fabs(v0 - 7) + fabs(v1 - 7) + fabs(u0 - 5) + fabs(u1 - 5))
+			bool if_equal = false;
+			//判断flip是否会优化度数分布
+			/*int before = (v0 - 6)*(v0 - 6) + (v1 - 6)*(v1 - 6) + (u0 - 6)*(u0 - 6) + (u1 - 6)*(u1 - 6);
+			int later = (v0 - 7)*(v0 - 7) + (v1 - 7)*(v1 - 7) + (u0 - 5)*(u0 - 5) + (u1 - 5)*(u1 - 5);
+			if (before < later)
+			{
+				continue;
+			}*/
+			if (fabs(v0 - 6) + fabs(v1 - 6) + fabs(u0 - 6) + fabs(u1 - 6) < fabs(v0 - 7) + fabs(v1 - 7) + fabs(u0 - 5) + fabs(u1 - 5))
 				continue;
 
 			//在一定程度上可防止翻折
@@ -375,34 +357,6 @@ namespace CADMesher
 			alpha1 = acos(-mesh->calc_edge_vector(h1).dot(mesh->calc_edge_vector(/*mesh->next_halfedge_handle(h1)*/h1.next())));
 			if (alpha0 + alpha1 > PI)
 				continue;
-
-			////检查二面角
-			//auto n0 = mesh->calc_face_normal(/*mesh->face_handle(h0)*/h0.face());
-			//auto n1 = mesh->calc_face_normal(/*mesh->face_handle(h1)*/h1.face());
-			//if (n0.dot(n1) < 0.8)
-			//{
-			//	if (mesh->data(te.v0()).get_vertflag() && mesh->data(te.v1()).get_vertflag())
-			//	{
-			//		mesh->data(te).set_edgeflag(true);
-			//		continue;
-			//	}
-			//}
-			////尽量防止出现小角
-			//if (mesh->calc_sector_angle(h0.next()) < lowerAngleBound)
-			//	continue;
-			//if (mesh->calc_sector_angle(h1.next()) < lowerAngleBound)
-			//	continue;
-			//假设flip，检查局部网格角度是否被优化
-			//double opt_before = opt(h0) + opt(h1);
-
-
-			////防止出现狭长三角形
-			//auto V0 = mesh->point(te->v0());
-			//auto V1 = mesh->point(te->v1());
-			//auto U0 = mesh->point(mesh->opposite_vh(h0));
-			//auto U1 = mesh->point(mesh->opposite_vh(h1));
-			//if (((U0 - V1).norm() + (U1 - V1).norm()) / (U0 - U1).norm() < 1.1) continue;
-			//if (((U0 - V0).norm() + (U1 - V0).norm()) / (U0 - U1).norm() < 1.1) continue;
 
 			//检测flip是否会导致小角产生
 			if (ifEnhanced)
@@ -421,12 +375,15 @@ namespace CADMesher
 				if (U01.dot(temp) > cosLowerAngleBound)
 					continue;
 			}
-
+			auto opt = [&](OpenMesh::HalfedgeHandle he) {
+				return fabs(mesh->calc_sector_angle(he) - PI / 3.0) + fabs(mesh->calc_sector_angle(mesh->prev_halfedge_handle(he)) - PI / 3.0) +
+					fabs(mesh->calc_sector_angle(mesh->next_halfedge_handle(he)) - PI / 3.0);
+			};
+			double opt_before = opt(h0) + opt(h1);
 			mesh->flip(te);
+			if (opt_before < opt(te.h0()) + opt(te.h1())) 
+				mesh->flip(te);
 			++equalizenumber;
-			//若局部网格角度未被优化，则再次flip回到初始状态
-			//if (opt_before < opt(te.h0()) + opt(te.h1()))
-				//mesh->flip(te);
 		}
 		mesh->garbage_collection();
 
@@ -439,44 +396,35 @@ namespace CADMesher
 
 	void TriangleMeshRemeshing::adjustTargetLength()
 	{
-		//double maxL = 0;
-		//double minL = expected_length;
-		//double sum = 0;
-		//double threshold = 0.15 * expected_length;
-		//for (auto tv : mesh->vertices())
-		//{
-		//	if (!mesh->data(tv).get_vertflag())
-		//		continue;
-		//	mesh->data(tv).set_targetlength(mesh->data(tv).get_targetlength()+)
-		//	/*sum = 0;
-		//	for (auto tve : mesh->ve_range(tv))
-		//	{
-		//		sum += mesh->calc_edge_length(tve);
-		//	}
-		//	mesh->data(tv).set_targetlength(std::min(expected_length, std::max(threshold, 1.2*sum / mesh->valence(tv))));*/
-		//}
+		//对目标边长做光滑处理
 		std::vector<double> tl; tl.reserve(mesh->n_vertices());
-		for (auto &tv : mesh->vertices())
+		for (auto& tv : mesh->vertices())
 		{
 			double l = 0;
-			for (auto &tvv : mesh->vv_range(tv))
+			if (mesh->is_boundary(tv))
+			//if (mesh->data(tv).get_vertflag())
 			{
-				l += mesh->data(tvv).get_targetlength();
+				tl.push_back(mesh->data(tv).get_targetlength());
 			}
-			tl.push_back(0.5 * (l / mesh->valence(tv) + mesh->data(tv).get_targetlength()));
+			else
+			{
+				/*for (auto& tvv : mesh->vv_range(tv))
+				{
+					l += mesh->data(tvv).get_targetlength();
+				}
+				tl.push_back(0.5 * (l / mesh->valence(tv) + mesh->data(tv).get_targetlength()));*/
+				double minL = expected_length;
+				for (auto& tvv : mesh->vv_range(tv))
+				{
+					double l0 = mesh->data(tvv).get_targetlength();
+					minL = std::min(minL, l0);
+					l += l0;
+				}
+				tl.push_back(std::min(expected_length, 1.5 * minL));
+			}
 		}
 		for (auto &tv : mesh->vertices())
 			mesh->data(tv).set_targetlength(tl[tv.idx()]);
-
-		//for (auto &te : mesh->edges())
-		//{
-		//	/*if (!mesh->data(te).flag1 && !mesh->data(te).flag2)
-		//		continue;
-		//	double l = mesh->calc_edge_length(te);
-		//	mesh->data(te.v0()).set_targetlength(l);
-		//	mesh->data(te.v1()).set_targetlength(l);*/
-		//	
-		//}
 #ifdef printRemeshingInfo
 		tr.out("adjust target length:");
 #endif
@@ -484,10 +432,8 @@ namespace CADMesher
 
 	int TriangleMeshRemeshing::processFeatureConstraintAngle(bool ifEnhanced)
 	{
-		auto edgeFlag = [&](OpenMesh::SmartEdgeHandle &e)
-		{
-			return mesh->data(e).flag1 || mesh->data(e).flag2;
-		};
+		//由于在之前remesh的过程中，我们始终保持特征线不动，因此一些小角难以消除。该函数在最大程度上保持特征线的同时，可以消除小角。
+		//但由于网格边界始终被锁定，以及网格尺寸在局部不合适，小角仍可能无法完全消除
 		auto setAvgLength = [&](OV &v)
 		{
 			double l = 0;
@@ -497,15 +443,26 @@ namespace CADMesher
 			}
 			mesh->data(v).set_targetlength(0.5 * (l / mesh->valence(v) + mesh->data(v).get_targetlength()));
 		};
-
+		//三角形中有小角的情况分为两种，即有两个小角和只有一个小角，分别进行处理
 		int processNumber = 0;
 		int findNumber = 0;
 		//处理有两个角小于阈值的情况
+		/*
+		如下图的三角形ABC，这里A,B皆为要消除的小角
+		消除小角的方法是翻转(flip)AB或者分割(split)AB
+		               C
+		               *
+		            *       *
+		         *               *
+		      *                      *
+	      B *  *  *  *  *  *  *  *  *  * A
+		*/
 		for (auto &th : mesh->halfedges())
 		{
-			if (th.is_boundary() || !th.is_valid() || mesh->calc_sector_angle(th) > lowerAngleBound)
+			if (th.edge().is_boundary() || !th.is_valid() || mesh->calc_sector_angle(th) > lowerAngleBound)
 				continue;
 			++findNumber;
+			//calc_sector_angle(h)是计算三角形在顶点h.to()上的角的弧度值
 			double angle0 = mesh->calc_sector_angle(th.next());
 			double angle1 = mesh->calc_sector_angle(th.prev());
 			SOH CB = th;
@@ -517,7 +474,7 @@ namespace CADMesher
 				CB = th.prev();
 				isTwoSmallAngles = true;
 			}
-			if (isTwoSmallAngles)
+			if (isTwoSmallAngles && !CB.next().edge().is_boundary())
 			{
 #ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
 				if (polymeshInput && CB.to().idx() < boundaryNum && CB.next().to().idx() < boundaryNum)
@@ -539,7 +496,9 @@ namespace CADMesher
 					mesh->data(AC).flag2 = true;
 					mesh->data(CB.edge()).flag2 = true;
 				}
-				if (edgeFlag(CB.edge()) || edgeFlag(CB.next().edge()) || edgeFlag(CB.prev().edge()))
+				//if (edgeFlag(CB.edge()) || edgeFlag(CB.next().edge()) || edgeFlag(CB.prev().edge()))
+				if (mesh->data(CB.edge()).get_edgeflag() || mesh->data(CB.next().edge()).get_edgeflag() 
+					|| mesh->data(CB.prev().edge()).get_edgeflag())
 				{
 					mesh->data(CB.from()).set_vertflag(true);
 				}
@@ -549,7 +508,11 @@ namespace CADMesher
 				{
 					split_one_edge(CB.next().edge(), true);
 					OV newvert = mesh->vertex_handle(mesh->n_vertices() - 1);
-					mesh->set_point(newvert, aabbtree->closest_point(GravityPos(newvert)));
+					/*auto query = GravityPos(newvert);
+					closestPoint(query, aabbtree);
+					mesh->set_point(newvert, query);*/
+					//mesh->set_point(newvert, aabbtree->closest_point(GravityPos(newvert)));
+					//auto cp = aabbtree->closest_point(ParallelTools::Vec3d(GravityPos(newvert).data()));
 					//setAvgLength(newvert);
 					//setAvgLength(CB.from());
 				}
@@ -565,24 +528,38 @@ namespace CADMesher
 #endif
 			return findNumber;
 		}
-		//return findNumber;
+
 		//处理有一个角小于阈值的情况
+		/*
+		如下图的三角形ABC，这里B是要消除的小角
+		消除小角的基本方法是坍缩(collapse)AC
+		若AC不可坍缩，这一般意味着B的度数为3，可以做特殊处理
+		 A
+		  *
+		  *       *
+		  *              *
+		  *                     *
+		  *                            *
+		  *                                   * B
+		  *                      *
+		  *           *
+		  *
+		 C
+		*/
 		for (auto &th : mesh->halfedges())
 		{
-			if (th.is_boundary() || !th.is_valid() || mesh->calc_sector_angle(th) > lowerAngleBound)
+			if (th.edge().is_boundary() || !th.is_valid() || mesh->calc_sector_angle(th) > lowerAngleBound)
 				continue;
 			SOH CB = th;
 			if (!mesh->is_collapse_ok(th.prev()))
 			{
-				//dprint(th.to().idx(), th.prev().opp().prev().from().idx(), th.to().valence(), th.prev().opp().prev().from().valence(), th.from());
-				//dprint(mesh->calc_sector_angle(th), mesh->calc_sector_angle(th.next()), mesh->calc_sector_angle(th.prev()));
 				if (ifEnhanced)
 				{
 					if (th.to().valence() == 3)
 						CB = th.next().opp().prev();
 					else if (th.prev().opp().prev().from().valence() == 3)
 						CB = th.prev().opp().prev().opp().prev();
-					if (mesh->is_collapse_ok(CB.prev()) && !mesh->is_boundary(CB.prev().edge()))
+					if (mesh->is_collapse_ok(CB.prev()) && !mesh->is_boundary(CB.prev().edge()) && !CB.prev().from().is_boundary())
 						goto goto20220511;
 					else
 						continue;
@@ -593,7 +570,7 @@ namespace CADMesher
 			++findNumber;
 			double angle0 = mesh->calc_sector_angle(th.next());
 			double angle1 = mesh->calc_sector_angle(th.prev());
-			if (angle0 > lowerAngleBound && angle1 > lowerAngleBound)
+			if (angle0 > lowerAngleBound && angle1 > lowerAngleBound && !CB.prev().edge().is_boundary() && !CB.prev().from().is_boundary())
 			{
 			goto20220511:;
 #ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
@@ -611,7 +588,10 @@ namespace CADMesher
 					mesh->data(temp.edge()).flag1 = true;
 				if (mesh->data(temp.prev().edge()).flag2)
 					mesh->data(temp.edge()).flag2 = true;
-				if (edgeFlag(CB.edge()) || edgeFlag(CB.next().edge()) || edgeFlag(CB.prev().edge()) || edgeFlag(temp.edge()) || edgeFlag(temp.prev().edge()))
+				//if (edgeFlag(CB.edge()) || edgeFlag(CB.next().edge()) || edgeFlag(CB.prev().edge()) || edgeFlag(temp.edge()) || edgeFlag(temp.prev().edge()))
+				if (mesh->data(CB.edge()).get_edgeflag() || mesh->data(CB.next().edge()).get_edgeflag() || 
+					mesh->data(CB.prev().edge()).get_edgeflag() || mesh->data(temp.edge()).get_edgeflag() ||
+					mesh->data(temp.prev().edge()).get_edgeflag())
 					mesh->data(CB.from()).set_vertflag(true);
 				mesh->collapse(CB.prev());
 				++processNumber;
@@ -623,290 +603,6 @@ namespace CADMesher
 		dprint("processNumber:", processNumber, "\tfindNunber:", findNumber);
 #endif
 		return findNumber;
-	}
-
-	void TriangleMeshRemeshing::processAngle()
-	{
-		int id = 0;
-		/*double upperAngleBound = PI - lowerAngleBound * 2;
-		for (auto &th : mesh->halfedges())
-		{
-#ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
-			if (polymeshInput && th.from().idx() < boundaryNum && th.to().idx() < boundaryNum)
-			{
-				continue;
-			}
-#endif
-			if (th.is_boundary() || !th.is_valid())
-				continue;
-			if (mesh->calc_sector_angle(th) < upperAngleBound)
-				continue;
-			split_one_edge(th.prev().edge(), id);
-		}
-		mesh->garbage_collection();*/
-
-		for (auto &th : mesh->halfedges())
-		{
-			if (th.is_boundary() || !th.is_valid())
-				continue;
-			if (mesh->calc_sector_angle(th) > lowerAngleBound)
-				continue;
-			double angle0 = mesh->calc_sector_angle(th.next());
-			double angle1 = mesh->calc_sector_angle(th.prev());
-
-			if (angle0 < lowerAngleBound)
-			{
-				if (mesh->data(th.next().edge()).flag1 || mesh->data(th.next().edge()).flag2 || mesh->is_boundary(th.from()))
-					continue;
-				mesh->data(th.next().edge()).flag1 = mesh->data(th.edge()).flag1 || mesh->data(th.prev().edge()).flag1;
-				mesh->data(th.next().edge()).flag2 = mesh->data(th.edge()).flag2 || mesh->data(th.prev().edge()).flag2;
-				mesh->data(th.edge()).flag1 = false;
-				mesh->data(th.edge()).flag2 = false;
-				mesh->data(th.prev().edge()).flag1 = false;
-				mesh->data(th.prev().edge()).flag2 = false;
-				mesh->data(th.from()).set_vertflag(false);
-				mesh->set_point(th.from(), aabbtree->closest_point(GravityPos(th.from())));
-			}
-			else if (angle1 < lowerAngleBound)
-			{
-				if (mesh->data(th.edge()).flag1 || mesh->data(th.edge()).flag2 || mesh->is_boundary(th.prev().from()))
-					continue;
-				mesh->data(th.edge()).flag1 = mesh->data(th.next().edge()).flag1 || mesh->data(th.prev().edge()).flag1;
-				mesh->data(th.edge()).flag2 = mesh->data(th.next().edge()).flag2 || mesh->data(th.prev().edge()).flag2;
-				mesh->data(th.next().edge()).flag1 = false;
-				mesh->data(th.next().edge()).flag2 = false;
-				mesh->data(th.prev().edge()).flag1 = false;
-				mesh->data(th.prev().edge()).flag2 = false;
-				mesh->data(th.prev().from()).set_vertflag(false);
-				mesh->set_point(th.prev().from(), aabbtree->closest_point(GravityPos(th.prev().from())));
-			}
-#if 1
-			else if (mesh->is_collapse_ok(th.prev()) && !mesh->is_boundary(th.from()) && !mesh->is_boundary(th.prev().from()))
-			{
-#ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
-				if (polymeshInput && th.from().idx() < boundaryNum)
-				{
-					continue;
-				}
-
-#endif
-				mesh->data(th.edge()).flag1 = mesh->data(th.edge()).flag1 || mesh->data(th.next().edge()).flag1;
-				mesh->data(th.edge()).flag2 = mesh->data(th.edge()).flag2 || mesh->data(th.next().edge()).flag2;
-				mesh->data(th.next().edge()).flag1 = false;
-				mesh->data(th.next().edge()).flag2 = false;
-				mesh->data(th.prev().edge()).flag1 = false;
-				mesh->data(th.prev().edge()).flag2 = false;
-				mesh->data(th.from()).set_vertflag(mesh->data(th.prev().from()).get_vertflag() || mesh->data(th.from()).get_vertflag());
-				mesh->data(th.prev().from()).set_vertflag(false);
-
-				auto tv = th.from();
-				{
-					mesh->collapse(th.prev());
-					mesh->set_point(tv, aabbtree->closest_point(GravityPos(tv)));
-
-				}
-			}
-#else
-			else 
-			{
-				mesh->data(th.from()).set_targetlength(mesh->data(th.from()).get_targetlength()*0.5);
-				mesh->data(th.prev().from()).set_targetlength(mesh->data(th.prev().from()).get_targetlength()*0.5);
-			}
-#endif
-		}
-		mesh->garbage_collection();
-
-		//#if 1
-		//		for (auto &tf : mesh->faces())
-		//		{
-		//			if (!tf.is_valid()) 
-		//				continue;
-		//			minAngle = 4.0;
-		//			for (auto &tfh : mesh->fh_range(tf))
-		//			{
-		//				double angle = mesh->calc_sector_angle(tfh);
-		//				if (angle < minAngle)
-		//				{
-		//					minAngle = angle;
-		//					th = tfh;
-		//				}
-		//			}
-		//			if (minAngle < lowerAngleBound)
-		//			{
-		//				double angle0 = mesh->calc_sector_angle(th.next());
-		//				double angle1 = mesh->calc_sector_angle(th.prev());
-		//#if 1
-		//				if (angle0 < lowerAngleBound)
-		//				{
-		//					split_one_edge(th.next().edge(), id);
-		//				}
-		//				else if (angle1 < lowerAngleBound)
-		//				{
-		//					split_one_edge(th.edge(), id);
-		//				}
-		//				else
-		//				{
-		//					mesh->data(th.edge()).flag1 = mesh->data(th.edge()).flag1 || mesh->data(th.next().edge()).flag1;
-		//					mesh->data(th.edge()).flag2 = mesh->data(th.edge()).flag2 || mesh->data(th.next().edge()).flag2;
-		//					mesh->data(th.next().edge()).flag1 = false;
-		//					mesh->data(th.next().edge()).flag2 = false;
-		//					mesh->data(th.prev().edge()).flag1 = false;
-		//					mesh->data(th.prev().edge()).flag2 = false;
-		//					mesh->data(th.prev().from()).set_vertflag(false);
-		//				}
-		//
-		//#else
-		//				//三角形三点共线
-		//				if (angle0 < lowerAngleBound)
-		//				{
-		//					if (mesh->is_flip_ok(th.next().edge()))
-		//					{
-		//						mesh->data(th.next().edge()).flag1 = false;
-		//						mesh->data(th.next().edge()).flag2 = false;
-		//						mesh->flip(th.next().edge());
-		//					}
-		//					//split_one_edge(th.next().edge(), id);
-		//				}
-		//				else if (angle1 < lowerAngleBound)
-		//				{
-		//					if (mesh->is_flip_ok(th.edge()))
-		//					{
-		//						//mesh->data(th.edge()).flag1 = false;
-		//						mesh->data(th.edge()).flag2 = false;
-		//						mesh->flip(th.edge());
-		//					}
-		//					//th = th.prev();
-		//					//split_one_edge(th.next().edge(), id);
-		//				}
-		//				//th = mesh->find_halfedge(mesh->vertex_handle(mesh->n_vertices() - 1), mesh->vertex_handle(th.from().idx())).next();
-		//				//只有一个顶点的角很小
-		//				else
-		//				{
-		//					if (!mesh->is_collapse_ok(th.prev()))
-		//					{
-		//						int p = 0;
-		//						//auto tv = th.from().valence() == 3 ? th.from() : (th.to().valence() == 3 ? th.to() : th.next().to());
-		//
-		//						split_one_edge(th.prev().edge(), p);
-		//						split_one_edge(th.next().opp().prev().edge(), p);
-		//					}
-		//					else
-		//					{
-		//
-		//#ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
-		//						if (polymeshInput)
-		//						{
-		//							if (th.prev().from().idx() >= boundaryNum)
-		//							{
-		//								mesh->collapse(th.prev());
-		//							}
-		//							else if (th.prev().to().idx() >= boundaryNum)
-		//							{
-		//								mesh->collapse(th.prev().opp());
-		//							}
-		//							continue;
-		//						}
-		//#endif
-		//						mesh->collapse(th.prev());
-		//					}
-		//				}
-		//#endif
-		//			}
-		//		}
-		//#else
-		//		for (auto tf : mesh->faces())
-		//		{
-		//			if (!tf.is_valid()) continue;
-		//			id = 0;
-		//			minAngle = 4.0;
-		//			int i = 0;
-		//			for (auto tfh : mesh->fh_range(tf))
-		//			{
-		//				double angle = mesh->calc_sector_angle(tfh);
-		//				if (angle < minAngle)
-		//				{
-		//					minAngle = angle;
-		//					id = i;
-		//				}
-		//				++i;
-		//			}
-		//			if (minAngle < lowerAngleBound)
-		//			{
-		//				auto h_iter = mesh->fh_begin(tf);
-		//				for (i = 0; i < id; ++i)
-		//				{
-		//					++h_iter;
-		//				}
-		//				auto th = mesh->prev_halfedge_handle(*h_iter);
-		//				auto te = mesh->edge_handle(th);
-		//				if (mesh->is_boundary(th.from()))
-		//				{
-		//					continue;
-		//				}
-		//				if (mesh->is_collapse_ok(th) && mesh->calc_edge_length(te) < threshold)
-		//				{
-		//					if (mesh->data(th.from()).get_vertflag())
-		//					{
-		//						mesh->data(th.to()).set_vertflag(true);
-		//					}
-		//					/*if (mesh->data(th.prev().edge()).get_edgeflag())
-		//					{
-		//						mesh->data(h_iter->edge()).set_edgeflag(true);
-		//					}*/
-		//					mesh->data(h_iter->edge()).flag1 = mesh->data(th.prev().edge()).flag1;
-		//					mesh->data(h_iter->edge()).flag2 = mesh->data(th.prev().edge()).flag2;
-		//
-		//					mesh->collapse(th);
-		//				}
-		//				else
-		//				{
-		//					if (mesh->calc_sector_angle(th) < mesh->calc_sector_angle(th.prev()))
-		//					{
-		//						th = th.prev();
-		//					}
-		//					auto flagvert = th.to();
-		//					auto ph = th.prev();
-		//					auto ne = th.next().edge();
-		//					te = th.edge();
-		//					auto pe = ph.edge();
-		//
-		//					if (!mesh->is_flip_ok(pe))
-		//						continue;
-		//					//if (mesh->data(pe).get_edgeflag())
-		//					//{
-		//					//	mesh->data(flagvert).set_vertflag(true);
-		//					//	mesh->data(te).set_edgeflag(true);
-		//					//	mesh->data(ne).set_edgeflag(true);
-		//					//	mesh->data(pe).set_edgeflag(false);
-		//					//	/*if (!mesh->data(flagvert).get_vertflag())
-		//					//	{
-		//					//		mesh->set_point(flagvert, mesh->calc_edge_midpoint(pe));
-		//					//	}*/
-		//					//}
-		//					if (mesh->data(pe).flag1)
-		//					{
-		//						mesh->data(flagvert).set_vertflag(true);
-		//						mesh->data(te).flag1 = true;
-		//						mesh->data(ne).flag1 = true;
-		//						mesh->data(pe).flag1 = false;
-		//					}
-		//					if (mesh->data(pe).flag2)
-		//					{
-		//						mesh->data(flagvert).set_vertflag(true);
-		//						mesh->data(te).flag2 = true;
-		//						mesh->data(ne).flag2 = true;
-		//						mesh->data(pe).flag2 = false;
-		//					}
-		//					mesh->flip(pe);
-		//				}
-		//			}
-		//		}
-		//#endif
-
-
-#ifdef printRemeshingInfo
-		tr.out("process small angle:");
-#endif
 	}
 
 	void TriangleMeshRemeshing::tangential_relaxation()
@@ -934,13 +630,53 @@ namespace CADMesher
 				area[tvf.idx()] = mesh->calc_face_area(tvf);
 			}
 		};
+		auto ifFlip = [&](SOV & tv)
+		{
+			for (auto& tvoh : mesh->voh_range(tv))
+			{
+				//if (tvoh.is_boundary() || tvoh.opp().is_boundary())
+				//	continue;
+				if (normal[tvoh.face().idx()].dot(normal[tvoh.opp().face().idx()]) < 0)
+					return true;
+			}
+			return false;
+		};
 
 		for (auto tv : mesh->vertices()) {
 			if (mesh->data(tv).get_vertflag() || mesh->is_boundary(tv))
 				continue;
+			O3d oldPos = mesh->point(tv);
 			mesh->set_point(tv, aabbtree->closest_point(GravityPos(tv, normal, area)));
 			updateVFRingAreas(tv);
 			updateVFRingNormals(tv);
+			//若移动点坐标导致三角形翻折，则退回操作
+			if (ifFlip(tv))
+			{
+				mesh->set_point(tv, oldPos);
+				updateVFRingAreas(tv);
+				updateVFRingNormals(tv);
+			}
+
+#if 0
+			O3d oldPos = mesh->point(tv);
+			auto query = GravityPos(tv, normal, area);
+			int fid = closestFaceAndPoint(query, aabbtree);
+			//将点向初始网格投影得到面索引fid后，即可查找面fid所在的曲面索引，从而查找背景网格在该点的步长
+			mesh->data(tv).set_targetlength(referenceModel->bgshape[referenceModel->triangle_surface_index[fid]].spacing(query.data()));
+			//dprint(mesh->data(tv).get_targetlength());
+			if (mesh->data(tv).get_vertflag())
+				continue;
+			mesh->set_point(tv, query);
+			updateVFRingAreas(tv);
+			updateVFRingNormals(tv);
+			//若移动点坐标导致三角形翻折，则退回操作
+			if (ifFlip(tv))
+			{
+				mesh->set_point(tv, oldPos);
+				updateVFRingAreas(tv);
+				updateVFRingNormals(tv);
+			}
+#endif
 		}
 #ifdef printRemeshingInfo
 		tr.out("project:");
@@ -949,28 +685,16 @@ namespace CADMesher
 
 	void TriangleMeshRemeshing::globalProject()
 	{
-		//vector<unsigned> &triangle_surface_index = globalmodel.triangle_surface_index;
-		//vector<vector<unsigned>> vertex_surface_index(globalmodel.faceshape.size());
-		//for (auto tv : mesh_->vertices()) {
-		//	OpenMesh::Vec3d p = mesh_->point(tv);
-		//	CGAL_AABB_Tree::Point_and_primitive_id point_primitive = AABB_tree->closest_point_and_primitive(CGAL_double_3_Point(p[0], p[1], p[2]));
-		//	CGAL_Triangle_Iterator it = point_primitive.second;
-		//	unsigned face_id = std::distance(triangle_vectors.begin(), it);
-		//	vertex_surface_index[triangle_surface_index[face_id]].push_back(tv.idx());
-		//}
-		///*print(vertex_surface_index[67].size());
-		//for (int i = 0; i < vertex_surface_index[67].size(); i++)
-		//	std::cout << vertex_surface_index[67][i] << ",";*/
-		//MeshProjectToSurface(mesh_, vertex_surface_index, &globalmodel);
-		vector<unsigned> &triangle_surface_index = globalmodel.triangle_surface_index;
-		vector<vector<unsigned>> vertex_surface_index(globalmodel.faceshape.size());
-		for (auto &tv : mesh->vertices())
+#if 0
+		vector<unsigned>& triangle_surface_index = referenceModel->triangle_surface_index;
+		for (auto& tv : mesh->vertices())
 		{
-			auto cdf = aabbtree->closest_distance_and_face_handle(mesh->point(tv));
-			vertex_surface_index[triangle_surface_index[cdf.second.idx()]].push_back(tv.idx());
-
+			if (mesh->data(tv).get_vertflag())
+				continue;
+			auto fid = closestFace(mesh->point(tv), aabbtree);
+			mesh->set_point(tv, project_pnt_to_surface(triangle_surface_index[fid], mesh->point(tv)));
 		}
-		MeshProjectToSurface(mesh, vertex_surface_index, &globalmodel);
+#endif
 	}
 
 	O3d TriangleMeshRemeshing::GravityPos(const OV &v)
@@ -1018,22 +742,144 @@ namespace CADMesher
 		return posSum - (posSum - mesh->point(v)).dot(n)*n;
 #endif
 	}
-
-	void TriangleMeshRemeshing::initTargetLength()
+#if 1
+	void TriangleMeshRemeshing::enhanceBasedFeature(bool d)
 	{
-		//double kMin = 1.0e-2;
-		//double kMax = 1.0e1;
-		////expected_length *= 2;
-		//double error = (6 / kMin + std::sqrt(36 / (kMin*kMin) - 12 * expected_length*expected_length)) / 6.0;
-		//double lowerLengthBound = std::sqrt(3 * error*(2 / kMax - error));
-		////double kMin = sqrt(3) / expected_length;
-		/*double l = meshAverageLength(*mesh);
 		for (auto tv : mesh->vertices())
 		{
-			mesh->data(tv).set_targetlength(l);
-		}*/
+			mesh->data(tv).vff = false;
+		}
+		for (auto the : mesh->halfedges())
+		{
+			if (!mesh->data(the).if_enhanced || !the.is_valid())
+				continue;
+			auto y = mesh->calc_face_normal(the.face()).cross(mesh->calc_edge_vector(the));
+			auto pos = mesh->calc_edge_midpoint(the) + sqrt(growth*growth*0.25 + growth*0.5)*y;
+			if (mesh->data(the.next().to()).get_vertflag())
+				continue;
+			mesh->set_point(the.next().to(), pos);
+			mesh->data(the.next().to()).set_targetlength(
+				growth*(mesh->data(the.from()).get_targetlength() + mesh->data(the.to()).get_targetlength())*0.5);
+			mesh->data(the.next().to()).vff = true;
+			/*if (mesh->data(the.next().to()).vff)
+			{
+				auto y = mesh->calc_face_normal(the.face()).cross(mesh->calc_edge_vector(the));
+				auto pos = mesh->calc_edge_midpoint(the) + sqrt((growth + 1)*(growth + 1) - 0.25)*y;
+				pos = 0.3*pos + 0.7*mesh->calc_edge_midpoint(the.next().edge());
+				auto newvert = mesh->add_vertex(pos);
+				mesh->split_edge(the.next().edge(), newvert);
+			}
+			else
+			{
+				auto y = mesh->calc_face_normal(the.face()).cross(mesh->calc_edge_vector(the));
+				auto pos = mesh->calc_edge_midpoint(the) + sqrt((growth + 1)*(growth + 1) - 0.25)*y;
+				pos = 0.3*pos + 0.7*mesh->point(the.next().to());
+				mesh->set_point(the.next().to(), pos);
+			}
+			if (d) mesh->data(the.next().to()).vff = true;
+			mesh->data(the.next().to()).set_targetlength((growth + 1)*
+				(mesh->data(the.from()).get_targetlength() + mesh->data(the.to()).get_targetlength())*0.5);*/
+		}
+		mesh->garbage_collection();
+	}
+#else
+	void TriangleMeshRemeshing::enhanceBasedFeature(bool d)
+	{
+		double invTPI = 3 / PI;
 
-#if 1
+		auto ang = [&](O3d &v0, O3d &v1)
+		{
+			O3d v2 = v0.cross(v1);
+			return PI + acos(v0.dot(v1));
+		};
+		for (auto the : mesh->halfedges())
+		{
+			if (!mesh->data(the).if_enhanced)
+				continue;
+			auto next = the.opp().prev().opp();
+			auto e0 = mesh->calc_edge_vector(the).normalize();
+			auto e1 = mesh->calc_edge_vector(next).normalize();
+			double desiredValence = std::max(2, (int)std::round(ang(e0, e1)*invTPI) + 1);
+			dprint(desiredValence);
+			auto tv = the.to();
+			if (tv.valence() < desiredValence)
+			{
+				double maxL = 0;
+				OE te;
+				for (auto tvoh : mesh->voh_range(the.to()))
+				{
+					if (tvoh.is_boundary())
+						continue;
+					double ll = mesh->calc_edge_length(tvoh.next());
+					if (ll > maxL)
+					{
+						maxL = ll;
+						te = tvoh.next().edge();
+					}
+				}
+				auto newvert = mesh->add_vertex(mesh->calc_edge_midpoint(te));
+				auto th = mesh->halfedge_handle(te, 0);
+				mesh->data(newvert).set_targetlength(0.5*(mesh->data(mesh->from_vertex_handle(th)).get_targetlength()
+					+ mesh->data(mesh->to_vertex_handle(th)).get_targetlength()));
+				mesh->split_edge(te, newvert);
+			}
+		}
+		mesh->garbage_collection();
+#if 0
+		for (auto the : mesh->halfedges())
+		{
+			if (!mesh->data(the).if_enhanced)
+				continue;
+			auto next = the.opp().prev().opp();
+			auto e0 = mesh->calc_edge_vector(the).normalize();
+			auto e1 = mesh->calc_edge_vector(next).normalize();
+			double desiredValence = std::max(2, (int)std::round(ang(e0, e1)*invTPI) + 1);
+			auto tv = the.to();
+			if (tv.valence() > desiredValence)
+			{
+				double minL = 1.0e10;
+				OH th;
+				for (auto tvoh : mesh->voh_range(the.to()))
+				{
+					if (tvoh.is_boundary())
+						continue;
+					double ll = mesh->calc_edge_length(tvoh.next());
+					if (ll < minL)
+					{
+						minL = ll;
+						th = tvoh.next();
+					}
+				}
+				if (mesh->is_collapse_ok(th) && !mesh->data(mesh->from_vertex_handle(th)).get_vertflag() && !mesh->data(mesh->to_vertex_handle(th)).get_vertflag())
+				{
+					mesh->set_point(mesh->to_vertex_handle(th), mesh->calc_edge_midpoint(th));
+					mesh->collapse(th);
+				}
+			}
+		}
+		mesh->garbage_collection();
+#endif
+	}
+#endif
+	void TriangleMeshRemeshing::initTargetLength()
+	{
+		for (auto &tv : mesh->vertices())
+		{
+			if (mesh->is_boundary(tv))
+			{
+				double ll = 0;
+				for (auto tve : mesh->ve_range(tv))
+				{
+					if (tve.is_boundary())
+						ll += mesh->calc_edge_length(tve);
+				}
+				mesh->data(tv).set_targetlength(ll*0.5);
+			}
+			else
+				mesh->data(tv).set_targetlength(expected_length);
+		}
+#if 0
+		//已知每个顶点附近的最大法曲率，并且给定误差，根据参考材料中的公式可换算得到该顶点处的目标边长
 		double error = 0.01*expected_length;
 		double minL = 0.1*expected_length;
 		double maxL = expected_length;
@@ -1041,27 +887,19 @@ namespace CADMesher
 		double kMin = 6 * error / (maxL*maxL + 3 * error*error);
 		double kMax = 6 * error / (minL*minL + 3 * error*error);
 
-
 		for (auto &tv : mesh->vertices())
 		{
-			if (tv.valence() <= 2 && !tv.is_boundary() || isnan(mesh->data(tv).GaussCurvature))
-			{
-				int p = 0;
-			}
-			int p = 0;
-			/*mesh->data(tv).set_targetlength(mesh->data(tv).GaussCurvature > 1.0e-4 ?
-				expected_length * 2 / (6 + Log10(mesh->data(tv).GaussCurvature)) : expected_length);*/
-			//mesh->data(tv).set_targetlength()
-			double gc = mesh->data(tv).GaussCurvature;
+			double gc = mesh->data(tv).Curvature;//最大主曲率的绝对值
 			if (gc <= kMin * 1.001)
 				mesh->data(tv).set_targetlength(maxL);
 			else if (gc > kMax)
 				mesh->data(tv).set_targetlength(minL);
 			else
 				mesh->data(tv).set_targetlength(std::sqrt(3 * error*(2 / gc - error)));
-			dprint(gc, mesh->data(tv).get_targetlength());
+
+			//mesh->data(tv).set_targetlength(0.001);
+			//dprint(gc, mesh->data(tv).get_targetlength());
 		}
-		int p = 0;
 #endif
 	}
 
@@ -1069,10 +907,12 @@ namespace CADMesher
 	TriangleMeshRemeshing::TriangleMeshRemeshing(PolyMesh *mesh_, double target_length)
 		:expected_length(target_length), polymeshInput(true)
 	{
+		//若输入的是三角形与四边形的混合网格，则现将四边形全部删除，优化完成后再重新加入四边形
 		initMeshStatusAndNormal(*mesh_);
 		polymesh = new Mesh();
 		polymesh->reserve(mesh_->n_vertices(), mesh_->n_edges(), mesh_->n_faces());
 
+		//标记顶点的类型，即周围全是三角形（tri），全是四边形（poly）以及两者都存在（mixed）
 		enum vertexType { tri, poly, mixed };
 		OpenMesh::VPropHandleT<int> idMap;
 		OpenMesh::VPropHandleT<vertexType> typeMap;
@@ -1167,6 +1007,7 @@ namespace CADMesher
 
 		int id[4];
 		int ii = 0;
+		//将三角形和四边形分别存入mesh和polymesh
 		for (auto &tf : mesh_->faces())
 		{
 			ii = 0;
@@ -1188,6 +1029,7 @@ namespace CADMesher
 					polymesh->vertex_handle(id[2]), polymesh->vertex_handle(id[3]));
 			}
 		}
+		//更新特征标记
 		for (auto &te : mesh_->edges())
 		{
 			vertexType vt0 = mesh_->property(typeMap, te.v0());
@@ -1249,11 +1091,11 @@ namespace CADMesher
 		{
 			expected_length = meshAverageLength(*mesh);
 		}
-		aabbtree = new ClosestPointSearch::AABBTree(*mesh);
 	}
 
 	void TriangleMeshRemeshing::assembleMesh()
 	{
+		//将优化前删除的四边形重新装入原网格中
 #if 1
 		int nv = polymesh->n_vertices();
 		auto vItr = mesh->vertices_begin();

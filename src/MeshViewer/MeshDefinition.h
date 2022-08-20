@@ -87,6 +87,7 @@ struct MeshTraits : public OpenMesh::DefaultTraits
 	private:
 		double opposite_angle; int face_he_var;
 	public:
+		bool if_enhanced = false;
 		void set_opposite_angle(const double& a){opposite_angle = a;};
 		double& get_opposite_angle(){return opposite_angle;};
 		int get_face_he_var() { return face_he_var; };
@@ -96,7 +97,7 @@ struct MeshTraits : public OpenMesh::DefaultTraits
 	VertexTraits
 	{
 		VertexT() : node_type(0), new_pos_fixed(false), color(1), density(1.0), h(OpenMesh::Vec6d(1, 0, 0, 1, 0, 1)),
-		new_pos(OpenMesh::Vec3d(0,0,0)), vertflag(false), targetlength(0)
+		new_pos(OpenMesh::Vec3d(0,0,0)), vertflag(false), targetlength(0), vff(false)
 		{
 		M << 0,0,0,0;
 		};
@@ -110,6 +111,7 @@ struct MeshTraits : public OpenMesh::DefaultTraits
 		bool vertflag;
 		double targetlength;
 	public:
+		bool vff;
 		Eigen::Matrix2d M;   //存放第一基本量
 		double GaussCurvature;
 		bool is_adjusted = false; //collapse入射边
@@ -135,7 +137,7 @@ struct MeshTraits : public OpenMesh::DefaultTraits
 		double get_density(){ return density; };
 
 		void set_vertflag(bool b) { vertflag = b; };
-		bool get_vertflag() { return vertflag; };
+		bool get_vertflag() { return vertflag || vff; };
 
 		void set_targetlength(double d) { targetlength = d; };
 		double get_targetlength() { return targetlength; };

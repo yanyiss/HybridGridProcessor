@@ -553,19 +553,19 @@ void MeshViewerWidget::draw_scene_mesh(int drawmode)
 	case CHECKBOARD:
 		draw_IsotropicMesh();
 
-		glEnable(GL_POLYGON_OFFSET_FILL);
-		glPolygonOffset(1.5f, 2.0f);
-		glEnable(GL_LIGHTING);
-		glShadeModel(GL_FLAT);
-		draw_mesh_solidflat();
-		glDisable(GL_POLYGON_OFFSET_FILL);
-		//draw_meshpointset();
-		glDisable(GL_LIGHTING);
+		//glEnable(GL_POLYGON_OFFSET_FILL);
+		//glPolygonOffset(1.5f, 2.0f);
+		//glEnable(GL_LIGHTING);
+		//glShadeModel(GL_FLAT);
+		//draw_mesh_solidflat();
+		//glDisable(GL_POLYGON_OFFSET_FILL);
+		////draw_meshpointset();
+		//glDisable(GL_LIGHTING);
 
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		draw_mesh_wireframe();
-		draw_feature();
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		//draw_mesh_wireframe();
+		//draw_feature();
+		//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		break;
 	case DIAGONAL_MESH:
 		glEnable(GL_POLYGON_OFFSET_FILL);
@@ -885,6 +885,42 @@ void MeshViewerWidget::draw_mesh_pointset() const
 #include "../src/Algorithm/SurfaceMesher/Optimizer/TriangleMeshRemeshing.h"
 void MeshViewerWidget::draw_IsotropicMesh()
 {
+	//绘制展示用图
+	OH h;
+	for (auto &th : mesh.halfedges())
+	{
+		if (th.is_boundary())
+		{
+			h = th;
+			break;
+		}
+	}
+	OH hiter = mesh.next_halfedge_handle(h);
+	glColor3d(0.1, 0.1, 0.1);
+	glLineWidth(2);
+	glBegin(GL_LINES);
+	while (h != hiter)
+	{
+		glVertex3dv(mesh.point(mesh.from_vertex_handle(hiter)).data());
+		glVertex3dv(mesh.point(mesh.to_vertex_handle(hiter)).data());
+		hiter = mesh.next_halfedge_handle(hiter);
+	}
+	glVertex3dv(mesh.point(mesh.from_vertex_handle(hiter)).data());
+	glVertex3dv(mesh.point(mesh.to_vertex_handle(hiter)).data());
+	glEnd();
+
+	hiter = mesh.next_halfedge_handle(h);
+	glColor3d(0.9, 0.4, 0.1);
+	glPointSize(10);
+	glBegin(GL_POINTS);
+	while (h != hiter)
+	{
+		glVertex3dv(mesh.point(mesh.from_vertex_handle(hiter)).data());
+		hiter = mesh.next_halfedge_handle(hiter);
+	}
+	glVertex3dv(mesh.point(mesh.from_vertex_handle(hiter)).data());
+	glEnd();
+
 //	if (ifUpdateMesh)
 //	{
 ////#if 0
@@ -910,6 +946,7 @@ void MeshViewerWidget::draw_IsotropicMesh()
 //
 //	}
 
+#if 0
 	//用于remesh普通三角网格
 	static bool once = true;
 	if (once) {
@@ -928,6 +965,7 @@ void MeshViewerWidget::draw_IsotropicMesh()
 		OpenMesh::IO::write_mesh(mesh, "C:/Git Rep/VolumeMeshFramework/VolumeMeshProcessing_Base/surface.obj");
 		once = false;
 	}
+#endif
 }
 
 #include "../src/Algorithm/SurfaceMesher/Optimizer/AnisotropicMeshRemeshing.h"
@@ -959,7 +997,28 @@ void MeshViewerWidget::draw_AnisotropicMesh()
 //<<<<<<< john
 void MeshViewerWidget::draw_feature()
 {	
-#if 1
+	//画enhance边
+	glLineWidth(2);
+	glColor3d(1.0, 0.0, 0.0);
+	glBegin(GL_LINES);
+	for (auto &te : mesh.halfedges())
+	{
+		if (mesh.data(te).if_enhanced)
+		{
+			glVertex3dv(mesh.point(te.from()).data());
+			glVertex3dv(mesh.point(te.to()).data());
+		}
+	}
+	glEnd();
+	glPointSize(5);
+	glBegin(GL_POINTS);
+	for (auto &tv : mesh.vertices())
+	{
+		if (mesh.data(tv).get_vertflag())
+			glVertex3dv(mesh.point(tv).data());
+	}
+	glEnd();
+#if 0
 	//画C0特征
 	glLineWidth(2);
 	glColor3d(1.0, 0.0, 0.0);
@@ -990,6 +1049,7 @@ void MeshViewerWidget::draw_feature()
 
 #endif
 	//draw triangles with low quality
+#if 1
 	glColor3d(0.9, 0.1, 0.9);
 	glPointSize(8);
 	glBegin(GL_POINTS);
@@ -997,7 +1057,7 @@ void MeshViewerWidget::draw_feature()
 	{
 		for (auto &tfh : mesh.fh_range(tf))
 		{
-			if (mesh.calc_sector_angle(tfh) < 0.08)
+			if (mesh.calc_sector_angle(tfh) < 0.1)
 			{
 				glVertex3dv(mesh.point(tfh.from()).data());
 				glVertex3dv(mesh.point(tfh.to()).data());
@@ -1007,7 +1067,7 @@ void MeshViewerWidget::draw_feature()
 		}
 	}
 	glEnd();
-
+#endif
 	////draw curvature distribution
 	//glColor3d(0, 0, 1);
 	//for (auto &tv : mesh.vertices())
