@@ -34,7 +34,6 @@ namespace CADMesher
 		void adjustTargetLength();
 		int processFeatureConstraintAngle(bool ifEnhanced = false);
 		void globalProject();
-		void enhanceBasedFeature(bool d);
 		//geometry support
 		void initTargetLength();
 		O3d GravityPos(const OV &v);
@@ -46,7 +45,6 @@ namespace CADMesher
 
 		timeRecorder tr;
 
-		double growth = 1.1;
 		double coerciveAngleBound = 0.06;
 		double lowerAngleBound = 0.1;
 		std::vector<double> initial_FaceTargetLength;

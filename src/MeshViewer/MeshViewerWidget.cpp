@@ -997,28 +997,7 @@ void MeshViewerWidget::draw_AnisotropicMesh()
 //<<<<<<< john
 void MeshViewerWidget::draw_feature()
 {	
-	//画enhance边
-	glLineWidth(2);
-	glColor3d(1.0, 0.0, 0.0);
-	glBegin(GL_LINES);
-	for (auto &te : mesh.halfedges())
-	{
-		if (mesh.data(te).if_enhanced)
-		{
-			glVertex3dv(mesh.point(te.from()).data());
-			glVertex3dv(mesh.point(te.to()).data());
-		}
-	}
-	glEnd();
-	glPointSize(5);
-	glBegin(GL_POINTS);
-	for (auto &tv : mesh.vertices())
-	{
-		if (mesh.data(tv).get_vertflag())
-			glVertex3dv(mesh.point(tv).data());
-	}
-	glEnd();
-#if 0
+#if 1
 	//画C0特征
 	glLineWidth(2);
 	glColor3d(1.0, 0.0, 0.0);

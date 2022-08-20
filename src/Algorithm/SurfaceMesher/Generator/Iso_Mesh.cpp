@@ -12,8 +12,7 @@ namespace CADMesher
 	{
 		occ_reader = new OccReader(fileName);
 #ifdef USETRI
-		//occ_reader->Set_TriMesh();
-		occ_reader->tempTest();
+		occ_reader->Set_TriMesh();
 		//occ_reader->Surface_delete();
 		MergeModel();
 		ResetFeature();
@@ -352,12 +351,6 @@ namespace CADMesher
 			}
 		}
 
-		for (int i = 71; i < 266; ++i)
-		{
-			//dprint(tm->find_halfedge(tm->vertex_handle(i), tm->vertex_handle(i + 1)).is_valid());
-			model_mesh.data(model_mesh.find_halfedge(model_mesh.vertex_handle(i), model_mesh.vertex_handle(i + 1))).if_enhanced = true;
-		}
-		model_mesh.data(model_mesh.find_halfedge(model_mesh.vertex_handle(266), model_mesh.vertex_handle(71))).if_enhanced = true;
 		dprint("Reset Feature Done!");
 	}
 

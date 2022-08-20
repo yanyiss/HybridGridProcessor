@@ -28,9 +28,7 @@ namespace CADMesher
 		//3.消除所有小角
 
 		initTargetLength();//根据曲率设置目标边长
-		enhanceBasedFeature(true); //return;
 		//提高网格平均质量
-		tangential_relaxation();//把顶点移动到周围点的中心
 		dprint("global remeshing");
 		int itertimes = 0;
 		for (; itertimes < 5; ++itertimes)
@@ -41,7 +39,6 @@ namespace CADMesher
 			collapse();//去除、删除短边
 			equalize_valence();//平衡度数（一个顶点的边数）
 			tangential_relaxation();//把顶点移动到周围点的中心
-			enhanceBasedFeature(false);
 			dprint("mesh vertices number:", mesh->n_vertices());
 #ifdef printRemeshingInfo
 			tmqh.update();
@@ -50,9 +47,6 @@ namespace CADMesher
 			dprint();
 #endif
 		}
-		/*for (auto tv : mesh->vertices())
-			mesh->data(tv).vff = false;*/
-		
 		tr.mark();
 		globalProject();//点到曲面的投影
 		tr.pastMark("project to the origin surface time:");
@@ -75,7 +69,6 @@ namespace CADMesher
 			collapse(true);
 			equalize_valence(true);
 			tangential_relaxation();//把顶点移动到周围点的中心
-			enhanceBasedFeature(false);
 
 			dprint("mesh vertices number:", mesh->n_vertices());
 #ifdef printRemeshingInfo
@@ -408,19 +401,11 @@ namespace CADMesher
 			}
 			else
 			{
-				/*for (auto& tvv : mesh->vv_range(tv))
+				for (auto& tvv : mesh->vv_range(tv))
 				{
 					l += mesh->data(tvv).get_targetlength();
 				}
-				tl.push_back(0.5 * (l / mesh->valence(tv) + mesh->data(tv).get_targetlength()));*/
-				double minL = expected_length;
-				for (auto& tvv : mesh->vv_range(tv))
-				{
-					double l0 = mesh->data(tvv).get_targetlength();
-					minL = std::min(minL, l0);
-					l += l0;
-				}
-				tl.push_back(std::min(expected_length, 1.5 * minL));
+				tl.push_back(0.5 * (l / mesh->valence(tv) + mesh->data(tv).get_targetlength()));
 			}
 		}
 		for (auto &tv : mesh->vertices())
@@ -742,143 +727,9 @@ namespace CADMesher
 		return posSum - (posSum - mesh->point(v)).dot(n)*n;
 #endif
 	}
-#if 1
-	void TriangleMeshRemeshing::enhanceBasedFeature(bool d)
-	{
-		for (auto tv : mesh->vertices())
-		{
-			mesh->data(tv).vff = false;
-		}
-		for (auto the : mesh->halfedges())
-		{
-			if (!mesh->data(the).if_enhanced || !the.is_valid())
-				continue;
-			auto y = mesh->calc_face_normal(the.face()).cross(mesh->calc_edge_vector(the));
-			auto pos = mesh->calc_edge_midpoint(the) + sqrt(growth*growth*0.25 + growth*0.5)*y;
-			if (mesh->data(the.next().to()).get_vertflag())
-				continue;
-			mesh->set_point(the.next().to(), pos);
-			mesh->data(the.next().to()).set_targetlength(
-				growth*(mesh->data(the.from()).get_targetlength() + mesh->data(the.to()).get_targetlength())*0.5);
-			mesh->data(the.next().to()).vff = true;
-			/*if (mesh->data(the.next().to()).vff)
-			{
-				auto y = mesh->calc_face_normal(the.face()).cross(mesh->calc_edge_vector(the));
-				auto pos = mesh->calc_edge_midpoint(the) + sqrt((growth + 1)*(growth + 1) - 0.25)*y;
-				pos = 0.3*pos + 0.7*mesh->calc_edge_midpoint(the.next().edge());
-				auto newvert = mesh->add_vertex(pos);
-				mesh->split_edge(the.next().edge(), newvert);
-			}
-			else
-			{
-				auto y = mesh->calc_face_normal(the.face()).cross(mesh->calc_edge_vector(the));
-				auto pos = mesh->calc_edge_midpoint(the) + sqrt((growth + 1)*(growth + 1) - 0.25)*y;
-				pos = 0.3*pos + 0.7*mesh->point(the.next().to());
-				mesh->set_point(the.next().to(), pos);
-			}
-			if (d) mesh->data(the.next().to()).vff = true;
-			mesh->data(the.next().to()).set_targetlength((growth + 1)*
-				(mesh->data(the.from()).get_targetlength() + mesh->data(the.to()).get_targetlength())*0.5);*/
-		}
-		mesh->garbage_collection();
-	}
-#else
-	void TriangleMeshRemeshing::enhanceBasedFeature(bool d)
-	{
-		double invTPI = 3 / PI;
 
-		auto ang = [&](O3d &v0, O3d &v1)
-		{
-			O3d v2 = v0.cross(v1);
-			return PI + acos(v0.dot(v1));
-		};
-		for (auto the : mesh->halfedges())
-		{
-			if (!mesh->data(the).if_enhanced)
-				continue;
-			auto next = the.opp().prev().opp();
-			auto e0 = mesh->calc_edge_vector(the).normalize();
-			auto e1 = mesh->calc_edge_vector(next).normalize();
-			double desiredValence = std::max(2, (int)std::round(ang(e0, e1)*invTPI) + 1);
-			dprint(desiredValence);
-			auto tv = the.to();
-			if (tv.valence() < desiredValence)
-			{
-				double maxL = 0;
-				OE te;
-				for (auto tvoh : mesh->voh_range(the.to()))
-				{
-					if (tvoh.is_boundary())
-						continue;
-					double ll = mesh->calc_edge_length(tvoh.next());
-					if (ll > maxL)
-					{
-						maxL = ll;
-						te = tvoh.next().edge();
-					}
-				}
-				auto newvert = mesh->add_vertex(mesh->calc_edge_midpoint(te));
-				auto th = mesh->halfedge_handle(te, 0);
-				mesh->data(newvert).set_targetlength(0.5*(mesh->data(mesh->from_vertex_handle(th)).get_targetlength()
-					+ mesh->data(mesh->to_vertex_handle(th)).get_targetlength()));
-				mesh->split_edge(te, newvert);
-			}
-		}
-		mesh->garbage_collection();
-#if 0
-		for (auto the : mesh->halfedges())
-		{
-			if (!mesh->data(the).if_enhanced)
-				continue;
-			auto next = the.opp().prev().opp();
-			auto e0 = mesh->calc_edge_vector(the).normalize();
-			auto e1 = mesh->calc_edge_vector(next).normalize();
-			double desiredValence = std::max(2, (int)std::round(ang(e0, e1)*invTPI) + 1);
-			auto tv = the.to();
-			if (tv.valence() > desiredValence)
-			{
-				double minL = 1.0e10;
-				OH th;
-				for (auto tvoh : mesh->voh_range(the.to()))
-				{
-					if (tvoh.is_boundary())
-						continue;
-					double ll = mesh->calc_edge_length(tvoh.next());
-					if (ll < minL)
-					{
-						minL = ll;
-						th = tvoh.next();
-					}
-				}
-				if (mesh->is_collapse_ok(th) && !mesh->data(mesh->from_vertex_handle(th)).get_vertflag() && !mesh->data(mesh->to_vertex_handle(th)).get_vertflag())
-				{
-					mesh->set_point(mesh->to_vertex_handle(th), mesh->calc_edge_midpoint(th));
-					mesh->collapse(th);
-				}
-			}
-		}
-		mesh->garbage_collection();
-#endif
-	}
-#endif
 	void TriangleMeshRemeshing::initTargetLength()
 	{
-		for (auto &tv : mesh->vertices())
-		{
-			if (mesh->is_boundary(tv))
-			{
-				double ll = 0;
-				for (auto tve : mesh->ve_range(tv))
-				{
-					if (tve.is_boundary())
-						ll += mesh->calc_edge_length(tve);
-				}
-				mesh->data(tv).set_targetlength(ll*0.5);
-			}
-			else
-				mesh->data(tv).set_targetlength(expected_length);
-		}
-#if 0
 		//已知每个顶点附近的最大法曲率，并且给定误差，根据参考材料中的公式可换算得到该顶点处的目标边长
 		double error = 0.01*expected_length;
 		double minL = 0.1*expected_length;
@@ -889,7 +740,7 @@ namespace CADMesher
 
 		for (auto &tv : mesh->vertices())
 		{
-			double gc = mesh->data(tv).Curvature;//最大主曲率的绝对值
+			double gc = mesh->data(tv).GaussCurvature;//最大主曲率的绝对值
 			if (gc <= kMin * 1.001)
 				mesh->data(tv).set_targetlength(maxL);
 			else if (gc > kMax)
@@ -900,7 +751,6 @@ namespace CADMesher
 			//mesh->data(tv).set_targetlength(0.001);
 			//dprint(gc, mesh->data(tv).get_targetlength());
 		}
-#endif
 	}
 
 #ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
