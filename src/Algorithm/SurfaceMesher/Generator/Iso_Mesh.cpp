@@ -3,6 +3,7 @@
 #include <iostream>
 #include<algorithm>
 #include "..\src\Algorithm\SurfaceMesher\Optimizer\TriangleMeshRemeshing.h"
+#include "..\src\Algorithm\SurfaceMesher\Optimizer\AnisoMeshRemeshing.h"
 
 #define USETRI
 
@@ -16,8 +17,11 @@ namespace CADMesher
 		//occ_reader->Surface_delete();
 		MergeModel();
 		ResetFeature();
-		TriangleMeshRemeshing trm(&(globalmodel.initial_trimesh));
-		trm.run();
+		/*TriangleMeshRemeshing trm(&(globalmodel.initial_trimesh));
+		trm.run();*/
+		TriMesh temp(globalmodel.initial_trimesh);
+		AnisoMeshRemeshing amr(&(globalmodel.initial_trimesh),&temp);
+		amr.run(amr.compute_src_mesh_ave_anisotropic_edge_length(), 1.5);
 		//Write_Obj(globalmodel.initial_trimesh);
 #else 
 		occ_reader->Set_PolyMesh();

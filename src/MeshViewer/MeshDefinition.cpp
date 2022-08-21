@@ -189,7 +189,7 @@ bool baryCoord( const OpenMesh::Vec3d& _p, const OpenMesh::Vec3d& _u, const Open
 	return true;
 }
 
-void compute_point_area(Mesh* mesh_, std::vector<std::map<int,double>>& cornerArea, std::vector<double>& pointArea, bool use_np)
+void compute_point_area(TriMesh* mesh_, std::vector<std::map<int,double>>& cornerArea, std::vector<double>& pointArea, bool use_np)
 {
 	pointArea.resize(mesh_->n_vertices(),0.0);
 	cornerArea.resize(mesh_->n_faces());
@@ -342,7 +342,7 @@ void diagonalize_curv(const OpenMesh::Vec3d &old_u, const OpenMesh::Vec3d &old_v
 	pdir2 = OpenMesh::cross( new_norm , pdir1);
 }
 
-void compute_principal_curvature(Mesh* mesh_, 
+void compute_principal_curvature(TriMesh* mesh_, 
 								 std::vector<double>& K1, std::vector<double>& K2, 
 								 std::vector<OpenMesh::Vec3d>& dir1,std::vector<OpenMesh::Vec3d>& dir2)
 {
