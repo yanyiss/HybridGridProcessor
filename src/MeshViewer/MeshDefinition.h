@@ -70,7 +70,7 @@ struct MeshTraits : public OpenMesh::DefaultTraits
 		double get_edge_weight(){ return weight; };
 
 		void set_edgeflag(bool b) { edgeflag = b; };
-		bool get_edgeflag() { return edgeflag; };
+		bool get_edgeflag() { return flag1 || flag2; };
 
 		bool offsetflag = false;
 		bool is_adjusted = false;

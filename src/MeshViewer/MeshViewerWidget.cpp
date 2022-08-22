@@ -1028,7 +1028,7 @@ void MeshViewerWidget::draw_feature()
 
 #endif
 	//draw triangles with low quality
-#if 1
+#if 0
 	glColor3d(0.9, 0.1, 0.9);
 	glPointSize(8);
 	glBegin(GL_POINTS);

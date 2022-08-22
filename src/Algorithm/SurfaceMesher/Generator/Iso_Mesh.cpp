@@ -21,7 +21,7 @@ namespace CADMesher
 		trm.run();*/
 		TriMesh temp(globalmodel.initial_trimesh);
 		AnisoMeshRemeshing amr(&(globalmodel.initial_trimesh),&temp);
-		amr.run(amr.compute_src_mesh_ave_anisotropic_edge_length(), 1.5);
+		amr.run(amr.compute_src_mesh_ave_anisotropic_edge_length() * 0.7, 1.5);
 		//Write_Obj(globalmodel.initial_trimesh);
 #else 
 		occ_reader->Set_PolyMesh();

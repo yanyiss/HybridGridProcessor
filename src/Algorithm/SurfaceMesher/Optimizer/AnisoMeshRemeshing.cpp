@@ -7,8 +7,10 @@ namespace CADMesher
 		rate = rate_;
 		aabbtree = globalmodel.init_trimesh_tree;
 		projectMesh();
+#if 1
 		for (int i = 0; i < 5; ++i)
 		{
+			dprint("itertimes:", i);
 			double cof = std::min(1.0, 0.1*i + 0.7);
 			flip();
 			double step_length = 0.5 - 0.04*i;
@@ -18,6 +20,19 @@ namespace CADMesher
 			reposition(0.5);
 			collapse(cof);
 		}
+#else
+		for (int i = 0; i < 5; ++i)
+		{
+			dprint("itertimes:", i);
+			double cof = std::min(1.0, 0.1*i + 0.7);
+			split(cof);
+			collapse(cof);
+			double step_length = 0.5 - 0.04*i;
+			reposition(step_length);
+			flip();
+			reposition(0.5);
+		}
+#endif
 		localOptimize(10, 1.0);
 		localOptimize(5, 0.25);
 	}
@@ -56,12 +71,13 @@ namespace CADMesher
 			if (edge_len > len*rate)
 			{
 				OpenMesh::Vec3d p = 0.5*(mesh->point(v0) + mesh->point(v1));
-				OV newvert;
+				OV newvert = mesh->add_vertex(p);
 				if (mesh->data(eh).get_edgeflag())
 				{
 					bool f1 = mesh->data(eh).flag1;
 					bool f2 = mesh->data(eh).flag2;
 					mesh->split_edge(eh, newvert);
+					mesh->data(newvert).set_Hessian(h);
 					if (f1)
 					{
 						mesh->data(mesh->edge_handle(mesh->find_halfedge(v0, newvert))).flag1 = true;
@@ -76,7 +92,6 @@ namespace CADMesher
 				}
 				else
 				{
-					newvert = mesh->add_vertex(p);
 					mesh->split_edge(eh, newvert);
 					projectVertex(newvert, p);
 				}
@@ -98,9 +113,10 @@ namespace CADMesher
 		{
 			ep(0) = op[0]; ep(1) = op[1]; ep(2) = op[2];
 		};
-		for (auto te = mesh->edges_begin(); te != mesh->edges_end(); ++te)
+		auto eEnd = mesh->edges_end();
+		for (auto te = mesh->edges_begin(); te != eEnd; ++te)
 		{
-			if (!te->is_valid())
+			if (!te->is_valid() || mesh->data(te).get_edgeflag())
 				continue;
 			auto eh = te.handle();
 			auto the = mesh->halfedge_handle(eh, 0);
@@ -170,9 +186,9 @@ namespace CADMesher
 		double oneThird = 1.0 / 3.0;
 		while (iter_count < 10)
 		{
-			dprint(iter_count);
 			int flip_count = 0;
-			for (auto e_it = mesh->edges_begin(); e_it != mesh->edges_end(); ++e_it)
+			auto eEnd = mesh->edges_end();
+			for (auto e_it = mesh->edges_begin(); e_it != eEnd; ++e_it)
 			{
 				if (!e_it->is_valid() || mesh->data(e_it).get_edgeflag() || !mesh->is_flip_ok(*e_it))
 					continue;
@@ -238,8 +254,11 @@ namespace CADMesher
 		//return true;
 	}
 
+	static int ccc = 0;
 	void AnisoMeshRemeshing::reposition(double step_length)
 	{
+		++ccc;
+		dprint("ccc", ccc);
 		unsigned nv = mesh->n_vertices(); //if (nv == 0) return false;
 		std::vector<OpenMesh::Vec6d> vH(nv);
 		for (unsigned i = 0; i < nv; ++i)
@@ -267,6 +286,10 @@ namespace CADMesher
 		std::vector<local_frame> vertex_f(nv);
 		for (auto v_it = mesh->vertices_begin(); v_it != mesh->vertices_end(); ++v_it)
 		{
+			if (ccc == 8 && v_it->idx() == 7502)
+			{
+				int p = 0;
+			}
 			int vertex_id = v_it.handle().idx(); OpenMesh::Vec3d n(0, 0, 0);
 			for (auto vf_it = mesh->vf_iter(v_it); vf_it; ++vf_it)
 			{
@@ -361,10 +384,9 @@ namespace CADMesher
 
 			new_pos[vertex_id] = p + (dx0 * vertex_f[vertex_id].e_x + dx1 * vertex_f[vertex_id].e_y) * step_length;
 		}
+
 		projectMesh(new_pos);
 		dprint("reposition done");
-		//project_on_reference_new_p(new_pos);
-		//return false;
 	}
 
 	void AnisoMeshRemeshing::initRefHessian()
@@ -426,7 +448,7 @@ namespace CADMesher
 		{
 			if (mesh->data(tv.handle()).get_vertflag())
 				continue;
-			projectVertex(tv.handle(), mesh->point(*tv));
+			projectVertex(tv.handle(), mesh->point(tv.handle()));
 		}
 	}
 
@@ -436,7 +458,7 @@ namespace CADMesher
 		{
 			if (mesh->data(tv.handle()).get_vertflag())
 				continue;
-			projectVertex(tv.handle(),pos[tv->idx()]);
+			projectVertex(tv.handle(), pos[tv->idx()]);
 		}
 	}
 
