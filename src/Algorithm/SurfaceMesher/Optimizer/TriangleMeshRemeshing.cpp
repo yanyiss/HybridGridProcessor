@@ -5,9 +5,35 @@ namespace CADMesher
 	void TriangleMeshRemeshing::run()
 	{
 #if 0
+		for (auto tv : mesh->vertices())
+			mesh->data(tv).set_targetlength(expected_length);
+#else
+		
 		for (auto &tv : mesh->vertices())
 		{
-			if (tv.valence() <= 2 && !tv.is_boundary() || isnan(mesh->data(tv).GaussCurvature))
+			if (isnan(mesh->data(tv).GaussCurvature))
+			{
+				int p = 0;
+			}
+			mesh->data(tv).set_targetlength(mesh->data(tv).GaussCurvature > 1.0e-4 ?
+				expected_length * 2 / (6 + Log10(mesh->data(tv).GaussCurvature)) : expected_length);
+		}
+		initial_FaceTargetLength.reserve(mesh->n_faces());
+		for (auto &tf : mesh->faces())
+		{
+			double tl = 0;
+			for (auto &tfv : mesh->fv_range(tf))
+			{
+				tl += mesh->data(tfv).get_targetlength();
+			}
+			initial_FaceTargetLength.push_back(tl*0.3333333);
+		}
+
+#endif
+		printMeshQuality(*mesh);
+		for (auto &tv : mesh->vertices())
+		{
+			if (tv.valence() <= 2 && !tv.is_boundary())
 			{
 				int p = 0;
 			}
@@ -25,14 +51,16 @@ namespace CADMesher
 		//mesh->delete_isolated_vertices();
 		//mesh->garbage_collection();
 
-		tr.refresh();
 
-		int itertimes = 0;
-		/*for (; itertimes < iterPeriod[0]; ++itertimes)
+		double mA = 0;
+		bool ifEnhanced = false;
+		tr.refresh();
+		dprint("mesh vertices number:", mesh->n_vertices());
+		for (int i = 0; i < 12; i++)
 		{
 			tr.mark();
-			split();
-			collapse();
+			dprint("\niteration times:", i + 1);
+			dprint("mesh vertices number:", mesh->n_vertices());
 
 			dprint("mesh vertices number:", mesh->n_vertices());
 #ifdef printRemeshingInfo
@@ -50,7 +78,7 @@ namespace CADMesher
 		{
 			tr.mark();
 			split();
-			collapse();
+			collapse(ifEnhanced);
 			equalize_valence();
 			tangential_relaxation();
 
@@ -80,7 +108,6 @@ namespace CADMesher
 			collapse(true);
 			equalize_valence(true);
 			tangential_relaxation();
-
 			dprint("mesh vertices number:", mesh->n_vertices());
 #ifdef printRemeshingInfo
 			tmqh.update();
@@ -210,6 +237,7 @@ namespace CADMesher
 #if 1
 			//特征线上移动点
 			//if (mesh->data(the.edge()).get_edgeflag())
+
 			if (edgeFlag(the.edge()))
 			{
 				if (x >= 0.666 * min_of_t0_t1) continue;
@@ -294,6 +322,7 @@ namespace CADMesher
 					if (acos(-p01.dot(p12)) < lowerAngleBound) goto goto20210523;
 					if (acos(-p12.dot(p20)) < lowerAngleBound) goto goto20210523;
 					if (acos(-p20.dot(p01)) < lowerAngleBound) goto goto20210523;
+
 					he = he.opp().prev();
 				}
 			}
@@ -330,29 +359,8 @@ namespace CADMesher
 				+ penaltyFunction(mesh->calc_sector_angle(he.next()));
 		};*/
 
-//		//除去度为3的顶点
-//		for (auto &tv : mesh->vertices())
-//		{
-//			if (mesh->valence(tv) == 3)
-//			{
-//				for (auto &tve : mesh->ve_range(tv))
-//				{
-//					if (tve.is_boundary())
-//						continue;
-//#ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
-//					if (polymeshInput && tve.v0().idx() < boundaryNum && tve.v1().idx() < boundaryNum)
-//					{
-//						continue;
-//					}
-//#endif
-//					split_one_edge(tve, true);
-//					break;
-//				}
-//			}
-//		}
-//		mesh->garbage_collection();
-
 		int equalizenumber = 0;
+		double pentaLowerAngleBound = 3*lowerAngleBound;
 		for (auto te : mesh->edges()) {
 			if (!mesh->is_flip_ok(te) || mesh->data(te).flag1 || mesh->data(te).flag2)
 				continue;
@@ -421,7 +429,6 @@ namespace CADMesher
 				if (U01.dot(temp) > cosLowerAngleBound)
 					continue;
 			}
-
 			mesh->flip(te);
 			++equalizenumber;
 			//若局部网格角度未被优化，则再次flip回到初始状态
