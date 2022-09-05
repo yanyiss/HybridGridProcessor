@@ -117,7 +117,7 @@ namespace CADMesher
 
 		}
 		mesh->garbage_collection();
-		dprint("split done");
+		//dprint("split done");
 	}
 
 	void AnisoMeshRemeshing::collapse(double cof)
@@ -189,7 +189,7 @@ namespace CADMesher
 			}
 		}
 		mesh->garbage_collection();
-		dprint("collapse done");
+		//dprint("collapse done");
 	}
 
 	void AnisoMeshRemeshing::flip()
@@ -282,7 +282,7 @@ namespace CADMesher
 			if (flip_count == 0) { break; };
 			++iter_count;
 		}
-		dprint("flip done");
+		//dprint("flip done");
 		//return true;
 	}
 
@@ -411,7 +411,7 @@ namespace CADMesher
 		}
 
 		projectMesh(new_pos);
-		dprint("reposition done");
+		//dprint("reposition done");
 	}
 
 	void AnisoMeshRemeshing::initRefHessian()
@@ -492,7 +492,7 @@ namespace CADMesher
 		int iter_count = 0;
 		projectMesh();
 
-		std::cout << "LCOT Optimize " << std::endl;
+		//std::cout << "LCOT Optimize " << std::endl;
 
 		while (iter_count < iter_num)
 		{
