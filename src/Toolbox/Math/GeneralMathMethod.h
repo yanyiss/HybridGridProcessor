@@ -26,6 +26,10 @@ namespace GeneralMathMethod
 	//唯一外圈各点逆时针排序，内圈皆为顺时针排序
 	bool IsInPolygons(Polygons &polygons, Eigen::Vector2d &p);
 	double ComputePolygonsArea(Polygons &polygons);//外圈所占面积减去内圈所占面积
+
+	void Find_Span(Matrix2Xd &dir, Matrix2Xd &para, bool direction, int &id, int num, double height);
+	double Binomial(int n, double p, int m);
+
 #pragma endregion
 
 #ifdef OPENMESH_TRIMESH_ARRAY_KERNEL_HH

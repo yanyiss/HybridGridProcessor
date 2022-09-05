@@ -51,6 +51,7 @@ namespace CADMesher
 		globalProject();//点到曲面的投影
 		tr.pastMark("project to the origin surface time:");
 
+
 		//消除大部分小角，并且继续优化网格质量
 		dprint("remeshing while eliminating small angle");
 		itertimes = 0;
@@ -69,7 +70,6 @@ namespace CADMesher
 			collapse(true);
 			equalize_valence(true);
 			tangential_relaxation();//把顶点移动到周围点的中心
-
 			dprint("mesh vertices number:", mesh->n_vertices());
 #ifdef printRemeshingInfo
 			tmqh.update();
@@ -225,7 +225,7 @@ namespace CADMesher
 					}
 				}
 				continue;
-			}
+			}*/
 #else
 			if (mesh->data(the.edge()).flag1 || mesh->data(the.edge()).flag2)
 				continue;
@@ -350,6 +350,7 @@ namespace CADMesher
 			alpha1 = acos(-mesh->calc_edge_vector(h1).dot(mesh->calc_edge_vector(/*mesh->next_halfedge_handle(h1)*/h1.next())));
 			if (alpha0 + alpha1 > PI)
 				continue;
+
 
 			//检测flip是否会导致小角产生
 			if (ifEnhanced)
@@ -503,6 +504,13 @@ namespace CADMesher
 				}
 				++processNumber;
 			}
+#else
+			else 
+			{
+				mesh->data(th.from()).set_targetlength(mesh->data(th.from()).get_targetlength()*0.5);
+				mesh->data(th.prev().from()).set_targetlength(mesh->data(th.prev().from()).get_targetlength()*0.5);
+			}
+#endif
 		}
 		mesh->garbage_collection();
 		if (!findNumber)

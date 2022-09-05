@@ -45,6 +45,8 @@ public:
 	const int FindSpan(int n, int p, double u, const std::vector<double> &K) const;
 
 	void PrincipalCurvature(const double u, const double v, double &k1, double &k2) const;  //计算主曲率
+	void NormalCurvature(const double u, const double v, const double x, const double y, double &k) const;  //计算法曲率
+
 
 	void setZero(double &t) const { t = 0; }
 	void setZero(Point &t)  const { t.setZero(); }

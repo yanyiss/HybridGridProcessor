@@ -24,7 +24,6 @@ namespace CADMesher
 		int EndId(vector<ShapeEdge> &edgeshape, int edge_id);
 		void ResetFeature();
 		void ResetFeature1();
-		void AdjustQuad(Mesh &model_mesh, double &offsetlen);
 
 		template <typename T>
 		std::string Write_Obj(T &aMesh)

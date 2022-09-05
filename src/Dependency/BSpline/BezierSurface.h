@@ -54,7 +54,20 @@ public:
 		k1 = std::max(std::abs(value(0, 0)), std::abs(value(1, 1)));
 		k2 = std::min(std::abs(value(0, 0)), std::abs(value(1, 1)));
 	}
-
+	void NormalCurvature(const double u, const double v, const double x, const double y, double &k) const
+	{
+		Eigen::Matrix2d Weingarten, value, eigenvector;
+		Point ru = PartialDerivativeU(u, v);
+		Point rv = PartialDerivativeV(u, v);
+		double E = ru.dot(ru);
+		double F = ru.dot(rv);
+		double G = rv.dot(rv);
+		Point n = (ru.cross(rv)).normalized();
+		double L = PartialDerivativeUU(u, v).dot(n);
+		double M = PartialDerivativeUV(u, v).dot(n);
+		double N = PartialDerivativeVV(u, v).dot(n);
+		k = std::abs((L*x*x + 2 * M*x*y + N * y*y) / (E*x*x + 2 * F*x*y + G * y*y));
+	}
 	template<typename T>
 	T DeCasteljau(const std::vector<std::vector<T>> controlpoints, const double u, const double v) const
 	{
