@@ -3,11 +3,19 @@ namespace CADMesher
 {
 	void AnisoMeshRemeshing::run(double len_, double rate_)
 	{
-		len = len_;
+		if (len_ <= 0)
+		{
+			len = compute_src_mesh_ave_anisotropic_edge_length();
+		}
+		else 
+		{
+			len = len_;
+		}
+		lowerLen = len / 1.1;
+		higherLen = len * 1.1;
 		rate = rate_;
 		aabbtree = globalmodel.init_trimesh_tree;
 		projectMesh();
-#if 1
 		for (int i = 0; i < 5; ++i)
 		{
 			dprint("itertimes:", i);
@@ -20,19 +28,6 @@ namespace CADMesher
 			reposition(0.5);
 			collapse(cof);
 		}
-#else
-		for (int i = 0; i < 5; ++i)
-		{
-			dprint("itertimes:", i);
-			double cof = std::min(1.0, 0.1*i + 0.7);
-			split(cof);
-			collapse(cof);
-			double step_length = 0.5 - 0.04*i;
-			reposition(step_length);
-			flip();
-			reposition(0.5);
-		}
-#endif
 		localOptimize(10, 1.0);
 		localOptimize(5, 0.25);
 	}
@@ -59,16 +54,39 @@ namespace CADMesher
 			auto v1 = mesh->to_vertex_handle(the);
 			h = 0.5*(mesh->data(v0).get_Hessian() + mesh->data(v1).get_Hessian());
 			H << h[0], h[1], h[2], h[1], h[3], h[4], h[2], h[4], h[5];
-			Eigen::JacobiSVD<Eigen::Matrix3d> svd(H, Eigen::ComputeFullU | Eigen::ComputeFullV); 
+			Eigen::JacobiSVD<Eigen::Matrix3d> svd(H, Eigen::ComputeFullU | Eigen::ComputeFullV);
 			sv = svd.singularValues();
 			diag(0, 0) = std::sqrt(sv(0)); diag(1, 1) = std::sqrt(sv(1)); diag(2, 2) = std::sqrt(sv(2));
+			Q = svd.matrixU() * diag * svd.matrixV().transpose();
 			openmesh2eigen(mesh->point(v0), p0);
 			openmesh2eigen(mesh->point(v1), p1);
-			Q = svd.matrixU() * diag * svd.matrixV().transpose();
 			p0 = Q * p0; p1 = Q * p1;
 			double edge_len = std::sqrt((p0(0) - p1(0))*(p0(0) - p1(0)) + (p0(1) - p1(1))*(p0(1) - p1(1)) + (p0(2) - p1(2))*(p0(2) - p1(2)));
-
-			if (edge_len > len*rate)
+			/*double max_len = 0;
+			using std::max;
+			if (mesh_->face_handle(heh).is_valid()) {
+				max_len = max(mesh_->calc_edge_length(heh),
+					max(mesh_->calc_edge_length(mesh_->next_halfedge_handle(heh)), mesh_->calc_edge_length(mesh_->prev_halfedge_handle(heh))));
+			}
+			OpenMesh::HalfedgeHandle oppoheh = mesh_->opposite_halfedge_handle(heh);
+			if (mesh_->face_handle(oppoheh).is_valid()) {
+				max_len = max(max_len, max(mesh_->calc_edge_length(oppoheh),
+					max(mesh_->calc_edge_length(mesh_->next_halfedge_handle(oppoheh)), mesh_->calc_edge_length(mesh_->prev_halfedge_handle(oppoheh)))));
+			}*/
+			double max_len_ = 0;
+			using std::max;
+			if (mesh->face_handle(the).is_valid())
+			{
+				max_len_ = max(mesh->calc_edge_length(eh), max(mesh->calc_edge_length(mesh->next_halfedge_handle(the)),
+					mesh->calc_edge_length(mesh->prev_halfedge_handle(the))));
+			}
+			auto oppthe = mesh->opposite_halfedge_handle(the);
+			if (mesh->face_handle(oppthe).is_valid())
+			{
+				max_len_ = max(max_len_, max(mesh->calc_edge_length(mesh->next_halfedge_handle(oppthe)),
+					mesh->calc_edge_length(mesh->prev_halfedge_handle(oppthe))));
+			}
+			if (edge_len > len*rate && mesh->calc_edge_length(eh) > max_len_ / rate || mesh->calc_edge_length(eh) > higherLen)
 			{
 				OpenMesh::Vec3d p = 0.5*(mesh->point(v0) + mesh->point(v1));
 				OV newvert = mesh->add_vertex(p);
@@ -142,8 +160,22 @@ namespace CADMesher
 			p0 = Q * p0; p1 = Q * p1;
 			double edge_len = std::sqrt((p0(0) - p1(0))*(p0(0) - p1(0)) + (p0(1) - p1(1))*(p0(1) - p1(1)) + (p0(2) - p1(2))*(p0(2) - p1(2)));
 
+			double min_len_ = mesh->calc_edge_length(eh);
+			using std::min;
+			if (mesh->face_handle(the).is_valid())
+			{
+				min_len_ = min(min_len_, min(mesh->calc_edge_length(mesh->next_halfedge_handle(the)),
+					mesh->calc_edge_length(mesh->prev_halfedge_handle(the))));
+			}
+			auto oppthe = mesh->opposite_halfedge_handle(the);
+			if (mesh->face_handle(oppthe).is_valid())
+			{
+				min_len_ = min(min_len_, min(mesh->calc_edge_length(mesh->next_halfedge_handle(oppthe)),
+					mesh->calc_edge_length(mesh->prev_halfedge_handle(oppthe))));
+			}
 
-			if (edge_len < len * cof / rate)// && mesh_->calc_edge_length(eh) < min_len*a)
+			//if (edge_len < len * cof / rate || mesh->calc_edge_length(eh) < lowerLen)// && mesh_->calc_edge_length(eh) < min_len*a)
+			if (edge_len < len * cof / rate && mesh->calc_edge_length(eh) < min_len_ * rate || mesh->calc_edge_length(eh) < lowerLen)
 			{
 				if (mesh->data(v1).get_vertflag())
 				{
@@ -254,11 +286,8 @@ namespace CADMesher
 		//return true;
 	}
 
-	static int ccc = 0;
 	void AnisoMeshRemeshing::reposition(double step_length)
 	{
-		++ccc;
-		dprint("ccc", ccc);
 		unsigned nv = mesh->n_vertices(); //if (nv == 0) return false;
 		std::vector<OpenMesh::Vec6d> vH(nv);
 		for (unsigned i = 0; i < nv; ++i)
@@ -286,10 +315,6 @@ namespace CADMesher
 		std::vector<local_frame> vertex_f(nv);
 		for (auto v_it = mesh->vertices_begin(); v_it != mesh->vertices_end(); ++v_it)
 		{
-			if (ccc == 8 && v_it->idx() == 7502)
-			{
-				int p = 0;
-			}
 			int vertex_id = v_it.handle().idx(); OpenMesh::Vec3d n(0, 0, 0);
 			for (auto vf_it = mesh->vf_iter(v_it); vf_it; ++vf_it)
 			{

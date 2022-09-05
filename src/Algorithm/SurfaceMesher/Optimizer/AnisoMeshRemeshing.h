@@ -58,5 +58,7 @@ namespace CADMesher
 		TriMesh* ref_mesh;
 		double len;
 		double rate;
+		double lowerLen;
+		double higherLen;
 	};
 }
