@@ -942,21 +942,21 @@ void MeshViewerWidget::draw_feature()
 {	
 #if 1
 	//画C0特征
-	glLineWidth(2);
-	glColor3d(1.0, 0.0, 0.0);
-	glBegin(GL_LINES);
-	for (auto &te : mesh.edges())
-	{
-		if (mesh.data(te).flag1)
-		{
-			glVertex3dv(mesh.point(te.v0()).data());
-			glVertex3dv(mesh.point(te.v1()).data());
-		}
-	}
-	glEnd();
+	//glLineWidth(5);
+	//glColor3d(1.0, 0.0, 0.0);
+	//glBegin(GL_LINES);
+	//for (auto &te : mesh.edges())
+	//{
+	//	if (mesh.data(te).flag1)
+	//	{
+	//		glVertex3dv(mesh.point(te.v0()).data());
+	//		glVertex3dv(mesh.point(te.v1()).data());
+	//	}
+	//}
+	//glEnd();
 
 	//画曲率特征
-	glLineWidth(5);
+	glLineWidth(4);
 	glColor3d(0.0, 1.0, 0.0);
 	glBegin(GL_LINES);
 	for (auto &te : mesh.edges())
@@ -970,24 +970,55 @@ void MeshViewerWidget::draw_feature()
 	glEnd();
 
 #endif
-	//draw triangles with low quality
-	glColor3d(0.9, 0.1, 0.9);
-	glPointSize(8);
-	glBegin(GL_POINTS);
-	for (auto &tf : mesh.faces())
+	/*glLineWidth(1);
+	glColor3d(0.0, 0.0, 0.0);
+	glBegin(GL_LINES);
+	for (int i = 0; i < 53; i++)
 	{
-		for (auto &tfh : mesh.fh_range(tf))
-		{
-			if (mesh.calc_sector_angle(tfh) < 0.08)
-			{
-				glVertex3dv(mesh.point(tfh.from()).data());
-				glVertex3dv(mesh.point(tfh.to()).data());
-				glVertex3dv(mesh.point(tfh.next().to()).data());
-				break;
-			}
-		}
+		glVertex3dv(mesh.point(mesh.vertex_handle(i)).data());
+		glVertex3dv(mesh.point(mesh.vertex_handle(i+1)).data());
 	}
+	glVertex3dv(mesh.point(mesh.vertex_handle(53)).data());
+	glVertex3dv(mesh.point(mesh.vertex_handle(0)).data());
 	glEnd();
+
+	glPointSize(5);
+	glColor3d(1.0, 0.0, 0.0);
+	glBegin(GL_POINTS);
+	for (int i = 0; i < 54; i++)
+	{
+		glVertex3dv(mesh.point(mesh.vertex_handle(i)).data());
+	}
+	glEnd();*/
+
+	//glColor3d(1, 0, 0);
+	//glPointSize(8);
+	//glBegin(GL_POINTS);
+	//auto v = mesh.vertex_handle(135);
+	//glVertex3dv(mesh.point(v).data());
+	//v = mesh.vertex_handle(17);
+	//glVertex3dv(mesh.point(v).data());
+	//glEnd();
+
+
+	//draw triangles with low quality
+	//glColor3d(0.9, 0.1, 0.9);
+	//glPointSize(8);
+	//glBegin(GL_POINTS);
+	//for (auto &tf : mesh.faces())
+	//{
+	//	for (auto &tfh : mesh.fh_range(tf))
+	//	{
+	//		if (mesh.calc_sector_angle(tfh) < 0.08)
+	//		{
+	//			glVertex3dv(mesh.point(tfh.from()).data());
+	//			glVertex3dv(mesh.point(tfh.to()).data());
+	//			glVertex3dv(mesh.point(tfh.next().to()).data());
+	//			break;
+	//		}
+	//	}
+	//}
+	//glEnd();
 }
 //=======
 #include "../src/Algorithm/CheckBoard/CheckBoardGenerator.h"

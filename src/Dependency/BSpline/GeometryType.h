@@ -18,6 +18,7 @@ public:
 	virtual Point PartialDerivativeUV(const double u, const double v) const = 0;
 	virtual Point PartialDerivativeVV(const double u, const double v) const = 0;
 	virtual void PrincipalCurvature(const double u, const double v, double &k1, double &k2) const = 0;
+	virtual void NormalCurvature(const double u, const double v, const double x, const double y, double &k) const = 0;
 	Point4 Getbounds() { return UV; }
 protected:
 	Point4 UV;
@@ -36,6 +37,7 @@ public:
 	Point PartialDerivativeUV(const double u, const double v) const { return Point(0, 0, 0); }
 	Point PartialDerivativeVV(const double u, const double v) const { return Point(0, 0, 0); }
 	void PrincipalCurvature(const double u, const double v, double &k1, double &k2) const { k1 = k2 = 0; }
+	void NormalCurvature(const double u, const double v, const double x, const double y, double &k) const { k = 0; }
 
 private:
 	Point Origin, Xdir, Ydir;	
@@ -53,7 +55,8 @@ public:
 	Point PartialDerivativeUU(const double u, const double v) const { return -std::cos(u)*R*XAxis - std::sin(u)*R*YAxis; }
 	Point PartialDerivativeUV(const double u, const double v) const { return Point(0, 0, 0); }
 	Point PartialDerivativeVV(const double u, const double v) const { return Point(0, 0, 0); }
-	void PrincipalCurvature(const double u, const double v, double &k1, double &k2) const { k1 = 1/R; k2 = 0; }
+	void PrincipalCurvature(const double u, const double v, double &k1, double &k2) const { k1 = 1 / R; k2 = 0; }
+	void NormalCurvature(const double u, const double v, const double x, const double y, double &k) const { k = (x*x*R) / (x*x*R*R + y * y); }
 private:
 	Point Location, XAxis, YAxis, ZAxis;
 	double R;
@@ -71,7 +74,7 @@ public:
 	Point PartialDerivativeUU(const double u, const double v) const { return (R + v * std::sin(Ang)) * (-std::cos(u)*Xdir - std::sin(u)*Ydir); }
 	Point PartialDerivativeUV(const double u, const double v) const { return std::sin(Ang) * (-std::sin(u)*Xdir + std::cos(u)*Ydir); }
 	Point PartialDerivativeVV(const double u, const double v) const { return Point(0, 0, 0); }
-	void PrincipalCurvature(const double u, const double v, double &k1, double &k2) const 
+	void PrincipalCurvature(const double u, const double v, double &k1, double &k2) const
 	{ 
 		Eigen::Matrix2d Weingarten, value;
 		Point ru = PartialDerivativeU(u, v);
@@ -87,9 +90,22 @@ public:
 			M * G - N * F, N * E - M * F;
 		Eigen::EigenSolver<Eigen::Matrix2d> es(Weingarten);
 		value = (es.pseudoEigenvalueMatrix()) / (E*G - pow(F, 2));
-		//vec = es.pseudoEigenvectors();
 		k1 = std::max(std::abs(value(0, 0)), std::abs(value(1, 1)));
-		k2 = 0;
+		k2 = std::min(std::abs(value(0, 0)), std::abs(value(1, 1)));
+	}
+	void NormalCurvature(const double u, const double v, const double x, const double y, double &k) const
+	{
+		Eigen::Matrix2d Weingarten, value, eigenvector;
+		Point ru = PartialDerivativeU(u, v);
+		Point rv = PartialDerivativeV(u, v);
+		double E = ru.dot(ru);
+		double F = ru.dot(rv);
+		double G = rv.dot(rv);
+		Point n = (ru.cross(rv)).normalized();
+		double L = PartialDerivativeUU(u, v).dot(n);
+		double M = PartialDerivativeUV(u, v).dot(n);
+		double N = 0;
+		k = std::abs((L*x*x + 2 * M*x*y + N * y*y) / (E*x*x + 2 * F*x*y + G * y*y));
 	}
 private:
 	Point Origin, Xdir, Ydir, Zdir;
@@ -109,6 +125,7 @@ public:
 	Point PartialDerivativeUV(const double u, const double v) const { return -R * std::sin(v) * (-std::sin(u)*Xdir + std::cos(u)*Ydir); }
 	Point PartialDerivativeVV(const double u, const double v) const { return -R * std::cos(v)*(std::cos(u)*Xdir + std::sin(u)*Ydir)-R*std::sin(v)*Zdir; }
 	void PrincipalCurvature(const double u, const double v, double &k1, double &k2) const { k1 = k2 = 1 / R; }
+	void NormalCurvature(const double u, const double v, const double x, const double y, double &k) const { k = 1 / R; }
 private:
 	Point Origin, Xdir, Ydir, Zdir;
 	double R;
@@ -126,7 +143,7 @@ public:
 	Point PartialDerivativeUU(const double u, const double v) const { return (R + r * std::cos(v)) * (-std::cos(u)*Xdir - std::sin(u)*Ydir); }
 	Point PartialDerivativeUV(const double u, const double v) const { return -r * std::sin(v) * (-std::sin(u)*Xdir + std::cos(u)*Ydir); }
 	Point PartialDerivativeVV(const double u, const double v) const { return -r * std::cos(v)*(std::cos(u)*Xdir + std::sin(u)*Ydir) - r*std::sin(v)*Zdir; }
-	void PrincipalCurvature(const double u, const double v, double &k1, double &k2) const 
+	void PrincipalCurvature(const double u, const double v, double &k1, double &k2) const
 	{
 		Eigen::Matrix2d Weingarten, value;
 		Point ru = PartialDerivativeU(u, v);
@@ -144,6 +161,20 @@ public:
 		value = (es.pseudoEigenvalueMatrix()) / (E*G - pow(F, 2));
 		k1 = std::max(std::abs(value(0, 0)), std::abs(value(1, 1)));
 		k2 = std::min(std::abs(value(0, 0)), std::abs(value(1, 1)));
+	}
+	void NormalCurvature(const double u, const double v, const double x, const double y, double &k) const
+	{
+		Eigen::Matrix2d Weingarten, value, eigenvector;
+		Point ru = PartialDerivativeU(u, v);
+		Point rv = PartialDerivativeV(u, v);
+		double E = ru.dot(ru);
+		double F = ru.dot(rv);
+		double G = rv.dot(rv);
+		Point n = (ru.cross(rv)).normalized();
+		double L = PartialDerivativeUU(u, v).dot(n);
+		double M = PartialDerivativeUV(u, v).dot(n);
+		double N = PartialDerivativeVV(u, v).dot(n);
+		k = std::abs((L*x*x + 2 * M*x*y + N * y*y) / (E*x*x + 2 * F*x*y + G * y*y));
 	}
 private:
 	Point Origin, Xdir, Ydir, Zdir;
@@ -246,6 +277,33 @@ public:
 		value = (es.pseudoEigenvalueMatrix()) / (E*G - pow(F, 2));
 		k1 = std::max(std::abs(value(0, 0)), std::abs(value(1, 1)));
 		k2 = std::min(std::abs(value(0, 0)), std::abs(value(1, 1)));
+	}
+	void NormalCurvature(const double u, const double v, const double x, const double y, double &k) const
+	{
+		Point pos = curve->DeBoor(v);   //旋转曲线对应的点的坐标
+		Point pos_v = curve->Derivative(v);
+		Point pos_vv = curve->Derivative2(v);
+		Point QP = pos - origin - (pos.dot(xdir) - origin.dot(xdir))*xdir;  //v对应点到旋转轴的垂直向量
+		Point QP_v = pos_v - pos_v.dot(xdir)*xdir;
+		double length = QP.norm();
+		double partial_len = QP.dot(pos_v - (pos_v.dot(xdir)*xdir)) / length;
+		double partial2_len = ((pos_v.dot(QP_v) + QP.dot(pos_vv - pos_vv.dot(xdir)*xdir))*QP.norm() - QP.dot(QP_v)*QP_v.dot(ydir)) / std::pow(QP.norm(), 2);
+
+		Point ru = -length * std::sin(u)*ydir + length * std::cos(u)*zdir;
+		Point rv = partial_len * std::cos(u)*ydir + partial_len * std::sin(u)*zdir + pos_v.dot(xdir)*xdir;
+		Point ruu = -length * std::cos(u)*ydir - length * std::sin(u)*zdir;
+		Point ruv = -partial_len * std::sin(u)*ydir + partial_len * std::cos(u)*zdir;
+		Point rvv = partial2_len * std::cos(u)*ydir + partial2_len * std::sin(u)*zdir + pos_vv.dot(xdir)*xdir;
+
+		Eigen::Matrix2d Weingarten, value, eigenvector;
+		double E = ru.dot(ru);
+		double F = ru.dot(rv);
+		double G = rv.dot(rv);
+		Point n = (ru.cross(rv)).normalized();
+		double L = ruu.dot(n);
+		double M = ruv.dot(n);
+		double N = rvv.dot(n);
+		k = std::abs((L*x*x + 2 * M*x*y + N * y*y) / (E*x*x + 2 * F*x*y + G * y*y));
 	}
 
 private:

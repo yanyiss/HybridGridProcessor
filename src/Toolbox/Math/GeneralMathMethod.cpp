@@ -139,6 +139,67 @@ namespace GeneralMathMethod {
 		return area;
 	}
 
+	void Find_Span(Matrix2Xd &dir, Matrix2Xd &para, bool direction, int &id, int num, double height)
+	{
+		id = -1;
+		Vector2d p0, dir1, dir2;
+		if (direction)
+		{
+			p0 = dir.col(dir.cols() - 1);
+			dir1 = (dir.col(dir.cols() - 2) - p0).normalized();
+			for (int i = 1; i < para.cols(); i++)
+			{
+				dir2 = para.col(i) - p0;
+				if (abs(dir1[0] * dir2[1] - dir1[1] * dir2[0]) < height) continue;
+				id = i - 1;
+				break;
+			}
+			if (id < 0) return;
+			for (int i = 0; i <= num; i++)
+			{
+				dir2 = ((num - i) * para.col(id) + i * para.col(id + 1))/num - p0;
+				if (abs(dir1[0] * dir2[1] - dir1[1] * dir2[0]) < height) continue;
+				id = i + id * num;
+				break;
+			}
+		}
+		else
+		{
+			p0 = dir.col(0);
+			dir1 = (dir.col(1) - p0).normalized();
+			for (int i = para.cols() - 2; i >= 0; i--)
+			{
+				dir2 = para.col(i) - p0;
+				if (abs(dir1[0] * dir2[1] - dir1[1] * dir2[0]) < height) continue;
+				id = i;
+				break;
+			}
+			if (id < 0) return;
+			for (int i = num; i >= 0; i--)
+			{
+				dir2 = ((num - i) * para.col(id) + i * para.col(id + 1)) / num - p0;
+				if (abs(dir1[0] * dir2[1] - dir1[1] * dir2[0]) < height) continue;
+				id = i + id * num;
+				break;
+			}
+		}
+	}
+
+	double Binomial(int n, double p, int m)
+	{
+		if (p < 0 || p > 1 || m > n || m < 0) return 0;
+		double a = 1, b = 1;
+		for (int i = m + 1; i <= n; i++)
+		{
+			a *= i;
+		}
+		for (int i = 1; i <= n - m; i++)
+		{
+			b *= i;
+		}
+		return (a / b) * pow(p, m) * pow(1 - p, n - m);
+	}
+
 #ifdef OPENMESH_TRIMESH_ARRAY_KERNEL_HH
 	double ComputeVoronoiArea(TriMesh* mesh, OpenMesh::VertexHandle v)//v不允许是边界点
 	{

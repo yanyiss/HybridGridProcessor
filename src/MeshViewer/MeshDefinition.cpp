@@ -502,43 +502,37 @@ void compute_principal_curvature(Mesh* mesh_,
 
 #pragma region functions by yanyisheshou at GCL
 #include "..\src\Toolbox\dprinter\dprint.h"
-double meshMinAngle(TriMesh &mesh)
-{
-	double angle = 4;
-	for (auto th : mesh.halfedges())
-	{
-		if (th.is_boundary())
-			continue;
-		angle = std::min(angle, mesh.calc_sector_angle(th));
-	}
-	return angle;
-}
-
-//the definition of single triangle quality in trimesh is from paper: Automatic and High-quality Surface Mesh Generation for CAD Models(Section 5.1)
-void printMeshQuality(TriMesh &mesh)
+void TriMeshQualityHelper::update()
 {
 	double c = 4 * std::sqrt(3);
-	double minAngle = 4, maxAngle = 0, avgAngle = 0;
-	double minQuality = 1, avgQuality = 0;
-	for (auto tf : mesh.faces())
+	minAngle = 4; maxAngle = 0; avgAngle = 0;
+	minQuality = 1; avgQuality = 0;
+	for (auto &tf : mesh->faces())
 	{
 		double h = 0, p = 0;
-		for (auto &tfh : mesh.fh_range(tf))
+		for (auto &tfh : mesh->fh_range(tf))
 		{
-			double angle = mesh.calc_sector_angle(tfh);
+			double angle = mesh->calc_sector_angle(tfh);
 			minAngle = std::min(angle, minAngle);
 			maxAngle = std::max(angle, maxAngle);
 			avgAngle += angle;
 
-			double l = mesh.calc_edge_length(tfh);
+			double l = mesh->calc_edge_length(tfh);
 			h = std::max(l, h);
 			p += l;
 		}
-		double q = c * mesh.calc_face_area(tf) / (p*h);
+		double q = c * mesh->calc_face_area(tf) / (p*h);
 		minQuality = std::min(q, minQuality);
 		avgQuality += q;
 	}
-	dprint("mesh quality info:\nmin, max and avg angle:", minAngle, maxAngle, avgAngle / mesh.n_halfedges(),
-		"\nmin and avg quality:", minQuality, avgQuality / mesh.n_faces());
+	avgAngle /= 3 * mesh->n_faces();
+	avgQuality /= mesh->n_faces();
 }
+
+void TriMeshQualityHelper::print()
+{
+	dprint("min, max, avg angle:", minAngle, maxAngle, avgAngle);
+	dprint("min, avg quality:", minQuality, avgQuality);
+}
+
 #pragma endregion

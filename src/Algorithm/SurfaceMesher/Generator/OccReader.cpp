@@ -9,11 +9,9 @@ namespace CADMesher
 		Surface_TriMeshes.resize(faceshape.size());
 		for (int i = 0; i < faceshape.size(); i++)
 		{
-			//dprint(i,"*******");
-			//if (i != 67) continue;
 			TriMesh &aMesh = Surface_TriMeshes[i];
 			auto &wires = faceshape[i].wires;
-			if (wires.empty())
+			if (wires.empty() || !faceshape[i].if_exisited)
 			{
 				continue;
 			}
@@ -66,7 +64,7 @@ namespace CADMesher
 			double if_reverse = aface.Orientation() ? -1.0 : 1.0;
 
 
-			double ra = (y_step < epsilonerror ? 1 : x_step / y_step) * if_reverse;
+			double ra = (y_step < epsilonerror ? 10 : x_step / y_step) * if_reverse;
 
 			for (int j = 0; j < wires.size(); j++)
 			{
@@ -131,6 +129,12 @@ namespace CADMesher
 			}
 			//dprint("initial vertices:", aMesh.n_vertices());
 
+
+			dprint("initial vertices:", aMesh.n_vertices());
+			//if (!OpenMesh::IO::write_mesh(aMesh, "1.obj"))
+			//{
+			//	std::cerr << "fail";
+			//}
 			//Remesh in domain		
 			/*Riemannremesh Remesh(Surface, &aMesh);
 			Remesh.remesh();*/
@@ -159,7 +163,10 @@ namespace CADMesher
 				auto v = asurface->Value(pos[0], pos[1]);
 				aMesh.set_point(tv, TriMesh::Point(v.X(), v.Y(), v.Z()));
 			}
-
+			//if (!OpenMesh::IO::write_mesh(aMesh, "3.obj"))
+			//{
+			//	std::cerr << "fail";
+			//}
 			//set flag1 and flag2
 			int id = 0, begin, endid;
 			for (int j = 0; j < wires.size(); j++)
@@ -215,18 +222,17 @@ namespace CADMesher
 
 	void OccReader::Set_PolyMesh()
 	{
+		Set_Offset_Grid();
+
 		vector<ShapeFace> &faceshape = globalmodel.faceshape;
 		vector<ShapeEdge> &edgeshape = globalmodel.edgeshape;
-
 		Surface_PolyMeshes.resize(faceshape.size());
 		for (int i = 0; i < faceshape.size(); i++)
 		{
-			//dprint(i);
-			//if (i != 69) continue;
 			Mesh &newmesh = Surface_PolyMeshes[i];
 			TriMesh aMesh;
 			auto &wires = faceshape[i].wires;
-			if (wires.empty())
+			if (wires.empty() || !faceshape[i].if_exisited)
 			{
 				continue;
 			}
@@ -277,7 +283,10 @@ namespace CADMesher
 			pointsnumber = 0;
 			int s = 0;
 			double if_reverse = aface.Orientation() ? -1.0 : 1.0;
-			double ra = (y_step < epsilonerror ? 1 : x_step / y_step) * if_reverse;
+
+
+			double ra = (y_step < epsilonerror ? 10 : x_step / y_step) * if_reverse;
+
 			for (int j = 0; j < wires.size(); j++)
 			{
 				auto &edges = wires[j];
@@ -290,252 +299,205 @@ namespace CADMesher
 				}
 				pointsnumber = s;
 			}
-			all_pnts.block(1, 0, 1, all_pnts.cols()) *= if_reverse;
+			Matrix2Xd boundary = all_pnts.block(0, 0, 2, pointsnumber);
+			auto &Surface = faceshape[i].Surface;
+			double ra_inv = 1.0 / ra;
 
-			int startid = 0, endid = -1, beginid;
-			Matrix2Xd offsetline;
-			int wireoffset;
-			for (int j = 0; j < wires.size(); j++)
+			//该面是否含曲率特征边
+			if (!faceshape[i].if_quad)
 			{
-				beginid = startid;
-				auto &edges = wires[j];
-				for (int k = 0; k < edges.size(); k++)
+				all_pnts.block(1, 0, 1, all_pnts.cols()) *= ra;
+				triangulate(all_pnts, bnd, sqrt(3) * x_step * x_step *0.25 * mu, aMesh);
+				for (auto tv : aMesh.vertices())
 				{
-					auto &aedge = edgeshape[edges[k]];
-					if (aedge.if_curvature)
+					if (tv.idx() < pointsnumber)
 					{
-						int id1, id2;
-						if (k == edges.size() - 1) endid = beginid;
-						else endid = startid + (aedge.parameters).cols()-1;
-						wireoffset = bnd[j].cols();
-						if (startid == beginid)
-						{
-							if (startid) id1 = beginid + wireoffset - 1;
-							else id1 = pointsnumber - 1;
-						}
-						else id1 = startid - 1;
-						id2 = endid + 1;
-						//Eigen::Matrix2Xd para(2, aedge.parameters.cols()+2);
-						//para.col(0) = all_pnts.col(id1);
-						//para.block(0, 1, 2, aedge.parameters.cols() - 1) = aedge.parameters.block(0, 0, 2, aedge.parameters.cols() - 1);
-						//para.col(aedge.parameters.cols()) = all_pnts.col(endid);
-						//para.col(aedge.parameters.cols()+1) = all_pnts.col(id2);
-						offsetline = Subdomain(aedge.parameters, all_pnts.col(id1), all_pnts.col(id2));
-						Matrix2Xi bnd_offset(2, wireoffset - 2);
-						bnd_offset.block(0, 0, 2, wireoffset - 3) = bnd[j].block(0, 0, 2, wireoffset - 3);
-						bnd_offset.col(wireoffset - 3) << beginid + wireoffset - 3, beginid;
-						bnd[j] = bnd_offset;
-						for (int m = j + 1; m < wires.size(); m++)
-						{
-							bnd[m] -= 2 * Matrix2i::Ones(2, bnd[m].cols());
-						}
-						break;
+						aMesh.set_point(tv, TriMesh::Point(boundary(0, tv.idx()), boundary(1, tv.idx()), 0));
+						continue;
 					}
-					startid += (aedge.parameters).cols() - 1;
+					auto pos = aMesh.point(tv);
+					aMesh.set_point(tv, TriMesh::Point(pos[0], pos[1] * ra_inv, 0));
 				}
-				if (endid != -1) break;
-			}
-			if (endid == -1)
-			{
-				all_pnts.block(1, 0, 1, all_pnts.cols()) *= ra * if_reverse;
-				triangulate(all_pnts, bnd, sqrt(3) * x_step * x_step / 4 * mu, aMesh);
-
-				double ra_inv = 1.0 / ra;
-				for (auto v = aMesh.vertices_begin(); v != aMesh.vertices_end(); v++)
-				{
-					auto p = aMesh.point(*v);
-					aMesh.set_point(*v, Mesh::Point{ p[0],p[1] * ra_inv,0 });
-				}
-
-				//Remesh in domain
-				//Riemannremesh Remesh(faceshape[i].Surface, &aMesh);
-				//Remesh.remesh();
-
+				//Remesh in domain		
+				Riemannremesh Remesh(Surface, &aMesh);
+				Remesh.remesh();
 				newmesh = Mesh(aMesh);
+				//if (!OpenMesh::IO::write_mesh(aMesh, "4.obj"))
+				//{
+				//	std::cerr << "fail";
+				//}
 			}
 			else
 			{
-				Matrix2Xd newall_pnts(2, pointsnumber-2);
-				int offsetpntnum = offsetline.cols();
-				if (endid < startid)
+				int quad_num = faceshape[i].quad_num;
+				dprint("has quad", i, quad_num);
+				all_pnts.block(1, 0, 1, all_pnts.cols()) *= if_reverse;
+				int beginid = 0, endid, offset_pnt_num;
+				auto &edges = wires.front();
+				for (int j = 0; j < edges.size(); j++)
 				{
-					newall_pnts.block(0, 0, 2, beginid) = all_pnts.block(0, 1, 2, beginid);
-					newall_pnts.block(0, beginid, 2, startid - beginid - 1) = all_pnts.block(0, beginid+1, 2, startid - beginid - 1);
-					newall_pnts.block(0, startid - 1, 2, offsetpntnum) = offsetline;
-					newall_pnts.block(0, startid + offsetpntnum - 1, 2, pointsnumber - startid - offsetpntnum - 1) = all_pnts.block(0, startid + offsetpntnum + 1, 2, pointsnumber - startid - offsetpntnum - 1);
+					if (!edgeshape[edges[j]].if_curvature)
+					{
+						beginid += (edgeshape[edges[j]].parameters).cols()-1;
+						continue;
+					}
+					offset_pnt_num = (edgeshape[edges[j]].parameters).cols();
+					break;
+				}
+				endid = (beginid + offset_pnt_num - 1 >= pointsnumber) ? 0 : beginid + offset_pnt_num - 1;
+				if (endid + quad_num > pointsnumber || (beginid && beginid < quad_num))
+				{
+					dprint("There exist a too short edge that cannot construct offset!");
+					system("pause");
+				}
+				vector<Matrix2Xd> offset_pnts;
+				Offset_lines(all_pnts, offset_pnts, beginid, offset_pnt_num, quad_num);
+				Matrix2Xd sub_all_pnts(2, pointsnumber - 2 * quad_num);
+				if (!beginid || !endid)
+				{
+					sub_all_pnts.block(0, 0, 2, pointsnumber - 2 * quad_num - offset_pnt_num + 2) = all_pnts.block(0, endid + quad_num, 2, pointsnumber - 2 * quad_num - offset_pnt_num + 2);
 				}
 				else
 				{
-					newall_pnts.block(0, 0, 2, startid) = all_pnts.block(0, 0, 2, startid);
-					newall_pnts.block(0, startid, 2, offsetpntnum) = offsetline;
-					newall_pnts.block(0, endid - 1, 2, pointsnumber - endid - 1) = all_pnts.block(0, endid + 1, 2, pointsnumber - endid - 1);
+					sub_all_pnts.block(0, 0, 2, pointsnumber - endid - quad_num) = all_pnts.block(0, endid + quad_num, 2, pointsnumber - endid - quad_num);
+					sub_all_pnts.block(0, pointsnumber - endid - quad_num, 2, beginid - quad_num + 1) = all_pnts.block(0, 0, 2, beginid - quad_num + 1);
 				}
-				newall_pnts.block(1, 0, 1, newall_pnts.cols()) *= ra * if_reverse;
-				triangulate(newall_pnts, bnd, sqrt(3) * x_step * x_step / 4 * mu, aMesh);
-				double ra_inv = 1.0 / ra;
-				for (auto v = aMesh.vertices_begin(); v != aMesh.vertices_end(); v++)
+				sub_all_pnts.block(0, pointsnumber - 2 * quad_num - offset_pnt_num + 2, 2, offset_pnt_num - 2) = offset_pnts.back();
+				vector<Matrix2Xi> sub_bnd;
+				Matrix2Xi sub_bnd_(2, pointsnumber - 2 * quad_num);
+				sub_bnd_.block(0, 0, 2, pointsnumber - 2 * quad_num - 1) = (bnd.front()).block(0, 0, 2, pointsnumber - 2 * quad_num - 1);
+				sub_bnd_(0, pointsnumber - 2 * quad_num - 1) = pointsnumber - 2 * quad_num - 1;
+				sub_bnd_(1, pointsnumber - 2 * quad_num - 1) = 0;
+				sub_bnd.push_back(sub_bnd_);
+				sub_all_pnts.block(1, 0, 1, sub_all_pnts.cols()) *= if_reverse;
+				Matrix2Xd aboundary(2, sub_all_pnts.cols());
+				aboundary = sub_all_pnts;
+				sub_all_pnts.block(1, 0, 1, sub_all_pnts.cols()) *= ra;
+				triangulate(sub_all_pnts, sub_bnd, sqrt(3) * x_step * x_step *0.25 * mu, aMesh);
+				for (auto tv : aMesh.vertices())
 				{
-					auto p = aMesh.point(*v);
-					aMesh.set_point(*v, Mesh::Point{ p[0],p[1] * ra_inv,0 });
+					if (tv.idx() < sub_all_pnts.cols())
+					{
+						aMesh.set_point(tv, TriMesh::Point(aboundary(0, tv.idx()), aboundary(1, tv.idx()), 0));
+						continue;
+					}
+					auto pos = aMesh.point(tv);
+					aMesh.set_point(tv, TriMesh::Point(pos[0], pos[1] * ra_inv, 0));
 				}
 
-				//Remesh in domain
-				//Riemannremesh Remesh(faceshape[i].Surface, &aMesh);
-				//Remesh.remesh();
+				//Remesh in domain		
+				Riemannremesh Remesh(Surface, &aMesh);
+				Remesh.remesh();
 
-				Mesh::Point newp;
-				Mesh::VertexHandle vh1, vh2, vh3, vh4;
-				std::vector<Mesh::VertexHandle> facevhandle;
+				//if (!OpenMesh::IO::write_mesh(aMesh, "1.obj"))
+				//{
+				//	std::cerr << "fail";
+				//}
 
+				//******construct hybridmesh*****//
 				//add boundary points
 				for (int j = 0; j < pointsnumber; j++)
 				{
-					newp = Mesh::Point(all_pnts(0, j), all_pnts(1, j), 0);
+					auto newp = Mesh::Point(boundary(0, j), boundary(1, j), 0);
 					newmesh.add_vertex(newp);
 				}
 
 				//add offset points and internal points
-				for (int j = 0; j < offsetline.cols(); j++)
+				for (int j = 0; j < quad_num; j++)
 				{
-					newp = Mesh::Point(offsetline(0, j), offsetline(1, j), 0);
-					newmesh.add_vertex(newp);
+					auto &offsetline = offset_pnts[j];
+					for (int k = 0; k < offset_pnt_num - 2; k++) 
+					{
+						auto newp = Mesh::Point(offsetline(0, k), offsetline(1, k)* if_reverse, 0);
+						newmesh.add_vertex(newp);
+					}
+				}
+				for (int j = pointsnumber - 2 * quad_num; j < aMesh.n_vertices(); j++)
+				{
+					auto newp = aMesh.point(aMesh.vertex_handle(j));
+					newmesh.add_vertex(Mesh::Point(newp[0], newp[1], 0));
 				}
 
-				for (int j = pointsnumber - 2; j < aMesh.n_vertices(); j++)
-				{
-					auto p = aMesh.point(aMesh.vertex_handle(j));
-					newp = Mesh::Point(p[0], p[1], p[2]);
-					newmesh.add_vertex(newp);
-				}
 				//add offset faces
-				if (startid == beginid)
+				vector<Mesh::VertexHandle> facevhandle;
+				Mesh::VertexHandle v1, v2, v3, v4;
+				v1 = newmesh.vertex_handle(beginid);
+				v2 = newmesh.vertex_handle(beginid + 1);
+				int newid = beginid ? beginid : pointsnumber;
+				for (int k = 0; k < quad_num; k++)
 				{
-					if(startid) vh1 = newmesh.vertex_handle(beginid + wireoffset - 1);
-					else vh1 = newmesh.vertex_handle(pointsnumber - 1);
-				}
-				else vh1 = newmesh.vertex_handle(startid - 1);
-				vh2 = newmesh.vertex_handle(startid);
-				for (int j = 1; j < offsetpntnum + 1; j++)
-				{
-					vh3 = newmesh.vertex_handle(startid + j);
-					vh4 = newmesh.vertex_handle(pointsnumber + j - 1);
-					facevhandle = { vh1, vh2, vh3, vh4 };
+					v3 = newmesh.vertex_handle(pointsnumber + k * (offset_pnt_num - 2));
+					v4 = newmesh.vertex_handle(newid - k - 1);
+					facevhandle = { v1, v2, v3, v4 };
 					newmesh.add_face(facevhandle);
-					auto eh = newmesh.edge_handle(newmesh.find_halfedge(vh2, vh3));
-					newmesh.data(eh).flag2 = true;
-					vh1 = vh4;
-					vh2 = vh3;
+					v1 = v4;
+					v2 = v3;
 				}
-				vh3 = newmesh.vertex_handle(endid);
-				vh4 = newmesh.vertex_handle(endid+1);
-				facevhandle = { vh1, vh2, vh3, vh4 };
-				newmesh.add_face(facevhandle);
-				auto eh = newmesh.edge_handle(newmesh.find_halfedge(vh2, vh3));
-				newmesh.data(eh).flag2 = true;
+				for (int j = 1; j < offset_pnt_num - 2; j++)
+				{
+					v1 = newmesh.vertex_handle(j + beginid);
+					v2 = newmesh.vertex_handle(j + 1 + beginid);
+					for (int k = 0; k < quad_num; k++)
+					{
+						v3 = newmesh.vertex_handle(pointsnumber + k * (offset_pnt_num - 2) + j);
+						v4 = newmesh.vertex_handle(pointsnumber + k * (offset_pnt_num - 2) + j - 1);
+						facevhandle = { v1, v2, v3, v4 };
+						newmesh.add_face(facevhandle);
+						v1 = v4;
+						v2 = v3;
+					}
+				}
+				v1 = newmesh.vertex_handle(beginid + offset_pnt_num - 2);
+				v2 = newmesh.vertex_handle(endid);
+				for (int k = 0; k < quad_num; k++)
+				{
+					v3 = newmesh.vertex_handle(endid + k + 1);
+					v4 = newmesh.vertex_handle(pointsnumber + (k + 1) * (offset_pnt_num - 2) - 1);
+					facevhandle = { v1, v2, v3, v4 };
+					newmesh.add_face(facevhandle);
+					v1 = v4;
+					v2 = v3;
+				}
+				//if (!OpenMesh::IO::write_mesh(newmesh, "2.obj"))
+				//{
+				//	std::cerr << "fail";
+				//}
 
 				//add internal faces
-				facevhandle.clear();
 				for (auto f : aMesh.faces())
 				{
+					facevhandle = {};
 					for (auto fv : aMesh.fv_range(f))
 					{
-						int id = fv.idx();
-						auto p = aMesh.point(fv);
-						if(id < beginid) facevhandle.push_back(newmesh.vertex_handle(id));
-						else if (id >= pointsnumber - 2) facevhandle.push_back(newmesh.vertex_handle(id + offsetpntnum + 2));
-						else if (endid < startid)
-						{
-							if (id >= startid + offsetpntnum - 1)
-							{
-								facevhandle.push_back(newmesh.vertex_handle(id + 2));
-								auto p1 = newmesh.point(newmesh.vertex_handle(id + 2));
-							}
-							else if (beginid <= id && id <= startid - 2)
-							{
-								facevhandle.push_back(newmesh.vertex_handle(id + 1));
-								auto p1 = newmesh.point(newmesh.vertex_handle(id + 1));
-							}
-							else
-							{
-								facevhandle.push_back(newmesh.vertex_handle(id - startid + pointsnumber + 1));
-								auto p1 = newmesh.point(newmesh.vertex_handle(id - startid + pointsnumber + 1));
-							}
-						}
+						if (fv.idx() < pointsnumber - 2 * quad_num - offset_pnt_num + 2)
+							facevhandle.push_back(newmesh.vertex_handle((endid + quad_num + fv.idx()) % pointsnumber));
 						else
-						{
-							if (id >= startid + offsetpntnum) facevhandle.push_back(newmesh.vertex_handle(id + 2));
-							else if(id < startid) facevhandle.push_back(newmesh.vertex_handle(id));
-							else facevhandle.push_back(newmesh.vertex_handle(id - startid + pointsnumber));
-						}
+							facevhandle.push_back(newmesh.vertex_handle(fv.idx() + quad_num * offset_pnt_num));
 					}
 					newmesh.add_face(facevhandle);
-					facevhandle.clear();
 				}
-			}
-			/*newall_pnts = Subdomain(all_pnts, bnd, pointsnumber);
-			all_pnts.block(1, 0, 1, all_pnts.cols()) *= if_reverse;				
-			Mesh::VertexHandle vh1, vh2, vh3, vh4, vend3, vend4;
-			std::vector<Mesh::VertexHandle> facevhandle;
-			Mesh::Point newp;
-
-			//add boundary points
-			for (int j = 0; j < pointsnumber; j++)
-			{
-				newp = Mesh::Point(all_pnts(0, j), all_pnts(1, j), 0);
-				vh1 = newmesh.add_vertex(newp);
-			}
-
-			//add internal points
-			for (auto v : aMesh.vertices())
-			{
-				newp = Mesh::Point(aMesh.point(v));
-				vh1 = newmesh.add_vertex(newp);
-			}
-
-			//add boundary faces
-			int count = 0;
-			for (int j = 0; j < bnd.size(); j++)
-			{
-				vend3 = vh1 = newmesh.vertex_handle(count);
-				vend4 = vh4 = newmesh.vertex_handle(count + pointsnumber);
-				for (int k = 0; k < bnd[j].cols() - 1; k++)
-				{
-					vh2 = newmesh.vertex_handle(count + 1);
-					vh3 = newmesh.vertex_handle(count + pointsnumber + 1);
-					facevhandle = { vh1,vh2,vh3,vh4 };
-					newmesh.add_face(facevhandle);
-					facevhandle.clear();
-					vh1 = vh2;
-					vh4 = vh3;
-					count++;
-				}
-				facevhandle = { vh1,vend3,vend4,vh4 };
-				newmesh.add_face(facevhandle);
-				facevhandle.clear();
-				count++;
-			}
-
-			//add internal faces
-			for (auto f : aMesh.faces())
-			{
-				for (auto fv = aMesh.fv_begin(f); fv.is_valid(); fv++)
-				{
-					vh1 = newmesh.vertex_handle((*fv).idx() + pointsnumber);
-					facevhandle.push_back(vh1);
-				}
-				newmesh.add_face(facevhandle);
-				facevhandle.clear();
-			}*/
-			
-			//if (!OpenMesh::IO::write_mesh(newmesh, "two.obj"))
+			} 
+			//if (!OpenMesh::IO::write_mesh(newmesh, "3.obj"))
 			//{
 			//	std::cerr << "fail";
 			//}
-
-			startid = 0;
+			surface_curvature(Surface, newmesh);
+			for (auto tv : newmesh.vertices())
+			{
+				auto pos = newmesh.point(tv);
+				auto v = asurface->Value(pos[0], pos[1]);
+				newmesh.set_point(tv, Mesh::Point(v.X(), v.Y(), v.Z()));
+			}
+			//if (!OpenMesh::IO::write_mesh(newmesh, "4.obj"))
+			//{
+			//	std::cerr << "fail";
+			//}
+			
+			//set flag1
+			int id = 0, begin, endid;
 			for (int j = 0; j < wires.size(); j++)
 			{
-				beginid = startid;
+				begin = id;
 				auto &edges = wires[j];
 				for (int k = 0; k < edges.size(); k++)
 				{
@@ -543,105 +505,23 @@ namespace CADMesher
 					int cols = aedge.parameters.cols() - 1;
 					if (aedge.if_C0)
 					{
-						if (k == edges.size() - 1) endid = beginid;
-						else endid = startid + cols;
-						for (int m = startid; m < startid + cols - 1; m++)
+						if (k == edges.size() - 1) endid = begin;
+						else endid = id + cols;
+						for (int m = id; m < id + cols - 1; m++)
 						{
 							auto e = newmesh.edge_handle(newmesh.find_halfedge(newmesh.vertex_handle(m), newmesh.vertex_handle(m + 1)));
 							newmesh.data(e).flag1 = true;
 						}
-						auto e = newmesh.edge_handle(newmesh.find_halfedge(newmesh.vertex_handle(startid + cols - 1), newmesh.vertex_handle(endid)));
+						auto e = newmesh.edge_handle(newmesh.find_halfedge(newmesh.vertex_handle(id + cols - 1), newmesh.vertex_handle(endid)));
 						newmesh.data(e).flag1 = true;
 					}
-					startid += cols;
+					id += cols;
 				}
 			}
-			//id = 0;
-			//for (int j = 0; j < wires.size(); j++)
-			//{
-			//	begin = id;
-			//	auto &edges = wires[j];
-			//	for (int k = 0; k < edges.size(); k++)
-			//	{
-			//		auto &aedge = edgeshape[edges[k]];
-			//		int cols = aedge.parameters.cols() - 1;
-			//		if (aedge.if_curvature)
-			//		{
-			//			if (k == edges.size() - 1) endid = begin;
-			//			else endid = id + cols;
-			//			for (int m = id; m < id + cols - 1; m++)
-			//			{
-			//				auto e = newmesh.edge_handle(newmesh.find_halfedge(newmesh.vertex_handle(m), newmesh.vertex_handle(m + 1)));
-			//				newmesh.data(e).flag2 = true;
-			//			}
-			//			auto e = newmesh.edge_handle(newmesh.find_halfedge(newmesh.vertex_handle(id + cols - 1), newmesh.vertex_handle(endid)));
-			//			newmesh.data(e).flag2 = true;
-			//		}
-			//		id += cols;
-			//	}
-			//}
-			
-			for (auto tv : newmesh.vertices())
-			{
-				auto pos = newmesh.point(tv);
-				auto v = asurface->Value(pos[0], pos[1]);
-				newmesh.set_point(tv, Mesh::Point(v.X(), v.Y(), v.Z()));
-			}
 		}
-
 		dprint("Piecewise PolyMesh Done!");
 	}
 
-	Matrix2Xd OccReader::Subdomain(Matrix2Xd &parameters, Matrix2Xd preedgepara, Matrix2Xd nextedgepara)
-	{
-		int pntsnum = parameters.cols();
-		Matrix2Xd offsetline(2, pntsnum-2), dire(2, pntsnum), p1 = Matrix2Xd::Zero(2, 1), p2, p3, p4;
-		p2 = p3 = p4 = p1;
-
-		//calculate the offset step
-		p1 = parameters.col(0);
-		p2 = preedgepara - p1;
-		p3 = parameters.col(1) - p1;
-		double step = std::abs(p2(0)*p3(1) - p2(1)*p3(0))/p3.norm();
-		p1 = parameters.col(pntsnum-1);
-		p2 = nextedgepara - p1;
-		p3 = parameters.col(pntsnum - 2) - p1;
-		step = (step + std::abs(p2(0)*p3(1) - p2(1)*p3(0)) / p3.norm())*0.5;
-		step = std::min(step, expected_edge_length * 0.4);
-
-		//calculate the mid-angle line, i.e, the basic offset direction
-		dire.col(0) = (preedgepara - parameters.col(0)).normalized();
-		dire.col(pntsnum - 1) = (nextedgepara - parameters.col(pntsnum - 1)).normalized();
-		for (int i = 1; i < pntsnum - 1; i++)
-		{
-			p1 = parameters.col(i);
-			p2 = (parameters.col(i - 1) - p1).normalized();
-			p3 = (parameters.col(i + 1) - p1).normalized();
-			if ((p2 + p3).norm() < 0.001) p4 << -p3(1), p3(0);
-			else if (p3(0)*p2(1) - p3(1)*p2(0) < 0) p4 = -((p2 + p3)*0.5).normalized();
-			else p4 = ((p2 + p3)*0.5).normalized();
-			dire.col(i) = p4;
-		}
-
-		//adjust the offset direction 
-		Matrix2Xd dire_temp(2, pntsnum);
-		dire_temp.col(0) = dire.col(0);
-		dire_temp.col(pntsnum - 1) = dire.col(pntsnum - 1);
-		for (int i = 1; i < pntsnum - 1; i++)
-		{
-			dire_temp.col(i) = ((dire.col(i - 1) + dire.col(i + 1))*0.5).normalized();
-		}
-		for (int i = 1; i < pntsnum - 1; i++)
-		{
-			dire.col(i) = ((dire_temp.col(i - 1) + dire_temp.col(i + 1))*0.5).normalized();
-		}
-		for (int i = 1; i < pntsnum - 1; i++)
-		{
-			p1 = parameters.col(i);
-			offsetline.col(i-1) = p1 + step * dire.col(i);
-		}
-		return offsetline;
-	}
 
 	void OccReader::ComputeFaceAndEdge()
 	{
@@ -785,6 +665,7 @@ namespace CADMesher
 			/*static int ti = 0;
 			dprint(ti++);*/
 			auto &aedge = edge->edge;
+			if (!edge->if_exisited) continue;
 			auto &mainface = faceshape[edge->main_face].face;
 			TopLoc_Location loc;
 			Handle(Geom_Surface) asurface = BRep_Tool::Surface(mainface, loc);
@@ -802,7 +683,7 @@ namespace CADMesher
 				acurve->D1(a*GL_x[i] + b, P, d1);
 				curve_length += a * GL_c[i] * d1.Magnitude();
 			}
-
+			edge->length = curve_length;
 			int segment_number = std::max(BRep_Tool::IsClosed(aedge) ? 4 : 4, int(curve_length / expected_edge_length));
 			edge->parameters.resize(2, segment_number + 1);
 			Handle_Geom2d_Curve thePCurve = BRep_Tool::CurveOnSurface(aedge, mainface, first, last);
@@ -839,6 +720,8 @@ namespace CADMesher
 
 		for (int i = 0; i < faceshape.size(); i++)
 		{
+			if (!faceshape[i].if_exisited) continue;
+			if (faceshape[i].wires.empty()) continue;
 			TopLoc_Location loca;
 			opencascade::handle<Geom_Surface> geom_surface = BRep_Tool::Surface(faceshape[i].face, loca);
 			opencascade::handle<Standard_Type> type = geom_surface->DynamicType();
@@ -972,6 +855,7 @@ namespace CADMesher
 				}
 				else
 					faceshape[i].Surface = new BSplineSurface(geom_bsplinesurface->UDegree(), geom_bsplinesurface->VDegree(), u, v, cp);
+				//dprint(i, cp.size(), cp[0].size(), geom_bsplinesurface->UDegree(), geom_bsplinesurface->VDegree());
 				//gp_Vec u2, v2, uu, uv, vv;
 				//gp_Pnt oringe;
 				//geom_bsplinesurface->D2(ut, vt, oringe, u2, v2, uu, vv, uv);
@@ -987,6 +871,7 @@ namespace CADMesher
 				//dprint("D2U:", uu.X(), uu.Y(), uu.Z(), uu1(0), uu1(1), uu1(2));
 				//dprint("D2V:", vv.X(), vv.Y(), vv.Z(), vv1(0), vv1(1), vv1(2));
 				//dprint("D2UV:", uv.X(), uv.Y(), uv.Z(), uv1(0), uv1(1), uv1(2));
+				//dprint(i, geom_bsplinesurface->UDegree(), geom_bsplinesurface->VDegree(), geom_bsplinesurface->Weights());
 			}
 			else if (type == STANDARD_TYPE(Geom_SurfaceOfRevolution))
 			{
@@ -1068,6 +953,7 @@ namespace CADMesher
 		for (int i = 0; i < edgeshape.size(); i++)
 		{
 			auto &edge = edgeshape[i];
+			if (!edge.if_exisited) continue;
 			auto &facer = faceshape[edge.main_face].Surface;
 			auto &pnts = edge.parameters;
 			Point4 UV = facer->Getbounds();
@@ -1091,23 +977,25 @@ namespace CADMesher
 		auto &face = globalmodel.faceshape;
 		for (int i = 0; i < edge.size(); i++)
 		{
-			//dprint("kk", i);
+			//if (i != 11) continue;
 			auto &aedge = edge[i];
+			if (!aedge.if_exisited) continue;
+			//dprint(i, aedge.main_face, aedge.secondary_face);
 			if (aedge.reversed_edge == -1)
 			{
 				aedge.if_C0 = true;
 				continue;
 			}	
 			if (aedge.if_C0) continue;
-			double C0 = 0.9;
+			double C0 = 0.92;
 			int single_flag = 0;
-			//dprint(i, aedge.main_face, aedge.secondary_face);
 			auto &face1 = face[aedge.main_face].Surface;
 			auto &face2 = face[aedge.secondary_face].Surface;
 			auto &pnts1 = aedge.parameters;
 			auto &pnts2 = edge[aedge.reversed_edge].parameters;
 			for(int j = 0; j < pnts1.cols(); j++)
 			{
+				if (j - single_flag > pnts1.cols()*0.4) break;
 				double u = pnts1(0, j), v = pnts1(1, j);
 				Point ru = face1->PartialDerivativeU(u, v);
 				Point rv = face1->PartialDerivativeV(u, v);
@@ -1115,24 +1003,20 @@ namespace CADMesher
 				if ((face[aedge.main_face].face).Orientation() == TopAbs_REVERSED) n1 = -n1;
 
 				u = pnts2(0, pnts1.cols() - 1 - j), v = pnts2(1, pnts1.cols() - 1 - j);
-				//dprint("jkji");
 				ru = face2->PartialDerivativeU(u, v);
-				//dprint("jj", j);
 				rv = face2->PartialDerivativeV(u, v);
-				//dprint("mm", j);
 				Point n2 = (ru.cross(rv)).normalized();
 				if ((face[aedge.secondary_face].face).Orientation() == TopAbs_REVERSED) n2 = -n2;
-				//dprint("the dot:", n1[0], n1[1], n1[2], n2[0], n2[1], n2[2], n1.dot(n2));
 				if (n1.dot(n2) < C0) single_flag++;
 			}
-			//dprint(pnts1.cols(), single_flag);
 			if (single_flag > pnts1.cols()*0.6)
 			{
-				//dprint("non_trim:", i);
 				aedge.if_C0 = true;
 				edge[aedge.reversed_edge].if_C0 = true;
 			}
 		}
+
+		//edge[3].if_C0 = true;
 		dprint("C0 feature done!");
 	}
 
@@ -1142,46 +1026,53 @@ namespace CADMesher
 		auto &face = globalmodel.faceshape;
 		for (int i = 0; i < edge.size(); i++)
 		{
-			//dprint("edge", i);
+			//if (i != 294) continue;
 			auto &aedge = edge[i];
+			if (!aedge.if_exisited) continue;
 			if (!aedge.if_curvature) continue;
-			if (aedge.if_C0 )
+
+			//已经为C0不予考虑
+			if (aedge.if_C0 && aedge.reversed_edge != -1)
 			{
 				aedge.if_curvature = false;
 				continue;
 			}
+
+			//短边不予考虑
+			if (aedge.parameters.cols() < 10) 
+			{
+				aedge.if_curvature = false;
+				continue;
+			}
+
 			auto &facer = face[aedge.main_face].Surface;
-			//dprint("surface_id:", aedge.main_face, aedge.reversed_edge);
 			auto &pnts = aedge.parameters;
 			double u1 = pnts(0, 0), v1 = pnts(1, 0), u2 = pnts(0, pnts.cols() - 1), v2 = pnts(1, pnts.cols() - 1);
 			Eigen::Vector2d step(v1 - v2, u2 - u1);
-			step.normalize();
+			step /= (pnts.cols() - 1) * 4;
+			if ((face[aedge.main_face].face).Orientation() == TopAbs_REVERSED) step = -step;
 			double base_stepu = step(0), base_stepv = step(1);
-			//dprint(u1, v1, u2, v2, base_stepu, base_stepv);
 			Point4 UV = facer->Getbounds();
 			double umin = UV(0), umax = UV(1), vmin = UV(2), vmax = UV(3);
-			//dprint(umin, umax, vmin, vmax);
-			Eigen::Matrix2d Weingarten, value, vec;
 			int single_flag = 0;
-			for (int j = 1; j < pnts.cols()-1; j++)
-			{				
-				//dprint("point", j);
+			for (int j = 1; j < pnts.cols() - 1; j++)
+			{
+				if (j - 1 - single_flag > (pnts.cols() - 2)*0.4) break;
 				double stepu = base_stepu, stepv = base_stepv;
 				int count = 0;
-				while (true) 
+				while (true)
 				{
 					u1 = pnts(0, j);
 					v1 = pnts(1, j);
 					for (int m = 0; m < 15; m++)
 					{
-						//dprint(u1, v1);
 						u1 += stepu;
 						v1 += stepv;
-						if (m==14 || u1 < umin || u1 > umax || v1 < vmin || v1 > vmax)
+						if (m == 14 || u1 < umin || u1 > umax || v1 < vmin || v1 > vmax)
 						{
 							count = m;
 							break;
-						}		
+						}
 					}
 					if (count) break;
 					else
@@ -1190,37 +1081,460 @@ namespace CADMesher
 						stepv *= 0.5;
 					}
 				}
-				stepu *= count*0.06;
-				stepv *= count*0.06;
+				stepu *= count * 0.06;
+				stepv *= count * 0.06;
 				u1 = pnts(0, j);
 				v1 = pnts(1, j);
 				std::vector<double> curvature;
-				double K1, K2;
+				double K, K1;
+				Point start_normal = ((facer->PartialDerivativeU(u1, v1)).cross(facer->PartialDerivativeV(u1, v1))).normalized(), end_normal;
 				for (int m = 0; m < 15; m++)
-				{				
-					facer->PrincipalCurvature(u1, v1, K1, K2);
-					//dprint(j, u1, v1, K1);
-					curvature.push_back(K1);
+				{
+					facer->NormalCurvature(u1, v1, stepu, stepv, K);
+					//dprint(j, u1, v1, K);
+					curvature.push_back(K);
+					if (m == 14)
+					{
+						end_normal = ((facer->PartialDerivativeU(u1, v1)).cross(facer->PartialDerivativeV(u1, v1))).normalized();
+					}
 					u1 += stepu;
 					v1 += stepv;
 				}
-				K1 = curvature.front();
-				std::sort(curvature.begin(), curvature.end());
-				//if (curvature.back() - curvature[curvature.size() - 2] > 4) curvature.pop_back();
-				if (curvature.back() - curvature.front() > 4 && K1 > curvature[10])
+				if (start_normal.dot(end_normal) < 0.85 && If_decline(curvature))
 				{
+					//dprint("hh", j);
 					single_flag++;
-					//dprint("juidjfhrythg", j);
 				}
 			}
-			if (single_flag <= (pnts.cols()-2)*0.6)
+			//dprint(single_flag, pnts.cols() - 2);
+			if (single_flag <= (pnts.cols() - 2)*0.6)
 			{
 				aedge.if_curvature = false;
-				edge[aedge.reversed_edge].if_curvature = false;
+				if (aedge.reversed_edge != -1) edge[aedge.reversed_edge].if_curvature = false;
 			}
+			else if (aedge.reversed_edge == -1) aedge.if_C0 = false;
 		}
+
+		for (int i = 0; i < edge.size(); i++)
+		{
+			auto &aedge = edge[i];
+			if (!aedge.if_curvature) continue;
+			//dprint("edge", i, aedge.main_face, aedge.secondary_face);
+
+			if (face[aedge.main_face].wires.size() > 1) continue;
+			if (aedge.parameters.cols() < 10) continue;
+			face[aedge.main_face].if_quad = true;
+		}
+
 		dprint("curvature feature done!");
 	}
+
+	bool OccReader::If_decline(vector<double>& curvature)
+	{
+		int n = (int)(curvature.size() * 0.5);
+
+		//前半段曲率平均值比后半段平均值2倍大
+		double front_curv = 0, back_curv = 0;
+		for (int i = 0; i < n; i++)
+		{
+			front_curv += curvature[i];
+		}
+		for (int i = curvature.size() - 1; i >= curvature.size() - n; i--)
+		{
+			back_curv += curvature[i];
+		}
+		//dprint("ave:", front_curv, back_curv);
+		if (front_curv < 2 * back_curv) return false;
+
+		//Cox Stuart趋势性检验，序关系比较
+		double p0 = 0.2;
+		int T = 0;
+		if (curvature.size() % 2)
+		{
+			for (int i = 0; i < n; i++)
+			{
+				if (curvature[i] > curvature[n + i + 1]) T++;
+			}
+		}
+		else
+		{
+			for (int i = 0; i < n; i++)
+			{
+				if (curvature[i] > curvature[n + i]) T++;
+			}
+		}
+		//dprint("here", T);
+		if (2 * T <= n) return false;
+		if (GeneralMathMethod::Binomial(n, 0.5, T) > p0) return false;
+
+		//有一定数量的有效数据
+		std::sort(curvature.begin(), curvature.end());	
+		if (curvature[(int)(curvature.size() * 0.8)] < 10e-4) return false;
+		else return true;
+
+		////曲率序关系变化
+		//int count = 0;
+		//for (int i = 0; i < mid; i++)
+		//{
+		//	if (initial[i] > curvature[mid]) count++;
+		//}
+		//if (count >= (int)(mid * 0.5)) return true;
+		//else return false;
+	}
+
+	void OccReader::Set_Offset_Grid()
+	{
+		if (offset_quad_num <= 0)
+		{
+			dprint("the offset quad number must be positive!");
+			system("pause");
+		}
+		if (offset_increase_ratio < 1)
+		{
+			dprint("the offset increase ratio must more than 1!");
+			system("pause");
+		}
+
+		vector<ShapeFace> &faceshape = globalmodel.faceshape;
+		vector<ShapeEdge> &edgeshape = globalmodel.edgeshape;
+		int discrete_num = 10;
+
+		//determine each edge's discrete points 
+		vector<vector<int>> edge_prev_info(edgeshape.size());
+		vector<vector<int>> edge_next_info(edgeshape.size());
+		for (int i = 0; i < faceshape.size(); i++)
+		{
+			//if (i != 32) continue;
+			if (!faceshape[i].if_quad) continue;
+			auto &edges = faceshape[i].wires.front();
+
+			//find curvature edge
+			int now, prev, next;
+			for (int j = 0; j < edges.size(); j++)
+			{
+				if (edgeshape[edges[j]].if_curvature)
+				{
+					now = j;
+					break;
+				}
+			}
+			if (now) prev = edges[now - 1];
+			else prev = edges.back();
+			if (now < edges.size() - 1) next = edges[now + 1];
+			else next = edges.front();
+			auto &curv = edgeshape[edges[now]];
+
+			//determain the offset height
+			int prev_id = -1, next_id = -1;
+			Vector2d p0, dir1, dir2;
+			double ave_len = 0;
+			p0 = curv.parameters.col(0);
+			for (int j = 1; j < curv.parameters.cols(); j++)
+			{
+				ave_len += (curv.parameters.col(j) - p0).norm();
+				p0 = curv.parameters.col(j);
+			}
+			ave_len /= curv.parameters.cols() - 1;
+			double offset_height;
+			if(abs(offset_increase_ratio - 1) < DBL_EPSILON)
+				offset_height = ave_len * offset_initial_ratio * offset_quad_num;
+			else
+				offset_height = ave_len * offset_initial_ratio *(1 - pow(offset_increase_ratio, offset_quad_num)) / (1 - offset_increase_ratio);
+			
+			//whether the two nearby edges can construct the expect offet
+			bool flag = false;
+			auto &prev_para = edgeshape[prev].parameters;
+			auto &next_para = edgeshape[next].parameters;
+			GeneralMathMethod::Find_Span(curv.parameters, prev_para, false, prev_id, discrete_num, offset_height);
+			if (prev_id >= 0)
+			{
+				GeneralMathMethod::Find_Span(curv.parameters, next_para, true, next_id, discrete_num, offset_height);
+				if (next_id >= 0) flag = true;
+			}
+
+			//compute offset grid to each nearby edge
+			int prev_quad_num, next_quad_num;
+			bool prev_end_flag, next_end_flag;
+			if (flag)
+			{
+				prev_end_flag = !prev_id;
+				next_end_flag = next_id == (next_para.cols() - 1) * discrete_num;
+				if (prev_end_flag && next_end_flag)
+				{
+					prev_id++;
+					next_id--;
+				}
+				prev_quad_num = next_quad_num = std::max(4, offset_quad_num);
+			}
+			else
+			{
+				p0 = curv.parameters.col(0);
+				dir1 = (p0 - curv.parameters.col(1)).normalized();
+				dir2 = prev_para.col(0) - p0;
+				double prev_height = abs(dir1[0] * dir2[1] - dir1[1] * dir2[0]);
+				p0 = curv.parameters.col(curv.parameters.cols() - 1);
+				dir1 = (p0 - curv.parameters.col(curv.parameters.cols() - 2)).normalized();
+				dir2 = next_para.col(next_para.cols() - 1) - p0;
+				double next_height = abs(dir1[0] * dir2[1] - dir1[1] * dir2[0]);
+				if (prev_height > next_height)
+				{
+					if (abs(offset_increase_ratio - 1) < DBL_EPSILON)
+						prev_quad_num = next_quad_num = std::max(4, (int)(next_height / (ave_len * offset_initial_ratio) + 0.5));
+					else
+						prev_quad_num = next_quad_num = std::max(4, (int)(log(1 - (next_height * (1 - offset_initial_ratio) / (ave_len * offset_initial_ratio))) / log(offset_increase_ratio) + 0.5));
+					GeneralMathMethod::Find_Span(curv.parameters, prev_para, false, prev_id, discrete_num, next_height);
+					prev_end_flag = !prev_id;
+					if (!prev_end_flag) next_id = (next_para.cols() - 1) * discrete_num;
+					else
+					{
+						prev_id = 1;
+						next_id = (next_para.cols() - 1) * discrete_num - 1;
+					}
+				}
+				else
+				{
+					if (abs(offset_increase_ratio - 1) < DBL_EPSILON)
+						prev_quad_num = next_quad_num = std::max(4, (int)(prev_height / (ave_len * offset_initial_ratio) + 0.5));
+					else
+						prev_quad_num = next_quad_num = std::max(4, (int)(log(1 - (prev_height * (1 - offset_initial_ratio) / (ave_len * offset_initial_ratio))) / log(offset_increase_ratio) + 0.5));
+					GeneralMathMethod::Find_Span(curv.parameters, next_para, true, next_id, discrete_num, prev_height);
+					next_end_flag = next_id == (next_para.cols() - 1) * discrete_num;
+					if (!next_end_flag) prev_id = 0;
+					else
+					{
+						next_id = (next_para.cols() - 1) * discrete_num - 1;
+						prev_id = 1;
+					}
+				}
+			}
+
+			//save the offset grid information 
+			auto &prev_info = edge_prev_info[prev];
+			if (prev_info.empty())
+			{
+				prev_info = { prev_id, prev_quad_num };
+				if (edgeshape[prev].reversed_edge != -1)
+					edge_next_info[edgeshape[prev].reversed_edge] = { (int)((prev_para.cols() - 1) * discrete_num - prev_id), prev_quad_num };
+			}
+			else
+			{
+				prev_id = (prev_id + prev_info.front()) / 2;
+				prev_quad_num = std::min(prev_quad_num, prev_info.back());
+				prev_info = { prev_id, prev_quad_num };
+				if (edgeshape[prev].reversed_edge != -1)
+					edge_next_info[edgeshape[prev].reversed_edge] = { (int)((prev_para.cols() - 1) * discrete_num - prev_id), prev_quad_num };
+			}
+			auto &next_info = edge_next_info[next];
+			if (next_info.empty())
+			{
+				next_info = { next_id, next_quad_num };
+				if (edgeshape[next].reversed_edge != -1)
+					edge_prev_info[edgeshape[next].reversed_edge] = { (int)((next_para.cols() - 1) * discrete_num - next_id), next_quad_num };
+			}
+			else
+			{
+				next_id = (next_id + next_info.front()) / 2;
+				next_quad_num = std::min(next_quad_num, next_info.back());
+				next_info = { next_id,  next_quad_num };
+				if (edgeshape[next].reversed_edge != -1)
+					edge_prev_info[edgeshape[next].reversed_edge] = { (int)((next_para.cols() - 1) * discrete_num - next_id), next_quad_num };
+			}
+		}
+
+		//re-discrete point in edge which is nearby curvature edge
+		for (int i = 0; i < edgeshape.size(); i++)
+		{
+			//if (i != 160 && i != 162) continue;
+			auto &prev_info = edge_prev_info[i];
+			auto &next_info = edge_next_info[i];
+			if (prev_info.empty() && next_info.empty()) continue;
+			if (!prev_info.empty() && !next_info.empty())
+			{
+				int t1 = prev_info.front(), t2 = next_info.front();
+				if (t1 >= t2)
+				{
+					re_discrete(edgeshape[i], t1, discrete_num, prev_info.back(), false);
+					re_discrete(edgeshape[i], t2, discrete_num, next_info.back(), true);
+				}
+				else
+				{
+					re_discrete(edgeshape[i], (t1 + t2) / 2, discrete_num, prev_info.back(), false);
+					re_discrete(edgeshape[i], (t1 + t2) / 2, discrete_num, next_info.back(), true);
+				}
+				continue;
+			}
+			if (!prev_info.empty())
+			{
+				int t1 = prev_info.front();
+				re_discrete(edgeshape[i], t1, discrete_num, prev_info.back(), false);
+			}
+			else
+			{
+				int t2 = next_info.front();
+				re_discrete(edgeshape[i], t2, discrete_num, next_info.back(), true);
+			}
+		}
+
+		//set offset quad num for each surface which has curvture feature edge
+		for (int i = 0; i < faceshape.size(); i++)
+		{
+			if (!faceshape[i].if_quad) continue;
+			auto &edges = faceshape[i].wires.front();
+
+			//find curvature edge
+			int now, prev, next;
+			for (int j = 0; j < edges.size(); j++)
+			{
+				if (edgeshape[edges[j]].if_curvature)
+				{
+					now = j;
+					break;
+				}
+			}
+			if (now) prev = edges[now - 1];
+			else prev = edges.back();
+			if (now < edges.size() - 1) next = edges[now + 1];
+			else next = edges.front();
+			faceshape[i].quad_num = std::min(edge_prev_info[prev].back(), edge_next_info[next].back());
+		}
+
+		for (int i = 0; i < edgeshape.size(); i++)
+		{
+			if (edgeshape[i].reversed_edge < 0) continue;
+			int a = edgeshape[i].parameters.cols();
+			int b = edgeshape[edgeshape[i].reversed_edge].parameters.cols();
+			if (a != b)
+			{
+				dprint("big bug!!!!!", i, edgeshape[i].reversed_edge);
+			}
+		}
+	}
+
+	void OccReader::re_discrete(ShapeEdge &edge, int id, int discrete_num, int quad_num, bool direction)
+	{
+		if (!quad_num) return;
+		int num = edge.parameters.cols(), id1 = id / discrete_num, id2 = id % discrete_num, left_segment;
+		Eigen::Matrix2Xd para;
+		if (direction) left_segment = num - id1 - 1;
+		else
+		{
+			if (id2) left_segment = id1 + 1;
+			else left_segment = id1;
+		}
+
+		para.resize(2, quad_num + 1 + left_segment);
+		vector<ShapeFace> &faceshape = globalmodel.faceshape;
+		gp_Pnt2d uv;
+		Standard_Real first = 0, last = 0;
+		Handle_Geom2d_Curve thePCurve = BRep_Tool::CurveOnSurface(edge.edge, faceshape[edge.main_face].face, first, last);
+		double t, t1, initial_step;
+		if (edge.edge.Orientation() == TopAbs_FORWARD)
+		{
+			t = (last - first) * id / ((num - 1.0) * discrete_num) + first;
+			if (direction)
+			{
+				if (abs(offset_increase_ratio - 1) < DBL_EPSILON)
+					initial_step = (t - first) / quad_num;
+				else
+					initial_step = (t - first) * (1 - offset_increase_ratio) / (1 - std::pow(offset_increase_ratio, quad_num));
+				para.col(0) = edge.parameters.col(0);
+				t1 = initial_step;
+				for (int i = 1; i <= quad_num; i++)
+				{
+					uv = thePCurve->Value(t1);
+					para.col(i) << uv.X(), uv.Y();
+					t1 += initial_step * std::pow(offset_increase_ratio, i);
+				}
+				for (int i = 1; i <= left_segment; i++)
+				{
+					para.col(i + quad_num) = edge.parameters.col(id1 + i);
+				}
+			}
+			else
+			{
+				if (abs(offset_increase_ratio - 1) < DBL_EPSILON)
+					initial_step = (last - t) / quad_num;
+				else
+					initial_step = (last - t) * (1 - offset_increase_ratio) / (1 - std::pow(offset_increase_ratio, quad_num));
+				t1 = last - initial_step;
+				para.col(para.cols() - 1) = edge.parameters.col(num - 1);
+				for (int i = 1; i <= quad_num; i++)
+				{
+					uv = thePCurve->Value(t1);
+					para.col(para.cols() - 1 - i) << uv.X(), uv.Y();
+					t1 -= initial_step * std::pow(offset_increase_ratio, i);
+				}
+				for (int i = 0; i < left_segment; i++)
+				{
+					para.col(i) = edge.parameters.col(i);
+				}
+			}
+		}
+		else
+		{
+			t = last - (last - first) * id / ((num - 1.0) * discrete_num);
+			if (direction)
+			{
+				if (abs(offset_increase_ratio - 1) < DBL_EPSILON)
+					initial_step = (last - t) / quad_num;
+				else
+					initial_step = (last - t) * (1 - offset_increase_ratio) / (1 - std::pow(offset_increase_ratio, quad_num));
+				para.col(0) = edge.parameters.col(0);
+				t1 = last - initial_step;
+				for (int i = 1; i <= quad_num; i++)
+				{
+					uv = thePCurve->Value(t1);
+					para.col(i) << uv.X(), uv.Y();
+					t1 -= initial_step * std::pow(offset_increase_ratio, i);
+				}
+				for (int i = 1; i <= left_segment; i++)
+				{
+					para.col(i + quad_num) = edge.parameters.col(id1 + i);
+				}
+			}
+			else
+			{
+				if (abs(offset_increase_ratio - 1) < DBL_EPSILON)
+					initial_step = (t - first) / quad_num;
+				else
+					initial_step = (t - first) * (1 - offset_increase_ratio) / (1 - std::pow(offset_increase_ratio, quad_num));
+				t1 = initial_step;
+				para.col(para.cols() - 1) = edge.parameters.col(num - 1);
+				for (int i = 1; i <= quad_num; i++)
+				{
+					uv = thePCurve->Value(t1);
+					para.col(para.cols() - 1 - i) << uv.X(), uv.Y();
+					t1 += initial_step * std::pow(offset_increase_ratio, i);
+				}
+				for (int i = 0; i < left_segment; i++)
+				{
+					para.col(i) = edge.parameters.col(i);
+				}
+			}
+		}
+		edge.parameters.setZero();
+		edge.parameters.resize(2, para.cols());
+		edge.parameters = para;
+	}
+
+	void OccReader::Offset_lines(Matrix2Xd &parameters, vector<Matrix2Xd> &offset_pnts, int beginid, int pntnum, int quadnum)
+	{
+		offset_pnts.reserve(quadnum);
+		int totalpnts = parameters.cols();
+		int endid = (beginid + pntnum - 1) >= totalpnts ? 0 : (beginid + pntnum - 1);
+		if (!beginid) beginid = totalpnts;
+		for (int i = 1; i <= quadnum; i++)
+		{
+			Matrix2Xd singleline(2, pntnum - 2);
+			auto start_pnt = parameters.col(beginid - i), end_pnt = parameters.col(endid + i);
+			for (int j = 1; j <= pntnum - 2; j++)
+			{
+				singleline.col(j - 1) = (j * end_pnt + (pntnum - 1 - j)*start_pnt) / (pntnum - 1);
+			}
+			offset_pnts.push_back(singleline);
+		}
+	}
+
 }
 
 

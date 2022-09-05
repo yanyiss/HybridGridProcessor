@@ -1,5 +1,4 @@
-#include"DomainRemesh.h"
-
+﻿#include"DomainRemesh.h"
 Eigen::Matrix2d Riemannremesh::Riemanndata(const TriMesh::Point &p)
 {
 	Point ru = B->PartialDerivativeU(p[0], p[1]);
@@ -37,13 +36,14 @@ void Riemannremesh::calclength()
 	int count = 0;
 	for (auto e : mesh->edges())
 	{
+		//if (!e.is_boundary()) continue;
 		count++;
 		he = mesh->halfedge_handle(e, 0);
 		len += Riemannlen(mesh->from_vertex_handle(he), mesh->to_vertex_handle(he));
 	}
 	len /= count;
 	highlength = 4 * len / 3;
-	lowlength = 0.8 * len ;
+	lowlength = 0.8 * len;
 }
 
 void Riemannremesh::split()
@@ -64,7 +64,7 @@ void Riemannremesh::split()
 		if (len > highlength)
 		{
 			vh = mesh->add_vertex(mesh->calc_edge_midpoint(ee));
-			mesh->split_edge(ee, vh);   
+			mesh->split_edge(ee, vh);
 			mesh->data(vh).M = (mesh->data(vh1).M + mesh->data(vh2).M) * 0.5;
 		}
 	}
@@ -76,7 +76,6 @@ void Riemannremesh::collapse()
 	TriMesh::EdgeHandle e;
 	TriMesh::HalfedgeHandle he;
 	TriMesh::VertexHandle p1, p2;
-	bool is_collapse = true;
 	for (int i = mesh->n_edges() - 1; i >= 0; i--)
 	{
 		if (i > mesh->n_edges() - 1) continue;
@@ -89,10 +88,11 @@ void Riemannremesh::collapse()
 		{
 			if (mesh->is_boundary(p2)) continue;
 			he = mesh->opposite_halfedge_handle(he);
-			p1 = mesh->from_vertex_handle(he);					
+			p1 = mesh->from_vertex_handle(he);
 			p2 = mesh->to_vertex_handle(he);
 		}
 		if (Riemannlen(p1, p2) >= lowlength) continue;
+		bool is_collapse = true;
 		for (auto vf : mesh->vf_range(p1))
 		{
 			int count = 0;
@@ -119,7 +119,7 @@ void Riemannremesh::collapse()
 	}
 	mesh->garbage_collection();
 }
-
+	
 void Riemannremesh::equalize_valence()
 {
 	std::vector<int> targetv;
@@ -186,10 +186,11 @@ void Riemannremesh::remesh()
 	calclength();
 	for (int i = 0; i < 5; i++)
 	{
-		dprint("Domain remesh iter time:", i,"    Vertices:",mesh->n_vertices());
+		//dprint("Domain remesh iter time:", i, "    Vertices:", mesh->n_vertices());
 		split();
 		collapse();
 		equalize_valence();
 		updatepoint();
 	}
 }
+
