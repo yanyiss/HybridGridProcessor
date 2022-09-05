@@ -11,8 +11,8 @@ namespace CADMesher
 		{
 			len = len_;
 		}
-		lowerLen = len / 1.1;
-		higherLen = len * 1.1;
+		lowerLen = len / 2;
+		higherLen = len * 2;
 		rate = rate_;
 		aabbtree = globalmodel.init_trimesh_tree;
 		projectMesh();
@@ -86,7 +86,7 @@ namespace CADMesher
 				max_len_ = max(max_len_, max(mesh->calc_edge_length(mesh->next_halfedge_handle(oppthe)),
 					mesh->calc_edge_length(mesh->prev_halfedge_handle(oppthe))));
 			}
-			if (edge_len > len*rate && mesh->calc_edge_length(eh) > max_len_ / rate || mesh->calc_edge_length(eh) > higherLen)
+			if (edge_len > len*rate && mesh->calc_edge_length(eh) > max_len_ / rate)// || mesh->calc_edge_length(eh) > higherLen)
 			{
 				OpenMesh::Vec3d p = 0.5*(mesh->point(v0) + mesh->point(v1));
 				OV newvert = mesh->add_vertex(p);
@@ -175,7 +175,7 @@ namespace CADMesher
 			}
 
 			//if (edge_len < len * cof / rate || mesh->calc_edge_length(eh) < lowerLen)// && mesh_->calc_edge_length(eh) < min_len*a)
-			if (edge_len < len * cof / rate && mesh->calc_edge_length(eh) < min_len_ * rate || mesh->calc_edge_length(eh) < lowerLen)
+			if (edge_len < len * cof / rate && mesh->calc_edge_length(eh) < min_len_ * rate)// || mesh->calc_edge_length(eh) < lowerLen)
 			{
 				if (mesh->data(v1).get_vertflag())
 				{
