@@ -62,7 +62,7 @@ namespace CADMesher
 			dprint();
 #endif
 		}
-		globalProject();
+		//globalProject();
 
 		dprint("remeshing while eliminating small angle");
 		itertimes = 0;
@@ -72,7 +72,7 @@ namespace CADMesher
 			if (processFeatureConstraintAngle() < 20)
 			{
 				tmqh.update();
-				if(tmqh.getAvgQuality() > 0.88)
+				if(tmqh.getAvgQuality() > 0.92)
 					break;
 			}
 			adjustTargetLength();
@@ -1027,7 +1027,13 @@ namespace CADMesher
 		//double error = (6 / kMin + std::sqrt(36 / (kMin*kMin) - 12 * expected_length*expected_length)) / 6.0;
 		//double lowerLengthBound = std::sqrt(3 * error*(2 / kMax - error));
 		////double kMin = sqrt(3) / expected_length;
+		/*double l = meshAverageLength(*mesh);
+		for (auto tv : mesh->vertices())
+		{
+			mesh->data(tv).set_targetlength(l);
+		}*/
 
+#if 1
 		double error = 0.01*expected_length;
 		double minL = 0.1*expected_length;
 		double maxL = expected_length;
@@ -1056,6 +1062,7 @@ namespace CADMesher
 			//dprint(gc, mesh->data(tv).get_targetlength());
 		}
 		int p = 0;
+#endif
 	}
 
 #ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH

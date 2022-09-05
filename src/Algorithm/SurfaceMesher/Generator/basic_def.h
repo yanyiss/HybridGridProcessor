@@ -30,14 +30,18 @@ namespace CADMesher
 	struct ShapeFace
 	{
 		bool if_exisited;
+		bool if_quad;
 		int id;
+		int quad_num;
 		TopoDS_Face face;
 		vector<vector<int>> wires;
 		GeometryType *Surface;
 		ShapeFace(int id_, TopoDS_Face face_)
 		{
 			if_exisited = true;
+			if_quad = false;
 			id = id_;
+			quad_num = -1;
 			face = face_;
 		}
 	};

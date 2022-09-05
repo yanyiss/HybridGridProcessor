@@ -23,12 +23,11 @@ namespace CADMesher
 				expected_length = meshAverageLength(*mesh);
 			}
 			boundaryNum = 0;
-			aabbtree = new ClosestPointSearch::AABBTree(*mesh);
-			//aabbtree = globalmodel.init_trimesh_tree;
+			aabbtree = globalmodel.init_trimesh_tree;
 		};
 		TriangleMeshRemeshing(const TriangleMeshRemeshing &tmr) = delete;
 		~TriangleMeshRemeshing() { 
-			if (aabbtree) { delete aabbtree; aabbtree = nullptr; } 
+			//if (aabbtree) { delete aabbtree; aabbtree = nullptr; } 
 		}
 
 	public:
