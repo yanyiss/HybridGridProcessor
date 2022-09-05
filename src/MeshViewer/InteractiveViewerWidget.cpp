@@ -300,7 +300,9 @@ void InteractiveViewerWidget::pick_vertex(int x,int y)
 {
 	int r = find_vertex_using_selected_point();
 	lastestVertex = r;
-	printf("Select Vertex : %d\n", r);
+	//printf("Select Vertex : %d\n", r);
+	dprint("Select Vertex:", r, "\tCurvature:", mesh.data(mesh.vertex_handle(r)).GaussCurvature,
+		"\tLength:",mesh.data(mesh.vertex_handle(r)).get_targetlength());
 
 	std::vector<int>::iterator it;
 	if( (it = std::find(selectedVertex.begin(),selectedVertex.end(), r)) == selectedVertex.end() )
@@ -640,6 +642,7 @@ void InteractiveViewerWidget::showAnisotropicMesh()
 #include "..\src\Toolbox\filesOperator.h"
 #include "..\src\Algorithm\SurfaceMesher\Generator\Iso_Mesh.h"
 #include "..\src\Algorithm\SurfaceMesher\Optimizer\TriangleMeshRemeshing.h"
+//#include <fstream>
 void InteractiveViewerWidget::showDebugTest()
 {
 #pragma region step files test
@@ -648,54 +651,38 @@ void InteractiveViewerWidget::showDebugTest()
 #if 0
 		std::string path = "..\\model\\CAD\\step files lib";
 #else
-		std::string path = "..\\model\\CAD";
+		std::string path = "..\\model\\models from partya";
 #endif
 		getFiles(path, allFileName);
-
+		std::ofstream fileWriter;
+		fileWriter.open("C:\\Git Rep\\HybridGridProcessor\\model\\Isotropic Mesh\\IsoMeshLog.txt", std::ios::out);
 		using namespace CADMesher;
-		int i = 11;
+		int i = 0;
 		for (; i < allFileName.size();)
 		{
 			auto fileName = allFileName[i];
 			dprint("\n\n\nfile index:\t", i++, "\nfileName:\t", fileName);
 			globalmodel.clear();
 			Iso_Mesh iso_mesh(QString::fromStdString(fileName));
-			if (!OpenMesh::IO::write_mesh(globalmodel.initial_trimesh, fileName+".obj"))
+			timeRecorder tr;
+			TriangleMeshRemeshing trm(&(globalmodel.initial_trimesh));
+			trm.run();
+			double iso_time = tr.out();
+
+			truncateFilePath(fileName);
+			truncateFileExtension(fileName);
+			if (!OpenMesh::IO::write_mesh(globalmodel.initial_trimesh, "C:\\Git Rep\\HybridGridProcessor\\model\\Isotropic Mesh\\" + fileName + "_iso.obj"));
 			{
 				std::cerr << "fail";
 			}
-			//TriMesh &m = globalmodel.initial_trimesh;
-			//initMeshStatusAndNormal(m);
-			//TriangleMeshRemeshing tmr(&m);
-			//tmr.run();
-
-			/*double c = 4 * std::sqrt(3);
-			double minAngle = 4, maxAngle = 0, avgAngle = 0;
-			double minQuality = 1, avgQuality = 0;
-			for (auto tf : m.faces())
-			{
-				double h = 0, p = 0;
-				for (auto &tfh : m.fh_range(tf))
-				{
-					double angle = m.calc_sector_angle(tfh);
-					minAngle = std::min(angle, minAngle);
-					maxAngle = std::max(angle, maxAngle);
-					avgAngle += angle;
-
-					double l = m.calc_edge_length(tfh);
-					h = std::max(l, h);
-					p += l;
-				}
-				double q = c * m.calc_face_area(tf) / (p*h);
-				minQuality = std::min(q, minQuality);
-				avgQuality += q;
-			}
-			dprint("angle and quality", minAngle, maxAngle, minQuality);
-			if (minAngle < 0.05)
-			{
-				system("pause");
-			}*/
+			TriMeshQualityHelper tmqh(&globalmodel.initial_trimesh);
+			fileWriter << fileName << std::endl;
+			fileWriter << "quantity: " << globalmodel.initial_trimesh.n_vertices() << std::endl;
+			fileWriter << "min, max, avg angle: " << tmqh.getMinAngle() << "," << tmqh.getMaxAngle() << "," << tmqh.getAvgAngle() << std::endl;
+			fileWriter << "min, avg quality: " << tmqh.getMinQuality() << "," << tmqh.getAvgQuality() << std::endl;
+			fileWriter << "remeshing times:" << iso_time << "\n\n";
 		}
+		fileWriter.close();
 	}
 }
 

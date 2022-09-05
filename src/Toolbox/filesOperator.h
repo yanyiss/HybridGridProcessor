@@ -28,3 +28,27 @@ void getFiles(std::string path, std::vector<std::string>& files)
 		_findclose(hFile);
 	}
 }
+
+#include <qstring.h>
+void truncateFilePath(std::string &file)
+{
+	QString fileName = QString::fromStdString(file);
+	int id = fileName.lastIndexOf("/");
+	if (id == -1)
+	{
+		id = fileName.lastIndexOf("\\");
+		if (id == -1)
+			return;
+	}
+	file = fileName.right(fileName.length() - id - 1).toLatin1().data();
+}
+
+void truncateFileExtension(std::string &file)
+{
+	QString fileName = QString::fromStdString(file);
+	int id = fileName.lastIndexOf(".");
+	if (id == -1)
+		return;
+	fileName.truncate(id);
+	file = fileName.toLatin1().data();
+}

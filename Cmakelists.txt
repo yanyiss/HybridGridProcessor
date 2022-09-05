@@ -12,7 +12,6 @@ set_property(TARGET ANN BSpline PROPERTY FOLDER "Dependency")
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
 
 add_definitions(/D_USE_MATH_DEFINES)
-add_definitions(-DUSE_AVX)
 
 #Complier
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")

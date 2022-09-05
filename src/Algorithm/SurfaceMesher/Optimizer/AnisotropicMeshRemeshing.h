@@ -6,6 +6,7 @@
 #include <OpenMesh/Core/IO/MeshIO.hh>
 #include "..\src\Dependency\Common\CommonDefinitions.h"
 #include "CGAL_Definition.h"
+#include "..\src\Dependency\CPS\CPS_AABBTree.h"
 #include "..\Generator\basic_def.h"
 #if 0
 namespace CADMesher

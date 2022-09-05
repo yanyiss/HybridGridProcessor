@@ -55,11 +55,12 @@ public:
 		else
 			timeKnots.push_back(clock());
 	}
-	inline void out(const std::string &info = "time:")
+	inline double out(const std::string &info = "time:")
 	{
 		clock_t presentTime = clock();
 		dprint(info, presentTime - timeKnots.back(), "ms");
 		timeKnots.push_back(presentTime);
+		return presentTime - timeKnots[timeKnots.size() - 2];
 	}
 	inline void sum(const std::string &info = "sum time:")
 	{

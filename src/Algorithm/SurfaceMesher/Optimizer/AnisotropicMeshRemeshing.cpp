@@ -690,7 +690,7 @@ namespace CADMesher
 	{
 		if (ref_mesh_ == NULL) return;
 		unsigned nv = mesh_->n_vertices();
-		//project_on_reference();
+		project_on_reference();
 
 		Eigen::Matrix3d H, H0, H1; Eigen::Vector3d P0, P1, P;
 		Eigen::Matrix3d U; Eigen::Matrix3d V; Eigen::Vector3d sv; Eigen::Matrix3d diag_a; diag_a.setZero();

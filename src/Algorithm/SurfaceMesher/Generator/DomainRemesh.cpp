@@ -186,7 +186,6 @@ void Riemannremesh::remesh()
 	calclength();
 	for (int i = 0; i < 5; i++)
 	{
-		//dprint("Domain remesh iter time:", i, "    Vertices:", mesh->n_vertices());
 		split();
 		collapse();
 		equalize_valence();

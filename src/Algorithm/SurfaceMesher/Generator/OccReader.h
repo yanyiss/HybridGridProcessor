@@ -35,6 +35,7 @@ namespace CADMesher
 			dprint(filetype + "file read finished\n");
 
 			ComputeFaceAndEdge();
+			narrow_surface();
 			Discrete_Edge();
 			Face_type();
 			C0_Feature();
@@ -70,7 +71,10 @@ namespace CADMesher
 		vector<PolyMesh> Surface_PolyMeshes;
 
 		void ComputeFaceAndEdge();
+		void narrow_surface();
 		void Discrete_Edge();
+		bool ProcessTangentialBoundary(int fid, int bid);
+		void ClearBoundary(TriMesh &tm);
 		void Face_type();
 		void C0_Feature();
 		void curvature_feature();
@@ -99,8 +103,10 @@ namespace CADMesher
 		}
 
 	private:
-		double initialRate = 0.006;
-		double degeneratedRate = 0.01;
+		double initialRate = 0.01;
+		//double degeneratedRate = 0.02;
 	};
+
 }
 #endif // !OCCREADER_H
+

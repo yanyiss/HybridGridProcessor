@@ -9,7 +9,7 @@
 //typedef CGAL::Exact_predicates_inexact_constructions_kernel CGAL_Inexact_Kernal;
 //typedef CGAL_Inexact_Kernal::Point_2 CGAL_2_Point;
 //typedef CGAL::Polygon_2<CGAL_Inexact_Kernal> CGAL_2_Polygon;
-
+//
 //#include <CGAL/Simple_cartesian.h>
 //#include <CGAL/AABB_tree.h>
 //#include <CGAL/AABB_traits.h>

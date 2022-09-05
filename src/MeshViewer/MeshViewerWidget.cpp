@@ -553,19 +553,19 @@ void MeshViewerWidget::draw_scene_mesh(int drawmode)
 	case CHECKBOARD:
 		draw_IsotropicMesh();
 
-		glEnable(GL_POLYGON_OFFSET_FILL);
-		glPolygonOffset(1.5f, 2.0f);
-		glEnable(GL_LIGHTING);
-		glShadeModel(GL_FLAT);
-		draw_mesh_solidflat();
-		glDisable(GL_POLYGON_OFFSET_FILL);
-		//draw_meshpointset();
-		glDisable(GL_LIGHTING);
+		//glEnable(GL_POLYGON_OFFSET_FILL);
+		//glPolygonOffset(1.5f, 2.0f);
+		//glEnable(GL_LIGHTING);
+		//glShadeModel(GL_FLAT);
+		//draw_mesh_solidflat();
+		//glDisable(GL_POLYGON_OFFSET_FILL);
+		////draw_meshpointset();
+		//glDisable(GL_LIGHTING);
 
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		draw_mesh_wireframe();
-		draw_feature();
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		//draw_mesh_wireframe();
+		//draw_feature();
+		//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		break;
 	case DIAGONAL_MESH:
 		glEnable(GL_POLYGON_OFFSET_FILL);
@@ -885,30 +885,87 @@ void MeshViewerWidget::draw_mesh_pointset() const
 #include "../src/Algorithm/SurfaceMesher/Optimizer/TriangleMeshRemeshing.h"
 void MeshViewerWidget::draw_IsotropicMesh()
 {
-	if (ifUpdateMesh)
+	//绘制展示用图
+	OH h;
+	for (auto &th : mesh.halfedges())
 	{
-//#if 0
-		timeRecorder tr;
+		if (th.is_boundary())
+		{
+			h = th;
+			break;
+		}
+	}
+	OH hiter = mesh.next_halfedge_handle(h);
+	glColor3d(0.1, 0.1, 0.1);
+	glLineWidth(2);
+	glBegin(GL_LINES);
+	while (h != hiter)
+	{
+		glVertex3dv(mesh.point(mesh.from_vertex_handle(hiter)).data());
+		glVertex3dv(mesh.point(mesh.to_vertex_handle(hiter)).data());
+		hiter = mesh.next_halfedge_handle(hiter);
+	}
+	glVertex3dv(mesh.point(mesh.from_vertex_handle(hiter)).data());
+	glVertex3dv(mesh.point(mesh.to_vertex_handle(hiter)).data());
+	glEnd();
+
+	hiter = mesh.next_halfedge_handle(h);
+	glColor3d(0.9, 0.4, 0.1);
+	glPointSize(10);
+	glBegin(GL_POINTS);
+	while (h != hiter)
+	{
+		glVertex3dv(mesh.point(mesh.from_vertex_handle(hiter)).data());
+		hiter = mesh.next_halfedge_handle(hiter);
+	}
+	glVertex3dv(mesh.point(mesh.from_vertex_handle(hiter)).data());
+	glEnd();
+
+//	if (ifUpdateMesh)
+//	{
+////#if 0
+//		timeRecorder tr;
+//		CADMesher::TriangleMeshRemeshing *tmr = new CADMesher::TriangleMeshRemeshing(&(CADMesher::globalmodel.initial_trimesh));
+//		tmr->run();
+//		tr.out("Isotropic Remesing Time:");
+////#else
+////		initMeshStatusAndNormal(CADMesher::globalmodel.initial_trimesh);
+////		CADMesher::TriangleMeshRemeshing *tmr = new CADMesher::TriangleMeshRemeshing(&CADMesher::globalmodel.initial_trimesh);
+////		tmr->run();
+////		mesh = Mesh(CADMesher::globalmodel.initial_trimesh);
+////#endif
+//		delete tmr;
+//		ifUpdateMesh = false; 
+//		
+//		std::string cfn = CADFileName.toLatin1().data();
+//		bool if_saveOK = OpenMesh::IO::write_mesh(mesh, "../model/CAD/Isotropic Mesh/" + cfn + "_iso.obj");
+//		if (if_saveOK)
+//			dprint("The isotropic mesh has been saved in \"Isotropic Mesh\" folder");
+//		else
+//			dprint("Save isotropic mesh failed");
+//
+//	}
+
+#if 0
+	//用于remesh普通三角网格
+	static bool once = true;
+	if (once) {
+		for (auto te : mesh.edges())
+		{
+			auto n0 = mesh.calc_face_normal(te.h0().face());
+			auto n1 = mesh.calc_face_normal(te.h1().face());
+			if (n0.dot(n1) < 0.8) {
+				mesh.data(te).flag1 = true;
+				mesh.data(te.v0()).set_vertflag(true);
+				mesh.data(te.v1()).set_vertflag(true);
+			}
+		}
 		CADMesher::TriangleMeshRemeshing *tmr = new CADMesher::TriangleMeshRemeshing(&mesh);
 		tmr->run();
-		tr.out("Isotropic Remesing Time:");
-//#else
-//		initMeshStatusAndNormal(CADMesher::globalmodel.initial_trimesh);
-//		CADMesher::TriangleMeshRemeshing *tmr = new CADMesher::TriangleMeshRemeshing(&CADMesher::globalmodel.initial_trimesh);
-//		tmr->run();
-//		mesh = Mesh(CADMesher::globalmodel.initial_trimesh);
-//#endif
-		delete tmr;
-		ifUpdateMesh = false; 
-		
-		std::string cfn = CADFileName.toLatin1().data();
-		bool if_saveOK = OpenMesh::IO::write_mesh(mesh, "../model/CAD/Isotropic Mesh/" + cfn + "_iso.obj");
-		if (if_saveOK)
-			dprint("The isotropic mesh has been saved in \"Isotropic Mesh\" folder");
-		else
-			dprint("Save isotropic mesh failed");
+		OpenMesh::IO::write_mesh(mesh, "C:/Git Rep/VolumeMeshFramework/VolumeMeshProcessing_Base/surface.obj");
+		once = false;
 	}
-
+#endif
 }
 
 #include "../src/Algorithm/SurfaceMesher/Optimizer/AnisotropicMeshRemeshing.h"
@@ -970,55 +1027,61 @@ void MeshViewerWidget::draw_feature()
 	glEnd();
 
 #endif
-	/*glLineWidth(1);
-	glColor3d(0.0, 0.0, 0.0);
-	glBegin(GL_LINES);
-	for (int i = 0; i < 53; i++)
+	//draw triangles with low quality
+#if 0
+	glColor3d(0.9, 0.1, 0.9);
+	glPointSize(8);
+	glBegin(GL_POINTS);
+	for (auto &tf : mesh.faces())
 	{
-		glVertex3dv(mesh.point(mesh.vertex_handle(i)).data());
-		glVertex3dv(mesh.point(mesh.vertex_handle(i+1)).data());
+		for (auto &tfh : mesh.fh_range(tf))
+		{
+			if (mesh.calc_sector_angle(tfh) < 0.1)
+			{
+				glVertex3dv(mesh.point(tfh.from()).data());
+				glVertex3dv(mesh.point(tfh.to()).data());
+				glVertex3dv(mesh.point(tfh.next().to()).data());
+				break;
+			}
+		}
 	}
 	glVertex3dv(mesh.point(mesh.vertex_handle(53)).data());
 	glVertex3dv(mesh.point(mesh.vertex_handle(0)).data());
 	glEnd();
-
-	glPointSize(5);
-	glColor3d(1.0, 0.0, 0.0);
-	glBegin(GL_POINTS);
-	for (int i = 0; i < 54; i++)
-	{
-		glVertex3dv(mesh.point(mesh.vertex_handle(i)).data());
-	}
-	glEnd();*/
-
-	//glColor3d(1, 0, 0);
-	//glPointSize(8);
-	//glBegin(GL_POINTS);
-	//auto v = mesh.vertex_handle(135);
-	//glVertex3dv(mesh.point(v).data());
-	//v = mesh.vertex_handle(17);
-	//glVertex3dv(mesh.point(v).data());
-	//glEnd();
-
-
-	//draw triangles with low quality
-	//glColor3d(0.9, 0.1, 0.9);
-	//glPointSize(8);
-	//glBegin(GL_POINTS);
-	//for (auto &tf : mesh.faces())
+  
+#endif
+	////draw curvature distribution
+	//glColor3d(0, 0, 1);
+	//for (auto &tv : mesh.vertices())
 	//{
-	//	for (auto &tfh : mesh.fh_range(tf))
-	//	{
-	//		if (mesh.calc_sector_angle(tfh) < 0.08)
-	//		{
-	//			glVertex3dv(mesh.point(tfh.from()).data());
-	//			glVertex3dv(mesh.point(tfh.to()).data());
-	//			glVertex3dv(mesh.point(tfh.next().to()).data());
-	//			break;
-	//		}
-	//	}
+	//	double gc = mesh.data(tv).GaussCurvature;
+	//	if (gc < 1.0e-4)
+	//		gc = 0;
+	//	else if (gc > 100)
+	//		gc = 1;
+	//	else
+	//		gc = (4 + log10(gc)) / 6.0;
+
+	//	glPointSize(gc*10+1);
+	//	glBegin(GL_POINTS);
+	//	glVertex3dv(mesh.point(tv).data());
+	//	glEnd();
 	//}
-	//glEnd();
+
+	/*int pN = 0;
+	glColor3d(0.1, 0.1, 0.1);
+	glPointSize(20);
+	glBegin(GL_POINTS);
+	for (auto &tv : mesh.vertices())
+	{
+		if (tv.valence() <= 2 || tv.is_boundary())
+		{
+			++pN;
+			glVertex3dv(mesh.point(tv).data());
+		}
+	}
+	glEnd();
+	dprint("problem number:", pN);*/
 }
 //=======
 #include "../src/Algorithm/CheckBoard/CheckBoardGenerator.h"

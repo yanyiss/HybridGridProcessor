@@ -70,7 +70,7 @@ struct MeshTraits : public OpenMesh::DefaultTraits
 		double get_edge_weight(){ return weight; };
 
 		void set_edgeflag(bool b) { edgeflag = b; };
-		bool get_edgeflag() { return edgeflag; };
+		bool get_edgeflag() { return flag1 || flag2; };
 
 		bool offsetflag = false;
 		bool is_adjusted = false;
@@ -156,7 +156,7 @@ bool flip_openmesh(Mesh::EdgeHandle& eh, Mesh& mesh_);
 bool check_in_triangle_face(const std::vector<OpenMesh::Vec3d>& tri, const OpenMesh::Vec3d& p);
 bool baryCoord( const OpenMesh::Vec3d& _p, const OpenMesh::Vec3d& _u, const OpenMesh::Vec3d& _v, const OpenMesh::Vec3d& _w, OpenMesh::Vec3d&_result );
 
-void compute_point_area(Mesh* mesh_, std::vector<std::map<int,double>>& cornerArea, std::vector<double>& pointArea , bool use_np = false);
+void compute_point_area(TriMesh* mesh_, std::vector<std::map<int,double>>& cornerArea, std::vector<double>& pointArea , bool use_np = false);
 
 void rot_coord_sys(const OpenMesh::Vec3d &old_u, const OpenMesh::Vec3d &old_v,
 				   const OpenMesh::Vec3d &new_norm,
@@ -174,7 +174,7 @@ void diagonalize_curv(const OpenMesh::Vec3d &old_u, const OpenMesh::Vec3d &old_v
 					  const OpenMesh::Vec3d &new_norm,
 					  OpenMesh::Vec3d &pdir1, OpenMesh::Vec3d &pdir2, double &vk1, double &vk2);
 
-void compute_principal_curvature(Mesh* mesh_, 
+void compute_principal_curvature(TriMesh* mesh_, 
 								 std::vector<double>& K1, std::vector<double>& K2, 
 								 std::vector<OpenMesh::Vec3d>& dir1,std::vector<OpenMesh::Vec3d>& dir2);
 
