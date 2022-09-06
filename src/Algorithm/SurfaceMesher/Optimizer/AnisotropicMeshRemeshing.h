@@ -1,16 +1,119 @@
 #ifndef ANISOTROPICMESHREMESHING_H
 #define ANISOTROPICMESHREMESHING_H
 
-//#include <QObject>
-#include "..\src\MeshViewer\MeshDefinition.h"
-#include <OpenMesh/Core/IO/MeshIO.hh>
-#include "..\src\Dependency\Common\CommonDefinitions.h"
-#include "CGAL_Definition.h"
-#include "..\src\Dependency\CPS\CPS_AABBTree.h"
-#include "..\Generator\basic_def.h"
-#if 0
+#include "TriangleMeshRemeshing.h"
+#if 1
 namespace CADMesher
 {
+	void ProjectToFeature(TriMesh* origin, ClosestPointSearch::AABBTree* aabbtree, O3d &in, O3d &out)
+	{
+		OF fh = aabbtree->closest_point_and_face_handle(in).second;
+		double dis = DBL_MAX;
+		auto tfv = origin->fv_begin(fh);
+		O3d vp[3] = { origin->point(tfv.handle()), origin->point((++tfv).handle()), origin->point((++tfv).handle()) };
+		O3d p0, p01, p;
+		out = in;
+		for (auto tfe : origin->fe_range(fh))
+		{
+			if (!origin->data(tfe).get_edgeflag())
+				continue;
+			p0 = origin->point(tfe.v0());
+			p01 = origin->point(tfe.v1()) - p0; p01.normalize();
+			p = (in - p0).dot(p01)*p01 + p0;
+			double norm = (in - p).norm();
+			if (norm > dis)
+				continue;
+			dis = norm;
+			out = p;
+		}
+	}
+
+	class AnisotropicMeshRemeshing
+	{
+	public:
+		AnisotropicMeshRemeshing();
+		~AnisotropicMeshRemeshing();
+
+		void SetMesh(TriMesh* mesh)
+		{
+			reset_all_State();
+			mesh_ = mesh;
+		}
+		void reset_all_State();
+
+		void load_ref(TriMesh* ref_mesh);
+		void sample_mesh_anisotropic_edge_length(double ref_edge_len = 1.0, double a = 1.5, bool add_flip = true);
+		void do_remeshing(double ref_edge_len = 1.0, double a = 1.5);
+		void build_AABB_tree_feature_edge_using_Ref();
+		void calc_tri_quality();
+
+		void LCOT_Optimize(int iter_num, double step_length);
+		bool reposition_LCOT(double step_length);
+		bool reposition_exp_LCOT(double step_length);
+		bool flip_based_energy();
+		void delete_boundary_small_tri();
+		double get_ref_mesh_ave_anisotropic_edge_length() { return ref_mesh_ave_anisotropic_edge_length; }
+
+	private:
+
+		void project_on_reference_mesh_with_metric(TriMesh::VertexHandle vh, OpenMesh::Vec3d& p);
+		void project_on_reference_edge_with_metric(TriMesh::VertexHandle vh, OpenMesh::Vec3d& p);
+		void find_nearst_point_on_reference_mesh(OpenMesh::Vec3d& p, bool is_boundary);
+		void project_on_reference();
+		void project_on_reference_new_p(std::vector<OpenMesh::Vec3d>& np);
+
+		bool split_one_edge(TriMesh::EdgeHandle& eh, OpenMesh::Vec3d& p);
+		double calc_flip_energy(const OpenMesh::Vec3d& p1, const OpenMesh::Vec3d& p2, const OpenMesh::Vec3d& p3, const OpenMesh::Vec6d& M, bool use_area);
+		void compute_src_mesh_ave_anisotropic_edge_length();
+
+		TriMesh* mesh_; TriMesh* ref_mesh_;
+		ClosestPointSearch::AABBTree* aabbtree;
+
+		std::vector<int> below_30_tri;
+		std::vector<double> below_30_tri_angle;
+		double smallest_angle_th;
+
+		double ref_mesh_ave_anisotropic_edge_length;
+
+		double least_angle = PI / 90.0;
+		double largest_angle = PI * 0.975;
+	};
+}
+#endif
+
+#if 0
+namespace USTC_GCL_C
+{
+	struct local_frame
+	{
+		local_frame()
+			:e_x(OpenMesh::Vec3d(1, 0, 0)), e_y(OpenMesh::Vec3d(0, 1, 0)), n(OpenMesh::Vec3d(0, 0, 1))
+		{}
+		~local_frame() {}
+
+		void find_e_x_y()
+		{
+			if (std::abs(n[2]) >= std::abs(n[1]) && std::abs(n[2]) >= std::abs(n[0]))
+			{
+				e_x[0] = 1.0; e_x[1] = 1.0; e_x[2] = (-n[0] - n[1]) / n[2];
+			}
+			else if (std::abs(n[1]) >= std::abs(n[2]) && std::abs(n[1]) >= std::abs(n[0]))
+			{
+				e_x[0] = 1.0; e_x[2] = 1.0; e_x[1] = (-n[0] - n[2]) / n[1];
+			}
+			else
+			{
+				e_x[1] = 1.0; e_x[2] = 1.0; e_x[0] = (-n[2] - n[1]) / n[0];
+			}
+			e_x.normalize();
+			e_y = OpenMesh::cross(n, e_x);
+		}
+
+		OpenMesh::Vec3d e_x;
+		OpenMesh::Vec3d e_y;
+		OpenMesh::Vec3d n;
+	};
+
 	class AnisotropicMeshRemeshing
 	{
 		//Q_OBJECT
@@ -18,17 +121,16 @@ namespace CADMesher
 		AnisotropicMeshRemeshing();
 		~AnisotropicMeshRemeshing();
 
-		void SetMesh(Mesh* mesh)
+		void SetMesh(TriMesh* mesh)
 		{
 			reset_all_State();
 			mesh_ = mesh;
 		}
 		void reset_all_State();
 
-		void load_ref_mesh(Mesh* aniso_ref_mesh);
+		void load_ref(GlobalGeometry* globalmodel);
 		void sample_mesh_anisotropic_edge_length(double ref_edge_len = 1.0, double a = 1.5, bool add_flip = true);
 		void do_remeshing(double ref_edge_len = 1.0, double a = 1.5);
-		void build_AABB_tree_using_Ref();
 		void build_AABB_tree_feature_edge_using_Ref();
 		void calc_tri_quality();
 
@@ -37,37 +139,39 @@ namespace CADMesher
 		bool reposition_exp_LCOT(double step_length);
 		bool flip_based_energy();
 
-		void uniform_optimize(int iter_num, double step_length);
+		//void uniform_optimize(int iter_num, double step_length);
 
-		void exp_mips_optimize(int iter_num, double area_angle_ratio, double energy_power);
-		void reposition_exp_mips(double area_angle_ratio, double energy_power);
+		//void exp_mips_optimize(int iter_num, double area_angle_ratio, double energy_power);
+		//void reposition_exp_mips(double area_angle_ratio, double energy_power);
 
-		void reposition_particle(double step_length);
-		void flip_based_particle_energy();
+		//void reposition_particle(double step_length);
+		//void flip_based_particle_energy();
 
 		void delete_boundary_small_tri();
 		double get_ref_mesh_ave_anisotropic_edge_length() { return ref_mesh_ave_anisotropic_edge_length; }
 
 	private:
-		bool draw_small_tri_ok;
 
-		void project_on_reference_mesh_with_metric(Mesh::VertexHandle vh, OpenMesh::Vec3d& p);
-		void project_on_reference_edge_with_metric(Mesh::VertexHandle vh, OpenMesh::Vec3d& p);
+		void project_on_reference_mesh_with_metric(TriMesh::VertexHandle vh, OpenMesh::Vec3d& p);
+		void project_on_reference_edge_with_metric(TriMesh::VertexHandle vh, OpenMesh::Vec3d& p);
 		void find_nearst_point_on_reference_mesh(OpenMesh::Vec3d& p, bool is_boundary);
 		void project_on_reference();
 		void project_on_reference_new_p(std::vector<OpenMesh::Vec3d>& np);
 		void project_on_reference(OpenMesh::Vec3d& p, OpenMesh::Vec3d& sp, OpenMesh::Vec3d& dir, double& dis);
 
-		bool split_one_edge(Mesh::EdgeHandle& eh, OpenMesh::Vec3d& p);
+		bool split_one_edge(TriMesh::EdgeHandle& eh, OpenMesh::Vec3d& p);
 		double calc_flip_energy(const OpenMesh::Vec3d& p1, const OpenMesh::Vec3d& p2, const OpenMesh::Vec3d& p3, const OpenMesh::Vec6d& M, bool use_area);
-		double calc_flip_particle_energy(const OpenMesh::Vec3d& p1, const OpenMesh::Vec3d& p2, const OpenMesh::Vec6d& M);
+		//double calc_flip_particle_energy(const OpenMesh::Vec3d& p1, const OpenMesh::Vec3d& p2, const OpenMesh::Vec6d& M);
 
-		Mesh* mesh_; Mesh* ref_mesh_;
-		std::vector<CGAL_3_Triangle> triangle_vectors;
+		TriMesh* mesh_;
+		GlobalGeometry* referenceModel;
+		/*std::vector<CGAL_3_Triangle> triangle_vectors;
 		CGAL_AABB_Tree* AABB_tree;
 		std::vector<CGAL_3_Segment> segment_vectors;
 		std::vector<unsigned> segment_edge_id;
-		CGAL_AABB_Segment_Tree* AABB_Segment_tree;
+		CGAL_AABB_Segment_Tree* AABB_Segment_tree;*/
+		//ClosestPointSearch::AABBTree* aabbtree;
+		ParallelTools::AABBTree* aabbtree;
 
 		std::vector<int> below_30_tri;
 		std::vector<double> below_30_tri_angle;
@@ -76,12 +180,13 @@ namespace CADMesher
 		void compute_src_mesh_ave_anisotropic_edge_length();
 		double ref_mesh_ave_anisotropic_edge_length;
 
-		double compute_exp_mips_area_energy(Mesh::VertexHandle vh, OpenMesh::Vec3d& np,
-			const std::vector<OpenMesh::Vec6d>& vH, double area_angle_ratio, double energy_power);
+		//double compute_exp_mips_area_energy(Mesh::VertexHandle vh, OpenMesh::Vec3d& np,
+		//	const std::vector<OpenMesh::Vec6d>& vH, double area_angle_ratio, double energy_power);
 
 		double least_angle = PI / 90.0;
 		double largest_angle = PI * 0.975;
 	};
 }
 #endif
+
 #endif

@@ -1169,6 +1169,7 @@ namespace CADMesher
 		auto &face = globalmodel.faceshape;
 		for (int i = 0; i < edge.size(); i++)
 		{
+			//if (i != 11) continue;
 			auto &aedge = edge[i];
 			if (!aedge.if_exisited) continue;
 			//dprint(i, aedge.main_face, aedge.secondary_face);
@@ -1209,19 +1210,12 @@ namespace CADMesher
 
 		//edge[3].if_C0 = true;
 		dprint("C0 feature done!");
-		//edge[8].if_C0 = true;
-		//edge[11].if_C0 = true;
-		//edge[15].if_C0 = true;
-		//edge[17].if_C0 = true;
 	}
 
 	void OccReader::curvature_feature()
 	{
 		auto &edge = globalmodel.edgeshape;
 		auto &face = globalmodel.faceshape;
-		double min_curv = 1 / expected_edge_length;
-		//timeRecorder tr;
-		int computation = 0;
 		for (int i = 0; i < edge.size(); i++)
 		{
 			//if (i != 294) continue;
@@ -1237,7 +1231,7 @@ namespace CADMesher
 			}
 
 			//短边不予考虑
-			if (aedge.parameters.cols() < 10) 
+			if (aedge.parameters.cols() < 10)
 			{
 				aedge.if_curvature = false;
 				continue;
@@ -1325,8 +1319,6 @@ namespace CADMesher
 		}
 
 		dprint("curvature feature done!");
-		//tr.out("time:");
-		//dprint("jisuanliang", computation);
 	}
 
 	bool OccReader::If_decline(vector<double>& curvature)

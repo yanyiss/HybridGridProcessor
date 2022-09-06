@@ -4,6 +4,8 @@
 #include<algorithm>
 #include "..\src\Algorithm\SurfaceMesher\Optimizer\TriangleMeshRemeshing.h"
 #include "..\src\Algorithm\SurfaceMesher\Optimizer\AnisoMeshRemeshing.h"
+#include "..\src\Algorithm\SurfaceMesher\Optimizer\AnisotropicMeshing_Interface.h"
+#include "..\src\Algorithm\SurfaceMesher\Optimizer\AnisotropicMeshRemeshing.h"
 
 #define USETRI
 
@@ -16,13 +18,30 @@ namespace CADMesher
 		occ_reader->Set_TriMesh();
 		MergeModel();
 		ResetFeature();
-#if 1
+#if 0
 		TriangleMeshRemeshing trm(&(globalmodel.initial_trimesh));
 		trm.run();
 #else
+#if 0
+		auto aniso_remesh = new anisotropic_meshing_interface();
+		aniso_remesh->SetMesh(&(globalmodel.initial_trimesh));
 		TriMesh temp(globalmodel.initial_trimesh);
+		aniso_remesh->load_ref_mesh(&temp);
+		//aniso_remesh->load_ref_mesh(&mesh);
+		double tl = aniso_remesh->get_ref_mesh_ave_anisotropic_edge_length();
+		dprint("anisotropic edge length:", tl);
+		clock_t start_time = clock();
+		aniso_remesh->do_remeshing(tl, 1.5);
+#else
+		AnisotropicMeshRemeshing amr;
+		amr.SetMesh(&(globalmodel.initial_trimesh));
+		TriMesh temp(globalmodel.initial_trimesh);
+		amr.load_ref(&temp);
+		amr.do_remeshing(amr.get_ref_mesh_ave_anisotropic_edge_length());
+#endif
+		/*TriMesh temp(globalmodel.initial_trimesh);
 		AnisoMeshRemeshing amr(&(globalmodel.initial_trimesh),&temp);
-		amr.run(-1, 1.5);
+		amr.run(0.7, 1.5);*/
 #endif
 		//Write_Obj(globalmodel.initial_trimesh);
 #else 
