@@ -225,7 +225,7 @@ namespace CADMesher
 					}
 				}
 				continue;
-			}*/
+			}
 #else
 			if (mesh->data(the.edge()).flag1 || mesh->data(the.edge()).flag2)
 				continue;
@@ -504,13 +504,6 @@ namespace CADMesher
 				}
 				++processNumber;
 			}
-#else
-			else 
-			{
-				mesh->data(th.from()).set_targetlength(mesh->data(th.from()).get_targetlength()*0.5);
-				mesh->data(th.prev().from()).set_targetlength(mesh->data(th.prev().from()).get_targetlength()*0.5);
-			}
-#endif
 		}
 		mesh->garbage_collection();
 		if (!findNumber)

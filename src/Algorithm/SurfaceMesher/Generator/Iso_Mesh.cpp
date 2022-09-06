@@ -16,11 +16,14 @@ namespace CADMesher
 		occ_reader->Set_TriMesh();
 		MergeModel();
 		ResetFeature();
+#if 1
 		TriangleMeshRemeshing trm(&(globalmodel.initial_trimesh));
 		trm.run();
-		/*TriMesh temp(globalmodel.initial_trimesh);
+#else
+		TriMesh temp(globalmodel.initial_trimesh);
 		AnisoMeshRemeshing amr(&(globalmodel.initial_trimesh),&temp);
-		amr.run(-1, 1.5);*/
+		amr.run(-1, 1.5);
+#endif
 		//Write_Obj(globalmodel.initial_trimesh);
 #else 
 		occ_reader->Set_PolyMesh();
