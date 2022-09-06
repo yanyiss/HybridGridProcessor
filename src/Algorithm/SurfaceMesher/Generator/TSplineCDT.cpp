@@ -1,4 +1,4 @@
-#include "CDT/TSplineCDT.h"
+#include "TSplineCDT.h"
 
 namespace PDF3D
 {
