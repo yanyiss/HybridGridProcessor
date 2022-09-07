@@ -3,9 +3,8 @@
 #include <iostream>
 #include<algorithm>
 #include "..\src\Algorithm\SurfaceMesher\Optimizer\TriangleMeshRemeshing.h"
-#include "..\src\Algorithm\SurfaceMesher\Optimizer\AnisoMeshRemeshing.h"
 #include "..\src\Algorithm\SurfaceMesher\Optimizer\AnisotropicMeshing_Interface.h"
-#include "..\src\Algorithm\SurfaceMesher\Optimizer\AnisotropicMeshRemeshing.h"
+//#include "..\src\Algorithm\SurfaceMesher\Optimizer\AnisotropicMeshRemeshing.h"
 
 #define USETRI
 
@@ -22,7 +21,7 @@ namespace CADMesher
 		TriangleMeshRemeshing trm(&(globalmodel.initial_trimesh));
 		trm.run();
 #else
-#if 0
+#if 1
 		auto aniso_remesh = new anisotropic_meshing_interface();
 		aniso_remesh->SetMesh(&(globalmodel.initial_trimesh));
 		TriMesh temp(globalmodel.initial_trimesh);

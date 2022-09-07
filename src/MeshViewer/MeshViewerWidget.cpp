@@ -968,7 +968,7 @@ void MeshViewerWidget::draw_IsotropicMesh()
 #endif
 }
 
-#include "../src/Algorithm/SurfaceMesher/Optimizer/AnisotropicMeshRemeshing.h"
+//#include "../src/Algorithm/SurfaceMesher/Optimizer/AnisotropicMeshRemeshing.h"
 void MeshViewerWidget::draw_AnisotropicMesh()
 {
 #if 0

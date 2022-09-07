@@ -5,29 +5,6 @@
 #if 1
 namespace CADMesher
 {
-	void ProjectToFeature(TriMesh* origin, ClosestPointSearch::AABBTree* aabbtree, O3d &in, O3d &out)
-	{
-		OF fh = aabbtree->closest_point_and_face_handle(in).second;
-		double dis = DBL_MAX;
-		auto tfv = origin->fv_begin(fh);
-		O3d vp[3] = { origin->point(tfv.handle()), origin->point((++tfv).handle()), origin->point((++tfv).handle()) };
-		O3d p0, p01, p;
-		out = in;
-		for (auto tfe : origin->fe_range(fh))
-		{
-			if (!origin->data(tfe).get_edgeflag())
-				continue;
-			p0 = origin->point(tfe.v0());
-			p01 = origin->point(tfe.v1()) - p0; p01.normalize();
-			p = (in - p0).dot(p01)*p01 + p0;
-			double norm = (in - p).norm();
-			if (norm > dis)
-				continue;
-			dis = norm;
-			out = p;
-		}
-	}
-
 	class AnisotropicMeshRemeshing
 	{
 	public:
