@@ -302,7 +302,7 @@ void InteractiveViewerWidget::pick_vertex(int x,int y)
 	lastestVertex = r;
 	//printf("Select Vertex : %d\n", r);
 	dprint("Select Vertex:", r, "\tCurvature:", mesh.data(mesh.vertex_handle(r)).GaussCurvature,
-		"\tLength:",mesh.data(mesh.vertex_handle(r)).get_targetlength());
+		"\tLength:",mesh.data(mesh.vertex_handle(r)).get_targetlength(), "\tPosition:", mesh.point(mesh.vertex_handle(r)));
 
 	std::vector<int>::iterator it;
 	if( (it = std::find(selectedVertex.begin(),selectedVertex.end(), r)) == selectedVertex.end() )

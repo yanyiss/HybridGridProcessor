@@ -997,6 +997,13 @@ void MeshViewerWidget::draw_AnisotropicMesh()
 //<<<<<<< john
 void MeshViewerWidget::draw_feature()
 {	
+	//16.1938 14.0963 6.5 15.0065 13.2649 6.5
+	glBegin(GL_LINE);
+	glLineWidth(10);
+	glColor3d(0, 0, 0);
+	glVertex3d(16.1938, 14.0963, 6.5);
+	glVertex3d(15.0065, 13.2649, 6.5);
+	glEnd();
 #if 1
 	//画C0特征
 	glLineWidth(5);

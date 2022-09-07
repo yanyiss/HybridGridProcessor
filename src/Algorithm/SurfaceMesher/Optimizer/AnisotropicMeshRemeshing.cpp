@@ -1,172 +1,45 @@
-#include "AnisotropicMeshing_Interface.h"
+#include "AnisotropicMeshRemeshing.h"
 #include <Eigen/Dense>
-struct local_frame
-{
-	local_frame()
-		:e_x(OpenMesh::Vec3d(1, 0, 0)), e_y(OpenMesh::Vec3d(0, 1, 0)), n(OpenMesh::Vec3d(0, 0, 1))
-	{}
-	~local_frame() {}
 
-	void find_e_x_y()
-	{
-		if (std::abs(n[2]) >= std::abs(n[1]) && std::abs(n[2]) >= std::abs(n[0]))
-		{
-			e_x[0] = 1.0; e_x[1] = 1.0; e_x[2] = (-n[0] - n[1]) / n[2];
-		}
-		else if (std::abs(n[1]) >= std::abs(n[2]) && std::abs(n[1]) >= std::abs(n[0]))
-		{
-			e_x[0] = 1.0; e_x[2] = 1.0; e_x[1] = (-n[0] - n[2]) / n[1];
-		}
-		else
-		{
-			e_x[1] = 1.0; e_x[2] = 1.0; e_x[0] = (-n[2] - n[1]) / n[0];
-		}
-		e_x.normalize();
-		e_y = OpenMesh::cross(n, e_x);
-	}
-
-	OpenMesh::Vec3d e_x;
-	OpenMesh::Vec3d e_y;
-	OpenMesh::Vec3d n;
-};
 namespace CADMesher
 {
-#define USE_FEATURE
-#define USE_PROMOTION
-#define USE_FEWERITERATION
-#define USE_CGAL_DEF_MESH
-#define USE_CGAL_DEF_EDGE
-
-	anisotropic_meshing_interface::anisotropic_meshing_interface()
+	AnisotropicMeshRemeshing::AnisotropicMeshRemeshing()
 	{
-		AABB_tree = NULL;
-		AABB_Segment_tree = NULL;
 		ref_mesh_ = NULL;
 		mesh_ = NULL;
 		draw_small_tri_ok = false;
 		smallest_angle_th = 1.0;
 	}
 
-	anisotropic_meshing_interface::~anisotropic_meshing_interface()
+	AnisotropicMeshRemeshing::~AnisotropicMeshRemeshing()
 	{
-		if (AABB_tree) delete AABB_tree;
-		AABB_tree = NULL;
-		if (AABB_Segment_tree) delete AABB_Segment_tree;
-		AABB_Segment_tree = NULL;
 		if (aabbtree) delete aabbtree;
 		aabbtree = nullptr;
 		if (segtree) delete segtree;
 		segtree = nullptr;
-		/*if(ref_mesh_)
-			delete ref_mesh_;
-		ref_mesh_ = NULL;*/
 	}
 
-	void anisotropic_meshing_interface::reset_all_State()
+	void AnisotropicMeshRemeshing::reset_all_State()
 	{
-		if (AABB_tree) delete AABB_tree;
-		AABB_tree = NULL;
-		if (AABB_Segment_tree) delete AABB_Segment_tree;
-		AABB_Segment_tree = NULL;
 		if (ref_mesh_) delete ref_mesh_;
 		ref_mesh_ = NULL;
 
 		below_30_tri.clear(); below_30_tri_angle.clear();
 	}
 
-	void anisotropic_meshing_interface::build_AABB_tree_using_Ref()
+	void AnisotropicMeshRemeshing::project_on_reference_mesh_with_metric(Mesh::VertexHandle vh, OpenMesh::Vec3d& p)
 	{
-		if (ref_mesh_->n_faces() == 0) return;
-
-		std::vector<CGAL_double_3_Point> v_pos(ref_mesh_->n_vertices()); OpenMesh::Vec3d p;
-		unsigned nv = ref_mesh_->n_vertices();
-		for (Mesh::VertexIter v_it = ref_mesh_->vertices_begin(); v_it != ref_mesh_->vertices_end(); ++v_it)
-		{
-			int vertex_id = v_it.handle().idx();
-			p = ref_mesh_->point(v_it);
-			v_pos[vertex_id] = CGAL_double_3_Point(p[0], p[1], p[2]);
-		}
-
-		triangle_vectors.clear(); triangle_vectors.reserve(ref_mesh_->n_faces()); int fv_id[3];
-		for (Mesh::FaceIter f_it = ref_mesh_->faces_begin(); f_it != ref_mesh_->faces_end(); ++f_it)
-		{
-			Mesh::FaceVertexIter fv_it = ref_mesh_->fv_iter(f_it);
-			fv_id[0] = fv_it.handle().idx(); ++fv_it;
-			fv_id[1] = fv_it.handle().idx(); ++fv_it;
-			fv_id[2] = fv_it.handle().idx();
-
-			triangle_vectors.push_back(CGAL_3_Triangle(v_pos[fv_id[0]], v_pos[fv_id[1]], v_pos[fv_id[2]]));
-		}
-
-		if (AABB_tree) delete AABB_tree;
-		AABB_tree = new CGAL_AABB_Tree(triangle_vectors.begin(), triangle_vectors.end());
-		AABB_tree->accelerate_distance_queries();
-
-		printf("------------------------------------------------------------\n");
-		printf("Build AABB Tree for Mesh.\n");
-	}
-
-	void anisotropic_meshing_interface::project_on_reference_mesh_with_metric(Mesh::VertexHandle vh, OpenMesh::Vec3d& p)
-	{
-#ifdef USE_CGAL_DEF_MESH
-		CGAL_AABB_Tree::Point_and_primitive_id point_primitive = AABB_tree->closest_point_and_primitive(CGAL_double_3_Point(p[0], p[1], p[2]));
-		CGAL_double_3_Point pos = point_primitive.first;
-		CGAL_Triangle_Iterator it = point_primitive.second;
-		unsigned face_id = std::distance(triangle_vectors.begin(), it);
-		OpenMesh::Vec3d p_ = OpenMesh::Vec3d(pos.x(), pos.y(), pos.z());
-		OpenMesh::Vec3d tp = mesh_->point(vh);
-		Mesh::VertexOHalfedgeIter voh_it = mesh_->voh_iter(vh);
-		OpenMesh::Vec3d tq = mesh_->point(mesh_->to_vertex_handle(voh_it));
-
-#ifdef USE_PROMOTION
-		double l_max = 0;
-		for (auto tvv : mesh_->vv_range(vh))
-			l_max = std::max(l_max, (mesh_->point(tvv) - tp).norm());
-		if (l_max < (p_ - tp).norm() / 3.0)
-			return;
-#endif // USE_PROMOTION
-
-		if ((p_ - tp).sqrnorm() > (tq - tp).sqrnorm())
-		{
-			printf("------------------------------------------------------------\n");
-			printf("%d\n", vh.idx());
-			printf("%f %f %f\n", p[0], p[1], p[2]);
-			printf("%f %f %f\n", p_[0], p_[1], p_[2]);
-			printf("%f %f %f\n", tp[0], tp[1], tp[2]);
-			printf("------------------------------------------------------------\n");
-			//return;
-		}
-		mesh_->set_point(vh, p_);
-
-		Mesh::ConstFaceVertexIter fv_it = ref_mesh_->cfv_iter(ref_mesh_->face_handle(face_id));
-		Mesh::Point p0 = ref_mesh_->point(fv_it.handle());
-		OpenMesh::Vec6d& h0 = ref_mesh_->data(fv_it).get_Hessian();
-		Mesh::Point p1 = ref_mesh_->point((++fv_it).handle());
-		OpenMesh::Vec6d& h1 = ref_mesh_->data(fv_it).get_Hessian();
-		Mesh::Point p2 = ref_mesh_->point((++fv_it).handle());
-		OpenMesh::Vec6d& h2 = ref_mesh_->data(fv_it).get_Hessian();
-
-		OpenMesh::Vec3d bc;
-		if (!baryCoord(p_, p0, p1, p2, bc))
-			bc[0] = bc[1] = bc[2] = 1.0 / 3.0;
-
-		OpenMesh::Vec6d h = bc[0] * h0 + bc[1] * h1 + bc[2] * h2;
-		mesh_->data(vh).set_Hessian(h);
-#else
 		OpenMesh::Vec3d tp = mesh_->point(vh);
 		auto voh_it = mesh_->voh_iter(vh);
 		OpenMesh::Vec3d tq = mesh_->point(mesh_->to_vertex_handle(voh_it));
-		OpenMesh::Vec3d p_ = tp;
-		//auto iid = closestFaceAndPoint(p_, aabbtree);
-		auto iid = aabbtree->closest_distance_and_face_handle(p_).second.idx();
+		auto fp = aabbtree->closest_point_and_face_handle(p);
+		auto p_ = fp.first;
 
-#ifdef USE_PROMOTION
 		double l_max = 0;
 		for (auto tvv : mesh_->vv_range(vh))
 			l_max = std::max(l_max, (mesh_->point(tvv) - tp).norm());
 		if (l_max < (p_ - tp).norm() / 3.0)
 			return;
-#endif // USE_PROMOTION
 
 		if ((p_ - tp).sqrnorm() > (tq - tp).sqrnorm())
 		{
@@ -180,7 +53,7 @@ namespace CADMesher
 		}
 		mesh_->set_point(vh, p_);
 		//auto ref_mesh_ = &(referenceModel->initial_trimesh);
-		auto fv_it = ref_mesh_->cfv_iter(ref_mesh_->face_handle(iid));
+		auto fv_it = ref_mesh_->cfv_iter(fp.second);
 		auto p0 = ref_mesh_->point(fv_it.handle());
 		auto& h0 = ref_mesh_->data(fv_it).get_Hessian();
 		auto p1 = ref_mesh_->point((++fv_it).handle());
@@ -194,111 +67,21 @@ namespace CADMesher
 
 		OpenMesh::Vec6d h = bc[0] * h0 + bc[1] * h1 + bc[2] * h2;
 		mesh_->data(vh).set_Hessian(h);
-#endif
 	}
 
-	void anisotropic_meshing_interface::build_AABB_tree_feature_edge_using_Ref()
+	void AnisotropicMeshRemeshing::project_on_reference_edge_with_metric(Mesh::VertexHandle vh, OpenMesh::Vec3d& p)
 	{
-		if (ref_mesh_->n_edges() == 0) return;
-		std::vector<CGAL_double_3_Point> v_pos(ref_mesh_->n_vertices()); OpenMesh::Vec3d p;
-		for (Mesh::VertexIter v_it = ref_mesh_->vertices_begin(); v_it != ref_mesh_->vertices_end(); ++v_it)
-		{
-			int vertex_id = v_it.handle().idx();
-			p = ref_mesh_->point(v_it);
-			v_pos[vertex_id] = CGAL_double_3_Point(p[0], p[1], p[2]);
-		}
-
-		segment_vectors.clear(); segment_vectors.reserve(ref_mesh_->n_edges());
-		segment_edge_id.clear(); segment_edge_id.reserve(ref_mesh_->n_edges());
-		for (Mesh::EdgeIter e_it = ref_mesh_->edges_begin(); e_it != ref_mesh_->edges_end(); ++e_it)
-		{
-#ifdef USE_FEATURE
-			if (ref_mesh_->data(e_it).get_edgeflag())
-#else
-			if (ref_mesh_->is_boundary(e_it))
-#endif // USE_FEATURE
-			{
-				Mesh::HalfedgeHandle heh = ref_mesh_->halfedge_handle(e_it, 0);
-				int v0 = ref_mesh_->from_vertex_handle(heh).idx();
-				int v1 = ref_mesh_->to_vertex_handle(heh).idx();
-				segment_vectors.push_back(CGAL_3_Segment(v_pos[v0], v_pos[v1]));
-				segment_edge_id.push_back(e_it.handle().idx());
-			}
-		}
-
-		if (segment_vectors.size() > 0)
-		{
-			if (AABB_Segment_tree) delete AABB_Segment_tree;
-			AABB_Segment_tree = new CGAL_AABB_Segment_Tree(segment_vectors.begin(), segment_vectors.end());
-			AABB_Segment_tree->accelerate_distance_queries();
-
-			printf("------------------------------------------------------------\n");
-			printf("Build AABB Tree for feature edge.\n");
-		}
-
-	}
-
-	void anisotropic_meshing_interface::project_on_reference_edge_with_metric(Mesh::VertexHandle vh, OpenMesh::Vec3d& p)
-	{
-#ifdef USE_CGAL_DEF_EDGE
-		CGAL_AABB_Segment_Tree::Point_and_primitive_id point_primitive = AABB_Segment_tree->closest_point_and_primitive(CGAL_double_3_Point(p[0], p[1], p[2]));
-		CGAL_double_3_Point pos = point_primitive.first;
-		CGAL_Segment_Iterator it = point_primitive.second;
-		unsigned edge_vector_id = std::distance(segment_vectors.begin(), it);
-		unsigned edge_id = segment_edge_id[edge_vector_id];
-		OpenMesh::Vec3d p_ = OpenMesh::Vec3d(pos.x(), pos.y(), pos.z());
-		OpenMesh::Vec3d tp = mesh_->point(vh);
-		Mesh::VertexOHalfedgeIter voh_it = mesh_->voh_iter(vh);
-		OpenMesh::Vec3d tq = mesh_->point(mesh_->to_vertex_handle(voh_it));
-
-
-#ifdef USE_PROMOTION
-		double l_max = 0;
-		for (auto tvv : mesh_->vv_range(vh))
-			l_max = std::max(l_max, (mesh_->point(tvv) - tp).norm());
-		if (l_max < (p_ - tp).norm() / 3.0)
-			return;
-#endif // USE_PROMOTION
-
-		if ((p_ - tp).sqrnorm() > (tq - tp).sqrnorm())
-		{
-			printf("------------------------------------------------------------\n");
-			printf("%d\n", vh.idx());
-			printf("%f %f %f\n", p[0], p[1], p[2]);
-			printf("%f %f %f\n", p_[0], p_[1], p_[2]);
-			printf("%f %f %f\n", tp[0], tp[1], tp[2]);
-			printf("------------------------------------------------------------\n");
-		}
-		mesh_->set_point(vh, p_);
-
-		Mesh::EdgeHandle eh = ref_mesh_->edge_handle(edge_id);
-		Mesh::HalfedgeHandle heh = ref_mesh_->halfedge_handle(eh, 0);
-		Mesh::VertexHandle v0 = ref_mesh_->from_vertex_handle(heh);
-		Mesh::VertexHandle v1 = ref_mesh_->to_vertex_handle(heh);
-		Mesh::Point p0 = ref_mesh_->point(v0);
-		OpenMesh::Vec6d& h0 = ref_mesh_->data(v0).get_Hessian();
-		Mesh::Point p1 = ref_mesh_->point(v1);
-		OpenMesh::Vec6d& h1 = ref_mesh_->data(v1).get_Hessian();
-
-		double len = (p0 - p1).norm();
-		double bc0 = (p_ - p1).norm() / len; double bc1 = 1.0 - bc0;
-		mesh_->data(vh).set_Hessian(bc0*h0 + bc1 * h1);
-#else
-		/*O3d p_; int edge_id;
-		ProjectToFeature(ref_mesh_, aabbtree, p, p_, edge_id);*/
 		O3d p_; int edge_id;
 		segtree->closest_point_and_edgeid(p, p_, edge_id);
 		OpenMesh::Vec3d tp = mesh_->point(vh);
 		Mesh::VertexOHalfedgeIter voh_it = mesh_->voh_iter(vh);
 		OpenMesh::Vec3d tq = mesh_->point(mesh_->to_vertex_handle(voh_it)); 
 
-#ifdef USE_PROMOTION
 		double l_max = 0;
 		for (auto tvv : mesh_->vv_range(vh))
 			l_max = std::max(l_max, (mesh_->point(tvv) - tp).norm());
 		if (l_max < (p_ - tp).norm() / 3.0)
 			return;
-#endif // USE_PROMOTION
 
 		if ((p_ - tp).sqrnorm() > (tq - tp).sqrnorm())
 		{
@@ -323,20 +106,13 @@ namespace CADMesher
 		double len = (p0 - p1).norm();
 		double bc0 = (p_ - p1).norm() / len; double bc1 = 1.0 - bc0;
 		mesh_->data(vh).set_Hessian(bc0*h0 + bc1 * h1);
-#endif
 	}
 
-	void anisotropic_meshing_interface::project_on_reference(OpenMesh::Vec3d& p, OpenMesh::Vec3d& sp, OpenMesh::Vec3d& dir, double& dis)
+	void AnisotropicMeshRemeshing::project_on_reference(OpenMesh::Vec3d& p, OpenMesh::Vec3d& sp, OpenMesh::Vec3d& dir, double& dis)
 	{
 		while (1)
 		{
 			p = aabbtree->closest_point(p);
-//#ifdef USE_CGAL_DEF_MESH
-//			CGAL_double_3_Point pos = AABB_tree->closest_point(CGAL_double_3_Point(p[0], p[1], p[2]));
-//			p[0] = pos.x(); p[1] = pos.y(); p[2] = pos.z();
-//#else
-//#endif
-
 			if ((sp - p).norm() < dis)
 			{
 				return;
@@ -354,31 +130,21 @@ namespace CADMesher
 		}
 	}
 
-	void anisotropic_meshing_interface::find_nearst_point_on_reference_mesh(OpenMesh::Vec3d& p, bool is_boundary)
+	void AnisotropicMeshRemeshing::find_nearst_point_on_reference_mesh(OpenMesh::Vec3d& p, bool is_boundary)
 	{
 		if (is_boundary)
 		{
-#ifdef USE_CGAL_DEF_EDGE
-			CGAL_double_3_Point pos = AABB_Segment_tree->closest_point(CGAL_double_3_Point(p[0], p[1], p[2]));
-			p = OpenMesh::Vec3d(pos.x(), pos.y(), pos.z());
-#else
 			O3d p_; int edge_id;
 			segtree->closest_point_and_edgeid(p, p_, edge_id);
 			p = p_;
-#endif
 		}
 		else
 		{
-#ifdef USE_CGAL_DEF_MESH
-			CGAL_double_3_Point pos = AABB_tree->closest_point(CGAL_double_3_Point(p[0], p[1], p[2]));
-			p = OpenMesh::Vec3d(pos.x(), pos.y(), pos.z());
-#else
 			p = aabbtree->closest_point(p);
-#endif
 		}
 	}
 
-	void anisotropic_meshing_interface::project_on_reference()
+	void AnisotropicMeshRemeshing::project_on_reference()
 	{
 		unsigned nv = mesh_->n_vertices(); OpenMesh::Vec3d p;
 		for (unsigned int i = 0; i < nv; ++i)
@@ -386,11 +152,7 @@ namespace CADMesher
 			Mesh::VertexHandle vh = mesh_->vertex_handle(i);
 			p = mesh_->point(vh);
 
-#ifdef USE_FEATURE
 			if (mesh_->data(vh).get_vertflag())
-#else
-			if (mesh_->is_boundary(vh))
-#endif // USE_FEATURE
 			{
 				project_on_reference_edge_with_metric(vh, p);
 			}
@@ -401,17 +163,13 @@ namespace CADMesher
 		}
 	}
 
-	void anisotropic_meshing_interface::project_on_reference_new_p(std::vector<OpenMesh::Vec3d>& np)
+	void AnisotropicMeshRemeshing::project_on_reference_new_p(std::vector<OpenMesh::Vec3d>& np)
 	{
 		unsigned nv = mesh_->n_vertices();
 		for (unsigned int i = 0; i < nv; ++i)
 		{
 			Mesh::VertexHandle vh = mesh_->vertex_handle(i);
-#ifdef USE_FEATURE
 			if (mesh_->data(vh).get_vertflag())
-#else
-			if (mesh_->is_boundary(vh))
-#endif // USE_FEATURE
 			{
 				project_on_reference_edge_with_metric(vh, np[i]);
 			}
@@ -422,7 +180,7 @@ namespace CADMesher
 		}
 	}
 
-	void anisotropic_meshing_interface::load_ref_mesh(TriMesh* aniso_ref_mesh)
+	void AnisotropicMeshRemeshing::load_ref_mesh(TriMesh* aniso_ref_mesh)
 	{
 		if (ref_mesh_) delete ref_mesh_;
 		ref_mesh_ = new TriMesh(*aniso_ref_mesh);
@@ -488,14 +246,12 @@ namespace CADMesher
 			vH = vH2;
 		}
 
-		build_AABB_tree_using_Ref();
-		build_AABB_tree_feature_edge_using_Ref();
 		project_on_reference();
 		calc_tri_quality();
 		compute_src_mesh_ave_anisotropic_edge_length();
 	}
 
-	void anisotropic_meshing_interface::compute_src_mesh_ave_anisotropic_edge_length()
+	void AnisotropicMeshRemeshing::compute_src_mesh_ave_anisotropic_edge_length()
 	{
 		Eigen::Matrix3d H, H0, H1; Eigen::Vector3d P0, P1, P;
 		Eigen::Matrix3d U; Eigen::Matrix3d V; Eigen::Vector3d sv; Eigen::Matrix3d diag_a; diag_a.setZero();
@@ -533,16 +289,12 @@ namespace CADMesher
 		printf("Src mesh ave anisotropic edge length : %f\n", ref_mesh_ave_anisotropic_edge_length);
 	}
 
-	bool anisotropic_meshing_interface::split_one_edge(Mesh::EdgeHandle& eh, OpenMesh::Vec3d& p)
+	bool AnisotropicMeshRemeshing::split_one_edge(Mesh::EdgeHandle& eh, OpenMesh::Vec3d& p)
 	{
 		Mesh::HalfedgeHandle heh0 = mesh_->halfedge_handle(eh, 0);
 		Mesh::HalfedgeHandle heh1 = mesh_->halfedge_handle(eh, 1);
 		Mesh::VertexHandle vh0 = mesh_->to_vertex_handle(heh0); OpenMesh::Vec3d p0 = mesh_->point(vh0);
 		Mesh::VertexHandle vh1 = mesh_->to_vertex_handle(heh1); OpenMesh::Vec3d p1 = mesh_->point(vh1);
-
-		//#ifdef USE_PROMOTION
-		//	if (((p0 + p1) / 2 - p).norm() > (p1 - p0).norm()) return false;
-		//#endif // USE_PROMOTION
 
 		std::vector<Mesh::VertexHandle> one_face(3);
 		//bool flag = mesh_->data(eh).get_edgeflag();
@@ -652,7 +404,29 @@ namespace CADMesher
 		return true;
 	}
 
-	void anisotropic_meshing_interface::sample_mesh_anisotropic_edge_length(double ref_edge_len, double a, bool add_flip)
+	void AnisotropicMeshRemeshing::collapse_one_edge(OH hh)
+	{
+		if (mesh_->data(mesh_->from_vertex_handle(hh)).get_vertflag())
+			mesh_->data(mesh_->to_vertex_handle(hh)).set_vertflag(true);
+		OE e0, e1;
+		e0 = mesh_->edge_handle(mesh_->prev_halfedge_handle(hh));
+		if (mesh_->data(e0).get_edgeflag())
+		{
+			e1 = mesh_->edge_handle(mesh_->next_halfedge_handle(hh));
+			mesh_->data(e1).flag1 = mesh_->data(e0).flag1;
+			mesh_->data(e1).flag2 = mesh_->data(e0).flag2;
+		}
+		e0 = mesh_->edge_handle(mesh_->next_halfedge_handle(mesh_->opposite_halfedge_handle(hh)));
+		if (mesh_->data(e0).get_edgeflag())
+		{
+			e1 = mesh_->edge_handle(mesh_->prev_halfedge_handle(mesh_->opposite_halfedge_handle(hh)));
+			mesh_->data(e1).flag1 = mesh_->data(e0).flag1;
+			mesh_->data(e1).flag2 = mesh_->data(e0).flag2;
+		}
+		mesh_->collapse(hh);
+	}
+
+	void AnisotropicMeshRemeshing::sample_mesh_anisotropic_edge_length(double ref_edge_len, double a, bool add_flip)
 	{
 		if (ref_mesh_ == NULL) return;
 
@@ -701,11 +475,7 @@ namespace CADMesher
 				double edge_len = std::sqrt((P0 - P1).transpose()*H*(P0 - P1));
 				if (edge_len > ref_edge_len * a)
 				{
-#ifdef USE_FEATURE
 					bool is_boundary_edge = mesh_->data(eh).get_edgeflag();
-#else
-					bool is_boundary_edge = mesh_->is_boundary(eh);
-#endif // USE_FEATURE
 					OpenMesh::Vec3d p = 0.5*(p0 + p1);
 					find_nearst_point_on_reference_mesh(p, is_boundary_edge);
 					if (!split_one_edge(eh, p)) { ++i; continue; };
@@ -771,23 +541,11 @@ namespace CADMesher
 					printf("%f %f\n", edge_len, edge_len_);*/
 					if (edge_len < ref_edge_len / a)
 					{
-#ifdef USE_FEATURE
 						if (!mesh_->data(eh).get_edgeflag())
-#else
-						if (!mesh_->is_boundary(eh))
-#endif // USE_FEATURE
 						{
-#ifdef USE_FEATURE
 							if (mesh_->is_collapse_ok(heh) && !mesh_->data(vh0_).get_vertflag())
-#else
-							if (mesh_->is_collapse_ok(heh) && !mesh_->is_boundary(vh0_)) //from vh0 to vh1
-#endif // USE_FEATURE
 							{
-#ifdef USE_FEATURE
 								if (!mesh_->data(vh1_).get_vertflag())
-#else
-								if (!mesh_->is_boundary(vh1_))
-#endif // USE_FEATURE
 								{
 									mesh_->set_point(vh1_, 0.5*(p0 + p1));
 									project_on_reference_mesh_with_metric(vh1_, mesh_->point(vh1_));
@@ -795,18 +553,10 @@ namespace CADMesher
 								mesh_->collapse(heh); mesh_->garbage_collection();
 								ne = mesh_->n_edges(); ++collapse_count;
 							}
-#ifdef USE_FEATURE
 							else if (mesh_->is_collapse_ok(mesh_->opposite_halfedge_handle(heh)) && !mesh_->data(vh1_).get_vertflag())
-#else
-							else if (mesh_->is_collapse_ok(mesh_->opposite_halfedge_handle(heh)) && !mesh_->is_boundary(vh1_))
-#endif // USE_FEATURE
 							{
 								heh = mesh_->opposite_halfedge_handle(heh);
-#ifdef USE_FEATURE
 								if (!mesh_->data(vh0_).get_vertflag())
-#else
-								if (!mesh_->is_boundary(vh0_))
-#endif // USE_FEATURE
 								{
 									mesh_->set_point(vh0_, 0.5*(p0 + p1));
 									project_on_reference_mesh_with_metric(vh0_, mesh_->point(vh0_));
@@ -863,7 +613,7 @@ namespace CADMesher
 		//emit updateGL_Manual_signal();
 	}
 
-	void anisotropic_meshing_interface::do_remeshing(double ref_edge_len /* = 1.0 */, double a /* = 1.5 */)
+	void AnisotropicMeshRemeshing::do_remeshing(double ref_edge_len /* = 1.0 */, double a /* = 1.5 */)
 	{
 		if (ref_mesh_ == NULL) return;
 		unsigned nv = mesh_->n_vertices();
@@ -888,7 +638,7 @@ namespace CADMesher
 			split_count = 0; nv = mesh_->n_vertices();
 
 			unsigned ne = mesh_->n_edges();
-			double cof = min(1.0, 0.1*ii + 0.7);
+			double cof = std::min(1.0, 0.1*ii + 0.7);
 			for (unsigned i = 0; i < mesh_->n_edges(); ++i)
 			{
 				if (i % 10000 == 0) std::cout << i << "," << mesh_->n_edges() << std::endl;
@@ -930,11 +680,7 @@ namespace CADMesher
 				if (edge_len > ref_edge_len * a / cof && mesh_->calc_edge_length(eh) > max_len / (a))
 					//if (edge_len > ref_edge_len * a / cof)
 				{
-#ifdef USE_FEATURE
 					bool is_boundary_edge = mesh_->data(eh).get_edgeflag();
-#else
-					bool is_boundary_edge = mesh_->is_boundary(eh);
-#endif // USE_FEATURE
 
 					OpenMesh::Vec3d p = 0.5*(p0 + p1);
 					find_nearst_point_on_reference_mesh(p, is_boundary_edge);
@@ -968,6 +714,16 @@ namespace CADMesher
 			//if (ii == 0) break;
 			for (auto te = mesh_->edges_sbegin(); te != mesh_->edges_end(); ++te)
 			{
+				/*if (ii == 2 && te->idx() > 31540)
+				{
+					break;
+				}*/
+				/*if (ii == 2 && te->idx() == 31540)
+				{
+					auto hhh = mesh_->halfedge_handle(te.handle(), 0);
+					dprint(mesh_->point(mesh_->from_vertex_handle(hhh)), mesh_->point(mesh_->to_vertex_handle(hhh)));
+					break;
+				}*/
 				//if (i % 10000 == 0) std::cout << i << std::endl;
 				if (te->idx() % 10000 == 0) std::cout << te->idx() << std::endl;
 				Mesh::EdgeHandle eh = *te;
@@ -1011,23 +767,11 @@ namespace CADMesher
 				if (edge_len < ref_edge_len * cof / a && mesh_->calc_edge_length(eh) < min_len*a)
 					//if (edge_len < ref_edge_len * cof / a)
 				{
-#ifdef USE_FEATURE
 					if (!mesh_->data(eh).get_edgeflag())
-#else
-					if (!mesh_->is_boundary(eh))
-#endif // USE_FEATURE
 					{
-#ifdef USE_FEATURE
 						if (mesh_->is_collapse_ok(heh) && !mesh_->data(vh0_).get_vertflag())
-#else
-						if (mesh_->is_collapse_ok(heh) && !mesh_->is_boundary(vh0_)) //from vh0 to vh1
-#endif // USE_FEATURE
 						{
-#ifdef USE_FEATURE
 							if (!mesh_->data(vh1_).get_vertflag())
-#else
-							if (!mesh_->is_boundary(vh1_))
-#endif // USE_FEATURE
 							{
 								OpenMesh::Vec3d pri = mesh_->point(vh1_);
 								mesh_->set_point(vh1_, 0.5*(p0 + p1));
@@ -1046,21 +790,14 @@ namespace CADMesher
 									continue;
 								}
 							}
-							mesh_->collapse(heh);
+							//mesh_->collapse(heh);
+							collapse_one_edge(heh);
 							++collapse_count;
 						}
-#ifdef USE_FEATURE
 						else if (mesh_->is_collapse_ok(mesh_->opposite_halfedge_handle(heh)) && !mesh_->data(vh1_).get_vertflag())
-#else
-						else if (mesh_->is_collapse_ok(mesh_->opposite_halfedge_handle(heh)) && !mesh_->is_boundary(vh1_))
-#endif // USE_FEATURE
 						{
 							heh = mesh_->opposite_halfedge_handle(heh);
-#ifdef USE_FEATURE
 							if (!mesh_->data(vh0_).get_vertflag())
-#else
-							if (!mesh_->is_boundary(vh0_))
-#endif // USE_FEATURE
 							{
 								OpenMesh::Vec3d pri = mesh_->point(vh0_);
 								mesh_->set_point(vh0_, 0.5*(p0 + p1));
@@ -1079,7 +816,8 @@ namespace CADMesher
 									continue;
 								}
 							}
-							mesh_->collapse(heh);
+							//mesh_->collapse(heh);
+							collapse_one_edge(heh);
 							++collapse_count;
 						}
 					}
@@ -1104,8 +842,9 @@ namespace CADMesher
 								mesh_->set_point(vh1_, pri);
 								continue;
 							}
-
-							mesh_->collapse(heh);
+							dprint(te->idx());
+							//mesh_->collapse(heh);
+							collapse_one_edge(heh);
 							++collapse_count;
 						}
 					}
@@ -1122,13 +861,9 @@ namespace CADMesher
 
 			std::cout << ii << " iter is OK " << std::endl;
 		}
-#ifdef USE_FEWERITERATION
+
 		LCOT_Optimize(10, 1.0);
 		LCOT_Optimize(5, 0.25);
-#else
-		LCOT_Optimize(50, 1.0);
-		LCOT_Optimize(25, 0.25);
-#endif // USE_FEWERITERATION
 		/*vector<unsigned> &triangle_surface_index = globalmodel.triangle_surface_index;
 		vector<vector<unsigned>> vertex_surface_index(globalmodel.faceshape.size());
 		for (auto tv : mesh_->vertices()) {
@@ -1141,11 +876,11 @@ namespace CADMesher
 		/*print(vertex_surface_index[67].size());
 		for (int i = 0; i < vertex_surface_index[67].size(); i++)
 			std::cout << vertex_surface_index[67][i] << ",";*/
-			//MeshProjectToSurface(mesh_, vertex_surface_index, &globalmodel);
+		//MeshProjectToSurface(mesh_, vertex_surface_index, &globalmodel);
 		calc_tri_quality();
 	}
 
-	void anisotropic_meshing_interface::calc_tri_quality()
+	void AnisotropicMeshRemeshing::calc_tri_quality()
 	{
 		if (mesh_->n_vertices() == 0) return;
 
@@ -1338,7 +1073,7 @@ namespace CADMesher
 		printf("Mesh vertices : %d\n\n", mesh_->n_vertices());
 	}
 
-	double anisotropic_meshing_interface::calc_flip_energy(const OpenMesh::Vec3d& p1, const OpenMesh::Vec3d& p2, const OpenMesh::Vec3d& p3, const OpenMesh::Vec6d& M, bool use_area)
+	double AnisotropicMeshRemeshing::calc_flip_energy(const OpenMesh::Vec3d& p1, const OpenMesh::Vec3d& p2, const OpenMesh::Vec3d& p3, const OpenMesh::Vec6d& M, bool use_area)
 	{
 		double m0 = M[0]; double m1 = M[1]; double m2 = M[2]; double m3 = M[3]; double m4 = M[4]; double m5 = M[5];
 		double x1 = p1[0]; double y1 = p1[1]; double z1 = p1[2];
@@ -1366,7 +1101,7 @@ namespace CADMesher
 		}
 	}
 
-	bool anisotropic_meshing_interface::flip_based_energy()
+	bool AnisotropicMeshRemeshing::flip_based_energy()
 	{
 		mesh_->update_face_normals();
 		int nv = mesh_->n_vertices();
@@ -1394,11 +1129,7 @@ namespace CADMesher
 			int flip_count = 0;
 			for (Mesh::EdgeIter e_it = mesh_->edges_begin(); e_it != mesh_->edges_end(); ++e_it)
 			{
-#ifdef USE_FEATURE
-				if (mesh_->data(e_it).get_edgeflag() || !mesh_->is_flip_ok(e_it.handle()))//!is_flip_ok_openmesh(e_it.handle(), *mesh_))
-#else
-				if (mesh_->is_boundary(e_it) || !is_flip_ok_openmesh(e_it.handle(), *mesh_))
-#endif // USE_FEATURE
+				if (mesh_->data(e_it).get_edgeflag() || !mesh_->is_flip_ok(e_it.handle()))
 					continue;
 
 				int edge_id = e_it->idx();
@@ -1409,12 +1140,10 @@ namespace CADMesher
 				OpenMesh::FaceHandle fh1 = mesh_->face_handle(b0); n += mesh_->normal(fh1);
 				n.normalize();
 
-#ifdef USE_PROMOTION
 				//一定程度上防止翻折
 				if (mesh_->calc_sector_angle(a0) + mesh_->calc_sector_angle(mesh_->prev_halfedge_handle(b0)) > PI
 					|| mesh_->calc_sector_angle(b0) + mesh_->calc_sector_angle(mesh_->prev_halfedge_handle(a0)) > PI)
 					continue;
-#endif // USE_PROMOTION
 
 
 				vh = mesh_->to_vertex_handle(a0); int v0_id = vh.idx();
@@ -1464,7 +1193,7 @@ namespace CADMesher
 		return true;
 	}
 
-	bool anisotropic_meshing_interface::reposition_LCOT(double step_length)
+	bool AnisotropicMeshRemeshing::reposition_LCOT(double step_length)
 	{
 		unsigned nv = mesh_->n_vertices(); if (nv == 0) return false;
 		std::vector<OpenMesh::Vec6d> vH(nv);
@@ -1510,11 +1239,7 @@ namespace CADMesher
 		for (Mesh::VertexIter v_it = mesh_->vertices_begin(); v_it != mesh_->vertices_end(); ++v_it)
 		{
 			int vertex_id = v_it->idx(); p = mesh_->point(v_it);
-#ifdef USE_FEATURE
 			if (mesh_->data(v_it).get_vertflag())
-#else
-			if (mesh_->is_boundary(v_it))
-#endif // USE_FEATURE
 			{
 				new_pos[vertex_id] = p;
 				continue;
@@ -1595,7 +1320,7 @@ namespace CADMesher
 		return false;
 	}
 
-	bool anisotropic_meshing_interface::reposition_exp_LCOT(double step_length)
+	bool AnisotropicMeshRemeshing::reposition_exp_LCOT(double step_length)
 	{
 		unsigned nv = mesh_->n_vertices(); if (nv == 0) return false;
 		std::vector<OpenMesh::Vec6d> vH(nv);
@@ -1725,7 +1450,7 @@ namespace CADMesher
 		return false;
 	}
 
-	void anisotropic_meshing_interface::uniform_optimize(int iter_num, double step_length)
+	void AnisotropicMeshRemeshing::uniform_optimize(int iter_num, double step_length)
 	{
 		unsigned nv = mesh_->n_vertices(); if (nv == 0) return;
 		std::vector<OpenMesh::Vec6d> vH(nv, OpenMesh::Vec6d(1.0, 0, 0, 1.0, 0, 1.0));
@@ -1847,7 +1572,7 @@ namespace CADMesher
 		return;
 	}
 
-	void anisotropic_meshing_interface::LCOT_Optimize(int iter_num, double step_length)
+	void AnisotropicMeshRemeshing::LCOT_Optimize(int iter_num, double step_length)
 	{
 		int iter_count = 0;
 		//project_on_reference();
@@ -1869,7 +1594,7 @@ namespace CADMesher
 		//emit updateGL_Manual_signal();
 	}
 
-	void anisotropic_meshing_interface::delete_boundary_small_tri()
+	void AnisotropicMeshRemeshing::delete_boundary_small_tri()
 	{
 		unsigned nf = mesh_->n_faces();
 		for (unsigned i = 0; i < below_30_tri.size(); ++i)
@@ -1892,7 +1617,7 @@ namespace CADMesher
 		//emit updateGL_Manual_signal();
 	}
 
-	void anisotropic_meshing_interface::exp_mips_optimize(int iter_num, double area_angle_ratio, double energy_power)
+	void AnisotropicMeshRemeshing::exp_mips_optimize(int iter_num, double area_angle_ratio, double energy_power)
 	{
 		int iter_count = 0;
 		project_on_reference();
@@ -1910,7 +1635,7 @@ namespace CADMesher
 		//emit updateGL_Manual_signal();
 	}
 
-	void anisotropic_meshing_interface::reposition_exp_mips(double area_angle_ratio, double energy_power)
+	void AnisotropicMeshRemeshing::reposition_exp_mips(double area_angle_ratio, double energy_power)
 	{
 		unsigned nv = mesh_->n_vertices();
 		/*std::vector<OpenMesh::Vec6d> vH(nv);
@@ -2081,7 +1806,7 @@ namespace CADMesher
 		}
 	}
 
-	double anisotropic_meshing_interface::compute_exp_mips_area_energy(Mesh::VertexHandle vh, OpenMesh::Vec3d& np,
+	double AnisotropicMeshRemeshing::compute_exp_mips_area_energy(Mesh::VertexHandle vh, OpenMesh::Vec3d& np,
 		const std::vector<OpenMesh::Vec6d>& vH, double area_angle_ratio, double energy_power)
 	{
 		int vertex_id = vh.idx(); Eigen::Matrix3d vm, H3, T; Eigen::Matrix2d H2;
@@ -2179,7 +1904,7 @@ namespace CADMesher
 		return new_e;
 	}
 
-	void anisotropic_meshing_interface::reposition_particle(double step_length)
+	void AnisotropicMeshRemeshing::reposition_particle(double step_length)
 	{
 		unsigned nv = mesh_->n_vertices();
 		std::vector<OpenMesh::Vec6d> vH(nv);
@@ -2309,7 +2034,7 @@ namespace CADMesher
 		project_on_reference_new_p(new_pos);
 	}
 
-	double anisotropic_meshing_interface::calc_flip_particle_energy(const OpenMesh::Vec3d& p1, const OpenMesh::Vec3d& p2, const OpenMesh::Vec6d& M)
+	double AnisotropicMeshRemeshing::calc_flip_particle_energy(const OpenMesh::Vec3d& p1, const OpenMesh::Vec3d& p2, const OpenMesh::Vec6d& M)
 	{
 		double h1 = M[0]; double h2 = M[1]; double h3 = M[2]; double h4 = M[3]; double h5 = M[4]; double h6 = M[5];
 		double x1 = p1[0]; double y1 = p1[1]; double z1 = p1[2];
@@ -2319,7 +2044,7 @@ namespace CADMesher
 		return std::exp(f + 1.0 / f);
 	}
 
-	void anisotropic_meshing_interface::flip_based_particle_energy()
+	void AnisotropicMeshRemeshing::flip_based_particle_energy()
 	{
 		mesh_->update_face_normals();
 		int nv = mesh_->n_vertices();
@@ -2346,11 +2071,7 @@ namespace CADMesher
 			int flip_count = 0;
 			for (Mesh::EdgeIter e_it = mesh_->edges_begin(); e_it != mesh_->edges_end(); ++e_it)
 			{
-#ifdef USE_FEATURE
-				if (mesh_->data(e_it).get_edgeflag() || !mesh_->is_flip_ok(e_it.handle()))//!is_flip_ok_openmesh(e_it.handle(), *mesh_))
-#else
-				if (mesh_->is_boundary(e_it) || !is_flip_ok_openmesh(e_it.handle(), *mesh_))
-#endif // USE_FEATURE
+				if (mesh_->data(e_it).get_edgeflag() || !mesh_->is_flip_ok(e_it.handle()))
 					continue;
 
 				int edge_id = e_it->idx();
