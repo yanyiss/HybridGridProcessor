@@ -139,7 +139,7 @@ namespace GeneralMathMethod {
 		return area;
 	}
 
-	void Find_Span(Matrix2Xd &dir, Matrix2Xd &para, bool direction, int &id, int num, double height)
+	void Find_Span(Matrix2Xd& dir, Matrix2Xd &para, bool direction, int &id, int num, double height)
 	{
 		id = -1;
 		Vector2d p0, dir1, dir2;
@@ -198,6 +198,20 @@ namespace GeneralMathMethod {
 			b *= i;
 		}
 		return (a / b) * pow(p, m) * pow(1 - p, n - m);
+	}
+
+	void DataSet(Point4& UV, double eps, Matrix2Xd& pnts)
+	{
+		double u1 = UV(0), u2 = UV(1), v1 = UV(2), v2 = UV(3);
+		for (int j = 0; j < pnts.cols(); j++)
+		{
+			double &u = pnts(0, j);
+			double &v = pnts(1, j);
+			if (u <= u1) u = u1 + (u2 - u1)*eps;
+			else if (u >= u2) u = u2 - (u2 - u1)*eps;
+			if (v <= v1) v = v1 + (v2 - v1)*eps;
+			else if (v >= v2) v = v2 - (v2 - v1)*eps;
+		}
 	}
 
 #ifdef OPENMESH_TRIMESH_ARRAY_KERNEL_HH

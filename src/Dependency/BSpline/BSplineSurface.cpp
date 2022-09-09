@@ -386,12 +386,20 @@ Point BSplineSurface::PartialDerivativeVV(const double u, const double v) const
 	}
 }
 
-void BSplineSurface::PrincipalCurvature(const double u, const double v, double &k1, double &k2) const
+bool BSplineSurface::NormalValue(const double u, const double v, Point &n) const
+{
+	n = PartialDerivativeU(u, v).cross(PartialDerivativeV(u, v));
+	if (n.norm() < 1e-10) return false;
+	n.normalize();
+	return true;
+}
+
+bool BSplineSurface::PrincipalCurvature(const double u, const double v, double &k1, double &k2) const
 {
 	if (u_degree < 1 || v_degree < 1)
 	{
 		k1 = k2 = 0;
-		return;
+		return true;
 	}
 
 	Eigen::Matrix2d Weingarten, value;
@@ -451,7 +459,9 @@ void BSplineSurface::PrincipalCurvature(const double u, const double v, double &
 	double E = ru.dot(ru);
 	double F = ru.dot(rv);
 	double G = rv.dot(rv);
-	Point n = (ru.cross(rv)).normalized();
+	Point n = ru.cross(rv);
+	if (n.norm() < 1e-10) return false;
+	n.normalize();
 	double L = ruu.dot(n);
 	double M = ruv.dot(n);
 	double N = rvv.dot(n);
@@ -461,14 +471,15 @@ void BSplineSurface::PrincipalCurvature(const double u, const double v, double &
 	value = (es.pseudoEigenvalueMatrix()) / (E*G - pow(F, 2));
 	k1 = std::max(std::abs(value(0, 0)), std::abs(value(1, 1)));
 	k2 = std::min(std::abs(value(0, 0)), std::abs(value(1, 1)));
+	return true;
 }
 
-void BSplineSurface::NormalCurvature(const double u, const double v, const double x, const double y, double &k) const
+bool BSplineSurface::NormalCurvature(const double u, const double v, const double x, const double y, double &k) const
 {
 	if (u_degree < 1 || v_degree < 1)
 	{
 		k = 0;
-		return;
+		return true;
 	}
 
 	Point ru, rv, ruu, ruv, rvv;
@@ -527,11 +538,14 @@ void BSplineSurface::NormalCurvature(const double u, const double v, const doubl
 	double E = ru.dot(ru);
 	double F = ru.dot(rv);
 	double G = rv.dot(rv);
-	Point n = (ru.cross(rv)).normalized();
+	Point n = ru.cross(rv);
+	if (n.norm() < 1e-10) return false;
+	n.normalize();
 	double L = ruu.dot(n);
 	double M = ruv.dot(n);
 	double N = rvv.dot(n);
 	k = std::abs((L*x*x + 2 * M*x*y + N * y*y) / (E*x*x + 2 * F*x*y + G * y*y));
+	return true;
 }
 
 void BSplineSurface::KnotInsertion(double uv, int k, DIRECTION dir, BSplineSurface & new_surface)

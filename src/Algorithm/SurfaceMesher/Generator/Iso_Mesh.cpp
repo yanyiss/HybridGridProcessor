@@ -15,7 +15,7 @@ namespace CADMesher
 #ifdef USETRI
 		occ_reader->Set_TriMesh();
 		MergeModel();
-		ResetFeature();
+		SetTriFeature();
 #if 1
 		TriangleMeshRemeshing trm(&(globalmodel.initial_trimesh));
 		trm.run();
@@ -27,10 +27,8 @@ namespace CADMesher
 		//Write_Obj(globalmodel.initial_trimesh);
 #else 
 		occ_reader->Set_PolyMesh();
-		dprint(globalmodel.initial_polymesh.n_vertices());
 		MergeModel();
-		dprint(globalmodel.initial_polymesh.n_vertices());
-		ResetFeature1();
+		SetPolyFeature();
 		//TriangleMeshRemeshing trm(&(globalmodel.initial_polymesh));
 		//trm.run();
 		//Write_Obj(globalmodel.initial_polymesh);
@@ -337,42 +335,35 @@ namespace CADMesher
 		}
 	}
 
-	void Iso_Mesh::ResetFeature()
+	void Iso_Mesh::SetTriFeature()
 	{
-		TriMesh &model_mesh = globalmodel.initial_trimesh;
+		TriMesh& model_mesh = globalmodel.initial_trimesh;
+		//将特征边和边界边的两个端点标记为特征点
 		for (auto te : model_mesh.edges())
 		{
-			if (!model_mesh.data(te).flag1 && !model_mesh.data(te).flag2) continue;
+			if (!model_mesh.data(te).flag1 && !model_mesh.data(te).flag2 && !model_mesh.is_boundary(te)) continue;
+			if (model_mesh.is_boundary(te))
+				model_mesh.data(te).flag1 = true;
 			model_mesh.data(te.v0()).set_vertflag(true);
 			model_mesh.data(te.v1()).set_vertflag(true);
-		}
-
-		for (auto te : model_mesh.edges())
-		{
-			if (model_mesh.is_boundary(te))
-			{
-				model_mesh.data(te).flag1 = true;
-				model_mesh.data(te.v0()).set_vertflag(true);
-				model_mesh.data(te.v1()).set_vertflag(true);
-			}
 		}
 
 		dprint("Reset Feature Done!");
 	}
 
-	void Iso_Mesh::ResetFeature1()
+	void Iso_Mesh::SetPolyFeature()
 	{
-		Mesh &model_mesh = globalmodel.initial_polymesh;
-
-		//set vertex flag
+		Mesh& model_mesh = globalmodel.initial_polymesh;
+		//将特征边和边界边的两个端点标记为特征点
 		for (auto te : model_mesh.edges())
 		{
-			if (model_mesh.data(te).flag1)
-			{
-				model_mesh.data(te.v0()).set_vertflag(true);
-				model_mesh.data(te.v1()).set_vertflag(true);
-			}
+			if (!model_mesh.data(te).flag1 && !model_mesh.is_boundary(te)) continue;
+			if (model_mesh.is_boundary(te))
+				model_mesh.data(te).flag1 = true;
+			model_mesh.data(te.v0()).set_vertflag(true);
+			model_mesh.data(te.v1()).set_vertflag(true);
 		}
+		//将四边形的4个顶点标记为特征点
 		for (auto f : model_mesh.faces())
 		{
 			if (f.valence() < 4) continue;
@@ -385,6 +376,7 @@ namespace CADMesher
 				model_mesh.data(fe).flag2 = true;
 			}
 		}
+
 		dprint("Reset Feature Done!");
 	}
 
