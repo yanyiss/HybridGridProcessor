@@ -86,6 +86,10 @@ namespace CADMesher
 				max_len_ = max(max_len_, max(mesh->calc_edge_length(mesh->next_halfedge_handle(oppthe)),
 					mesh->calc_edge_length(mesh->prev_halfedge_handle(oppthe))));
 			}
+			if (edge_len / mesh->calc_edge_length(eh) > 2.0 || edge_len / mesh->calc_edge_length(eh) < 0.5)
+			{
+				//dprint(eh.idx(), edge_len, mesh->calc_edge_length(eh));
+			}
 			if (edge_len > len*rate && mesh->calc_edge_length(eh) > max_len_ / rate)// || mesh->calc_edge_length(eh) > higherLen)
 			{
 				OpenMesh::Vec3d p = 0.5*(mesh->point(v0) + mesh->point(v1));

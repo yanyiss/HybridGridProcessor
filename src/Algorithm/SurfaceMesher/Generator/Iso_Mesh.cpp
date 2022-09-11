@@ -3,9 +3,9 @@
 #include <iostream>
 #include<algorithm>
 #include "..\src\Algorithm\SurfaceMesher\Optimizer\TriangleMeshRemeshing.h"
-#include "..\src\Algorithm\SurfaceMesher\Optimizer\AnisoMeshRemeshing.h"
+#include "..\src\Algorithm\SurfaceMesher\Optimizer\AnisotropicMeshRemeshing.h"
 
-#define USETRI
+//#define USETRI
 
 namespace CADMesher
 {
@@ -20,9 +20,26 @@ namespace CADMesher
 		TriangleMeshRemeshing trm(&(globalmodel.initial_trimesh));
 		trm.run();
 #else
+#if 1
+		auto aniso_remesh = new AnisotropicMeshRemeshing();
+		aniso_remesh->SetMesh(&(globalmodel.initial_trimesh));
+		TriMesh temp = globalmodel.initial_trimesh;
+		aniso_remesh->load_ref_mesh(&temp);
+		//aniso_remesh->load_ref_mesh(&mesh);
+		double tl = aniso_remesh->get_ref_mesh_ave_anisotropic_edge_length();
+		dprint("anisotropic edge length:", tl);
+		clock_t start_time = clock();
+		aniso_remesh->do_remeshing(tl, 1.5);
+#else
+		AnisotropicMeshRemeshing amr;
+		amr.SetMesh(&(globalmodel.initial_trimesh));
 		TriMesh temp(globalmodel.initial_trimesh);
+		amr.load_ref(&temp);
+		amr.do_remeshing(amr.get_ref_mesh_ave_anisotropic_edge_length());
+#endif
+		/*TriMesh temp(globalmodel.initial_trimesh);
 		AnisoMeshRemeshing amr(&(globalmodel.initial_trimesh),&temp);
-		amr.run(-1, 1.5);
+		amr.run(0.7, 1.5);*/
 #endif
 		//Write_Obj(globalmodel.initial_trimesh);
 #else 
@@ -338,7 +355,7 @@ namespace CADMesher
 	void Iso_Mesh::SetTriFeature()
 	{
 		TriMesh& model_mesh = globalmodel.initial_trimesh;
-		//½«ÌØÕ÷±ßºÍ±ß½ç±ßµÄÁ½¸ö¶Ëµã±ê¼ÇÎªÌØÕ÷µã
+		//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ßºÍ±ß½ï¿½ßµï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½
 		for (auto te : model_mesh.edges())
 		{
 			if (!model_mesh.data(te).flag1 && !model_mesh.data(te).flag2 && !model_mesh.is_boundary(te)) continue;
@@ -354,7 +371,7 @@ namespace CADMesher
 	void Iso_Mesh::SetPolyFeature()
 	{
 		Mesh& model_mesh = globalmodel.initial_polymesh;
-		//½«ÌØÕ÷±ßºÍ±ß½ç±ßµÄÁ½¸ö¶Ëµã±ê¼ÇÎªÌØÕ÷µã
+		//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ßºÍ±ß½ï¿½ßµï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½
 		for (auto te : model_mesh.edges())
 		{
 			if (!model_mesh.data(te).flag1 && !model_mesh.is_boundary(te)) continue;
@@ -363,7 +380,7 @@ namespace CADMesher
 			model_mesh.data(te.v0()).set_vertflag(true);
 			model_mesh.data(te.v1()).set_vertflag(true);
 		}
-		//½«ËÄ±ßÐÎµÄ4¸ö¶¥µã±ê¼ÇÎªÌØÕ÷µã
+		//ï¿½ï¿½ï¿½Ä±ï¿½ï¿½Îµï¿½4ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½
 		for (auto f : model_mesh.faces())
 		{
 			if (f.valence() < 4) continue;

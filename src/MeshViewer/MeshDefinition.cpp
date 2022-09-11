@@ -554,4 +554,31 @@ void TriMeshQualityHelper::print()
 	dprint("min, avg quality:", minQuality, avgQuality);
 }
 
+void tri2poly(TriMesh &tm, Mesh &m)
+{
+	for (auto tv = tm.vertices_begin(); tv != tm.vertices_end(); ++tv)
+	{
+		auto v = m.add_vertex(tm.point(tv.handle()));
+		m.data(v).set_vertflag(tm.data(tv.handle()).get_vertflag());
+	}
+	for (auto tf = tm.faces_begin(); tf != tm.faces_end(); ++tf)
+	{
+		std::vector<OV> vhs;
+		for (auto tfv = tm.fv_begin(tf.handle()); tfv != tm.fv_end(tf.handle()); ++tfv)
+		{
+			vhs.push_back(tfv.handle());
+		}
+		m.add_face(vhs);
+	}
+	for (auto te = tm.edges_begin(); te != tm.edges_end(); ++te)
+	{
+		auto th = tm.halfedge_handle(te.handle(), 0);
+		int v0 = tm.from_vertex_handle(th).idx();
+		int v1 = tm.to_vertex_handle(th).idx();
+		auto e = m.edge_handle(m.find_halfedge(m.vertex_handle(v0), m.vertex_handle(v1)));
+		m.data(e).flag1 = tm.data(te.handle()).flag1;
+		m.data(e).flag2 = tm.data(te.handle()).flag2;
+	}
+}
+
 #pragma endregion

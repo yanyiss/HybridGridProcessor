@@ -968,7 +968,7 @@ void MeshViewerWidget::draw_IsotropicMesh()
 #endif
 }
 
-#include "../src/Algorithm/SurfaceMesher/Optimizer/AnisotropicMeshRemeshing.h"
+//#include "../src/Algorithm/SurfaceMesher/Optimizer/AnisotropicMeshRemeshing.h"
 void MeshViewerWidget::draw_AnisotropicMesh()
 {
 #if 0
@@ -1028,11 +1028,11 @@ void MeshViewerWidget::draw_feature()
 
 #endif
 	//draw triangles with low quality
-#if 0
+#if 1
 	glColor3d(0.9, 0.1, 0.9);
 	glPointSize(8);
 	glBegin(GL_POINTS);
-	for (auto &tf : mesh.faces())
+	/*for (auto &tf : mesh.faces())
 	{
 		for (auto &tfh : mesh.fh_range(tf))
 		{
@@ -1046,7 +1046,7 @@ void MeshViewerWidget::draw_feature()
 		}
 	}
 	glVertex3dv(mesh.point(mesh.vertex_handle(53)).data());
-	glVertex3dv(mesh.point(mesh.vertex_handle(0)).data());
+	glVertex3dv(mesh.point(mesh.vertex_handle(0)).data());*/
 	glEnd();
   
 #endif
