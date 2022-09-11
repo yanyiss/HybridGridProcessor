@@ -50,7 +50,7 @@ namespace CADMesher
 				for (int i = 0; i < faceshape.size(); i++)
 				{
 					if (!faceshape[i].if_exisited) continue;
-					delete faceshape[i].Surface;
+					//delete faceshape[i].Surface;
 					faceshape[i].Surface = nullptr;
 				}
 			}

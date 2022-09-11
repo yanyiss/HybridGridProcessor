@@ -2,7 +2,7 @@
 #include "..\src\Toolbox\dprinter\dprint.h"
 #define grainSize 1024
 #define epsilon 1.1e-15
-
+#if 0
 MeshField::hierarchy* MeshField::h = nullptr;
 
 #if 0
@@ -4180,3 +4180,4 @@ void PositionField::searchBFSTree(TriMesh &trimesh)
 #endif
 }
 #pragma endregion
+#endif
