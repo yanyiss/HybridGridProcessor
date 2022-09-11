@@ -22,8 +22,8 @@ namespace CADMesher
 
 		void MergeModel();
 		int EndId(vector<ShapeEdge> &edgeshape, int edge_id);
-		void ResetFeature();
-		void ResetFeature1();
+		void SetTriFeature();
+		void SetPolyFeature();
 
 		template <typename T>
 		std::string Write_Obj(T &aMesh)

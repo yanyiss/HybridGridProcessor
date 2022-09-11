@@ -12,6 +12,7 @@ namespace GeneralMathMethod
 	using namespace std;
 	typedef Matrix2Xd Polygon;
 	typedef vector<Polygon> Polygons;
+	typedef Eigen::Vector4d Point4;
 
 #pragma region polygon method
 	//polygon顶点数为polygon.rows(),要求输入点逆时针排序
@@ -29,6 +30,7 @@ namespace GeneralMathMethod
 
 	void Find_Span(Matrix2Xd &dir, Matrix2Xd &para, bool direction, int &id, int num, double height);
 	double Binomial(int n, double p, int m);
+	void DataSet(Point4& UV, double eps, Matrix2Xd& pnts);
 
 #pragma endregion
 

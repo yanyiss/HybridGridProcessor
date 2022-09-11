@@ -15,8 +15,8 @@ namespace CADMesher
 #ifdef USETRI
 		occ_reader->Set_TriMesh();
 		MergeModel();
-		ResetFeature();
-#if 0
+		SetTriFeature();
+#if 1
 		TriangleMeshRemeshing trm(&(globalmodel.initial_trimesh));
 		trm.run();
 #else
@@ -45,9 +45,9 @@ namespace CADMesher
 #else 
 		occ_reader->Set_PolyMesh();
 		MergeModel();
-		ResetFeature1();
-		TriangleMeshRemeshing trm(&(globalmodel.initial_polymesh));
-		trm.run();
+		SetPolyFeature();
+		//TriangleMeshRemeshing trm(&(globalmodel.initial_polymesh));
+		//trm.run();
 		//Write_Obj(globalmodel.initial_polymesh);
 #endif
 	}
@@ -352,42 +352,35 @@ namespace CADMesher
 		}
 	}
 
-	void Iso_Mesh::ResetFeature()
+	void Iso_Mesh::SetTriFeature()
 	{
-		TriMesh &model_mesh = globalmodel.initial_trimesh;
+		TriMesh& model_mesh = globalmodel.initial_trimesh;
+		//������ߺͱ߽�ߵ����˵���Ϊ�����
 		for (auto te : model_mesh.edges())
 		{
-			if (!model_mesh.data(te).flag1 && !model_mesh.data(te).flag2) continue;
+			if (!model_mesh.data(te).flag1 && !model_mesh.data(te).flag2 && !model_mesh.is_boundary(te)) continue;
+			if (model_mesh.is_boundary(te))
+				model_mesh.data(te).flag1 = true;
 			model_mesh.data(te.v0()).set_vertflag(true);
 			model_mesh.data(te.v1()).set_vertflag(true);
-		}
-
-		for (auto te : model_mesh.edges())
-		{
-			if (model_mesh.is_boundary(te))
-			{
-				model_mesh.data(te).flag1 = true;
-				model_mesh.data(te.v0()).set_vertflag(true);
-				model_mesh.data(te.v1()).set_vertflag(true);
-			}
 		}
 
 		dprint("Reset Feature Done!");
 	}
 
-	void Iso_Mesh::ResetFeature1()
+	void Iso_Mesh::SetPolyFeature()
 	{
-		Mesh &model_mesh = globalmodel.initial_polymesh;
-
-		//set vertex flag
+		Mesh& model_mesh = globalmodel.initial_polymesh;
+		//������ߺͱ߽�ߵ����˵���Ϊ�����
 		for (auto te : model_mesh.edges())
 		{
-			if (model_mesh.data(te).flag1)
-			{
-				model_mesh.data(te.v0()).set_vertflag(true);
-				model_mesh.data(te.v1()).set_vertflag(true);
-			}
+			if (!model_mesh.data(te).flag1 && !model_mesh.is_boundary(te)) continue;
+			if (model_mesh.is_boundary(te))
+				model_mesh.data(te).flag1 = true;
+			model_mesh.data(te.v0()).set_vertflag(true);
+			model_mesh.data(te.v1()).set_vertflag(true);
 		}
+		//���ı��ε�4�����Ϊ�����
 		for (auto f : model_mesh.faces())
 		{
 			if (f.valence() < 4) continue;
@@ -400,6 +393,7 @@ namespace CADMesher
 				model_mesh.data(fe).flag2 = true;
 			}
 		}
+
 		dprint("Reset Feature Done!");
 	}
 

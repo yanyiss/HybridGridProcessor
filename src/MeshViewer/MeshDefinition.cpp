@@ -97,6 +97,25 @@ bool flip_openmesh(Mesh::EdgeHandle& eh, Mesh& mesh_)
 	return true;
 }
 
+void Tri_to_Poly(const TriMesh& mesh1, Mesh& mesh2)
+{
+	if (mesh2.n_faces()) return;
+	for (auto v : mesh1.vertices())
+	{
+		mesh2.add_vertex(Mesh::Point(mesh1.point(v)));
+	}
+	std::vector<Mesh::VertexHandle> fvh;
+	for (auto f : mesh1.faces())
+	{
+		fvh.clear();
+		for (auto fv : mesh1.fv_range(f))
+		{
+			fvh.push_back(mesh2.vertex_handle(fv.idx()));
+		}
+		mesh2.add_face(fvh);
+	}
+}
+
 bool check_in_triangle_face(const std::vector<OpenMesh::Vec3d>& tri, const OpenMesh::Vec3d& p)
 {
 	OpenMesh::Vec3d v1 = tri[1] - tri[0]; OpenMesh::Vec3d v2 = tri[2] - tri[0];

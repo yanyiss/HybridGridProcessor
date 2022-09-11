@@ -35,11 +35,10 @@ namespace CADMesher
 			dprint(filetype + "file read finished\n");
 
 			ComputeFaceAndEdge();
-			narrow_surface();
 			Discrete_Edge();
 			Face_type();
 			C0_Feature();
-			curvature_feature();
+			Curvature_Feature();
 		}
 		OccReader(const OccReader& or) = delete;
 		~OccReader() {
@@ -71,34 +70,47 @@ namespace CADMesher
 		vector<PolyMesh> Surface_PolyMeshes;
 
 		void ComputeFaceAndEdge();
-		void narrow_surface();
 		void Discrete_Edge();
 		bool ProcessTangentialBoundary(int fid, int bid);
 		void ClearBoundary(TriMesh &tm);
 		void Face_type();
 		void C0_Feature();
-		void curvature_feature();
+		void Curvature_Feature();
 		void Set_TriMesh();
 		void Offset_lines(Matrix2Xd &parameters, vector<Matrix2Xd> &offset_pnts, int begin, int pntnum, int quadnum);
 		void Set_PolyMesh();
 		void Set_Offset_Grid();
-		void re_discrete(ShapeEdge &edge, int id, int discrete_num, int quad_num, bool direction);
+		void Re_discrete(ShapeEdge &edge, int id, int discrete_num, int quad_num, bool direction);
 		bool If_decline(vector<double>& curvature);
 
 		template<typename T>
-		void surface_curvature(GeometryType * srf, T & aMesh)
+		void Set_Curvature(GeometryType * srf, T & aMesh)
 		{
 			double k1, k2;
 			for (auto v : aMesh.vertices())
 			{
 				auto p = aMesh.point(v);
-				srf->PrincipalCurvature(p[0], p[1], k1, k2);
-				//dprint("v.idx()", k1, k2);
-				if (isnan(k1*k2))
+				if(srf->PrincipalCurvature(p[0], p[1], k1, k2))
+					aMesh.data(v).GaussCurvature = std::max(std::fabs(k1), std::fabs(k2));		
+				else aMesh.data(v).GaussCurvature = -1;
+			}
+			for (auto v : aMesh.vertices())
+			{
+				if (aMesh.data(v).GaussCurvature >= 0) continue;
+				int count = 0;
+				k1 = 0;
+				for (auto vv : aMesh.vv_range(v))
 				{
-					dprint("bug", v.idx());
+					if (aMesh.data(vv).GaussCurvature < 0) continue;
+					k1 += aMesh.data(vv).GaussCurvature;
+					count++;
 				}
-				aMesh.data(v).GaussCurvature = std::max(std::fabs(k1), std::fabs(k2));
+				if (!count)
+				{
+					dprint("Cannot compute the curvature of this surface");
+					system("pause");
+				}
+				aMesh.data(v).GaussCurvature = k1 / count;
 			}
 		}
 
