@@ -87,7 +87,7 @@ public slots:
 				tr.out("time of generating isotropic mesh:");
 #if 0
 				Mesh me;
-				tri2poly(CADMesher::globalmodel.initial_trimesh, me);
+				tri2poly(CADMesher::globalmodel.initial_trimesh, me, true);
 #else
 				Mesh me = CADMesher::globalmodel.initial_polymesh;
 #endif
