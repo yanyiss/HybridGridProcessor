@@ -35,7 +35,15 @@ public:
 	const std::vector<std::vector<double>> GetWeights(void) const { return weights; }
 	const std::vector<std::vector<Point>> GetControlPoints(void) const { return ctrlpoints; }
 
-	void PrincipalCurvature(const double u, const double v, double &k1, double &k2) const  //计算主曲率
+	bool NormalValue(const double u, const double v, Point &n) const
+	{
+		n = PartialDerivativeU(u, v).cross(PartialDerivativeV(u, v));
+		if (n.norm() < 1e-10) return false;
+		n.normalize();
+		return true;
+	}
+
+	bool PrincipalCurvature(const double u, const double v, double &k1, double &k2) const  //计算主曲率
 	{
 		Eigen::Matrix2d Weingarten, value;
 		Point ru = PartialDerivativeU(u, v);
@@ -43,7 +51,9 @@ public:
 		double E = ru.dot(ru);
 		double F = ru.dot(rv);
 		double G = rv.dot(rv);
-		Point n = (ru.cross(rv)).normalized();
+		Point n = ru.cross(rv);
+		if (n.norm() < 1e-10) return false;
+		n.normalize();
 		double L = PartialDerivativeUU(u, v).dot(n);
 		double M = PartialDerivativeUV(u, v).dot(n);
 		double N = PartialDerivativeVV(u, v).dot(n);
@@ -53,8 +63,9 @@ public:
 		value = (es.pseudoEigenvalueMatrix()) / (E*G - pow(F, 2));
 		k1 = std::max(std::abs(value(0, 0)), std::abs(value(1, 1)));
 		k2 = std::min(std::abs(value(0, 0)), std::abs(value(1, 1)));
+		return true;
 	}
-	void NormalCurvature(const double u, const double v, const double x, const double y, double &k) const
+	bool NormalCurvature(const double u, const double v, const double x, const double y, double &k) const
 	{
 		Eigen::Matrix2d Weingarten, value, eigenvector;
 		Point ru = PartialDerivativeU(u, v);
@@ -62,12 +73,16 @@ public:
 		double E = ru.dot(ru);
 		double F = ru.dot(rv);
 		double G = rv.dot(rv);
-		Point n = (ru.cross(rv)).normalized();
+		Point n = ru.cross(rv);
+		if (n.norm() < 1e-10) return false;
+		n.normalize();
 		double L = PartialDerivativeUU(u, v).dot(n);
 		double M = PartialDerivativeUV(u, v).dot(n);
 		double N = PartialDerivativeVV(u, v).dot(n);
 		k = std::abs((L*x*x + 2 * M*x*y + N * y*y) / (E*x*x + 2 * F*x*y + G * y*y));
+		return true;
 	}
+
 	template<typename T>
 	T DeCasteljau(const std::vector<std::vector<T>> controlpoints, const double u, const double v) const
 	{

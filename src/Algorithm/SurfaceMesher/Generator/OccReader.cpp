@@ -1,4 +1,6 @@
 #include "OccReader.h"
+#include "BRepBndLib.hxx"
+#include "Bnd_Box.hxx"
 
 namespace CADMesher
 {
@@ -118,73 +120,27 @@ namespace CADMesher
 				aMesh.set_point(tv, TriMesh::Point(pos[0], pos[1] * ra_inv, 0));
 			}
 
-
 			/*ClearBoundary(aMesh);
 			continue;*/
 			auto &Surface = faceshape[i].Surface;
 
-			//calculate the target edge length with respect to the error between mesh and surface		
-			double errorbounds = 0.0, testnum = std::min(200, (int)aMesh.n_vertices());
-			for (int j = 0; j < testnum; j++)
-			{
-				auto p = aMesh.point(aMesh.vertex_handle(j));
-				errorbounds += (Surface->PartialDerivativeUU(p[0], p[1])).norm() + 2 * (Surface->PartialDerivativeUV(p[0], p[1])).norm() + (Surface->PartialDerivativeVV(p[0], p[1])).norm();
-			}
-			errorbounds /= 2 * testnum;
-			errorbounds = std::max(errorbounds, 0.00001);
-			double target_h = std::sqrt(epsratio / errorbounds);
-			//dprint(aMesh.n_vertices(), target_h, x_step);
-			if (target_h < x_step && target_h > 0.25*x_step)
-			{
-				triangulate(all_pnts, bnd, sqrt(3) * target_h * target_h *0.25, aMesh);
-				for (auto tv : aMesh.vertices())
-				{
-					if (tv.idx() < pointsnumber)
-					{
-						aMesh.set_point(tv, TriMesh::Point(boundary(0, tv.idx()), boundary(1, tv.idx()), 0));
-						continue;
-					}
-					auto pos = aMesh.point(tv);
-					aMesh.set_point(tv, TriMesh::Point(pos[0], pos[1] * ra_inv, 0));
-				}
-			}
-			//dprint("initial vertices:", aMesh.n_vertices());
-
-
-			dprint("initial vertices:", aMesh.n_vertices());
-			//if (!OpenMesh::IO::write_mesh(aMesh, "1.obj"))
-			//{
-			//	std::cerr << "fail";
-			//}
 			//Remesh in domain		
 			//Riemannremesh Remesh(Surface, &aMesh);
 			//Remesh.remesh();
-			//dprint("domain remesh done!");
+			dprint("domain remesh done!");
+
 			ClearBoundary(aMesh);
 
-			/*if (!OpenMesh::IO::write_mesh(aMesh, "one.obj"))
-			{
-				std::cerr << "fail";
-			}*/
+			Set_Curvature(Surface, aMesh);
+			dprint("GaussCurvature compute done!");
 
-			double k1, k2;
-			for (auto v : aMesh.vertices())
-			{
-				auto p = aMesh.point(v);
-				Surface->PrincipalCurvature(p[0], p[1], k1, k2);
-				if (isnan(k1*k2))
-				{
-					dprint("bug", v.idx());
-				}
-				aMesh.data(v).GaussCurvature = std::max(std::fabs(k1), std::fabs(k2));
-			}
-			//dprint("GaussCurvature compute done!");
 			for (auto tv : aMesh.vertices())
 			{
 				auto pos = aMesh.point(tv);
 				auto v = asurface->Value(pos[0], pos[1]);
 				aMesh.set_point(tv, TriMesh::Point(v.X(), v.Y(), v.Z()));
 			}
+
 			//set flag1 and flag2
 			int id = 0, begin, endid;
 			for (int j = 0; j < wires.size(); j++)
@@ -321,7 +277,7 @@ namespace CADMesher
 			auto &Surface = faceshape[i].Surface;
 			double ra_inv = 1.0 / ra;
 
-			//该面是否含曲率特征边
+			//该面是否需生成四边形
 			if (!faceshape[i].if_quad)
 			{
 				all_pnts.block(1, 0, 1, all_pnts.cols()) *= ra;
@@ -339,16 +295,11 @@ namespace CADMesher
 				//Remesh in domain		
 				Riemannremesh Remesh(Surface, &aMesh);
 				Remesh.remesh();
-				newmesh = Mesh(aMesh);
-				//if (!OpenMesh::IO::write_mesh(aMesh, "4.obj"))
-				//{
-				//	std::cerr << "fail";
-				//}
+				Tri_to_Poly(aMesh, newmesh);
 			}
 			else
 			{
 				int quad_num = faceshape[i].quad_num;
-				dprint("has quad", i, quad_num);
 				all_pnts.block(1, 0, 1, all_pnts.cols()) *= if_reverse;
 				int beginid = 0, endid, offset_pnt_num;
 				auto &edges = wires.front();
@@ -490,21 +441,16 @@ namespace CADMesher
 					newmesh.add_face(facevhandle);
 				}
 			} 
-			//if (!OpenMesh::IO::write_mesh(newmesh, "3.obj"))
-			//{
-			//	std::cerr << "fail";
-			//}
-			surface_curvature(Surface, newmesh);
+
+			Set_Curvature(Surface, newmesh);
+
 			for (auto tv : newmesh.vertices())
 			{
 				auto pos = newmesh.point(tv);
 				auto v = asurface->Value(pos[0], pos[1]);
 				newmesh.set_point(tv, Mesh::Point(v.X(), v.Y(), v.Z()));
 			}
-			//if (!OpenMesh::IO::write_mesh(newmesh, "4.obj"))
-			//{
-			//	std::cerr << "fail";
-			//}
+
 			
 			//set flag1
 			int id = 0, begin, endid;
@@ -534,7 +480,6 @@ namespace CADMesher
 		}
 		dprint("Piecewise PolyMesh Done!");
 	}
-
 
 	void OccReader::ComputeFaceAndEdge()
 	{
@@ -686,99 +631,6 @@ namespace CADMesher
 			"\nSurface Number: ", faceshape.size(),
 			"\nEdge Number: ", edgeshape.size(),
 			"\n\nCompute Topology Done!");
-	}
-
-	void OccReader::narrow_surface()
-	{
-		//detect the narrow surface, consider only rectangle surface
-		//std::vector<std::vector<int>> narrow_face;
-		auto &faceshape = globalmodel.faceshape;
-		auto &edgeshape = globalmodel.edgeshape;
-		for (int i = 0; i < faceshape.size(); i++)
-		{
-			auto &wire = (faceshape[i]).wires;
-			if (wire.empty() || wire.size() > 1) continue;
-			auto &edges = wire.front();
-			if (edges.size() != 4) continue;
-			std::vector<gp_Pnt> corners;
-			for (int j = 0; j < 4; j++)
-			{
-				auto &aedge = edgeshape[edges[j]].edge;
-				if (aedge.Orientation() == TopAbs_FORWARD) corners.push_back(BRep_Tool::Pnt(TopExp::FirstVertex(aedge)));
-				else corners.push_back(BRep_Tool::Pnt(TopExp::LastVertex(aedge)));
-			}
-			auto &p1 = corners[0], &p2 = corners[1], p3 = corners[2], p4 = corners[3];
-			auto e1 = Point(p2.X() - p1.X(), p2.Y() - p1.Y(), p2.Z() - p1.Z());
-			auto e2 = Point(p3.X() - p2.X(), p3.Y() - p2.Y(), p3.Z() - p2.Z());
-			auto e3 = Point(p4.X() - p3.X(), p4.Y() - p3.Y(), p4.Z() - p3.Z());
-			auto e4 = Point(p1.X() - p4.X(), p1.Y() - p4.Y(), p1.Z() - p4.Z());
-			if ((e1.normalized() + e3.normalized()).norm() > 0.1 || (e2.normalized() + e4.normalized()).norm() > 0.1) continue;
-			double length = e1.norm(), width = e2.norm();
-			int id0, id1;// = 0;
-			/*if (length > 1e5*width) narrow_face.push_back({ i, edges[0], edges[2] });
-			else if (width > 1e5*length) narrow_face.push_back({ i, edges[1], edges[3] });*/
-			if (length > 1e5*width) { id0 = 0; id1 = 1; }
-			else if (width > 1e5*length) { id0 = 1; id1 = 0; }
-			else continue;
-
-#if 1
-			faceshape[i].if_exisited = false;
-			ShapeEdge &m0 = edgeshape[edgeshape[edges[id0]].reversed_edge];
-			ShapeEdge &m1 = edgeshape[edgeshape[edges[id0 + 2]].reversed_edge];
-			m0.reversed_edge = m1.id;
-			m1.reversed_edge = m0.id;
-			m0.secondary_face = m1.main_face;
-			m1.secondary_face = m0.main_face;
-
-			edgeshape[edges[id1]].if_exisited = false;
-			if (edgeshape[edges[id1]].reversed_edge != -1)
-				edgeshape[edgeshape[edges[id1]].reversed_edge].if_exisited = false;
-			edgeshape[edges[id1 + 2]].if_exisited = false;
-			if (edgeshape[edges[id1 + 2]].reversed_edge != -1)
-				edgeshape[edgeshape[edges[id1 + 2]].reversed_edge].if_exisited = false;
-			edgeshape[edges[id0]].if_exisited = false;
-			edgeshape[edges[id0 + 2]].if_exisited = false;
-
-			int er0 = edgeshape[edges[id1]].reversed_edge;
-			if (er0 != -1)
-			{
-				ShapeFace &f0 = faceshape[edgeshape[edges[id1]].secondary_face];
-				for (auto &edges : f0.wires)
-				{
-					int foundid = -1;
-					for (int j = 0; j < edges.size(); ++j)
-					{
-						if (edges[j] == er0)
-							foundid = j;
-					}
-					if (foundid != -1)
-					{
-						edges.erase(edges.begin() + foundid);
-						break;
-					}
-				}
-			}
-			int er1 = edgeshape[edges[id1 + 2]].reversed_edge;
-			if (er1 != -1)
-			{
-				ShapeFace &f1 = faceshape[edgeshape[edges[id1 + 2]].secondary_face];
-				for (auto &edges : f1.wires)
-				{
-					int foundid = -1;
-					for (int j = 0; j < edges.size(); ++j)
-					{
-						if (edges[j] == er1)
-							foundid = j;
-					}
-					if (foundid != -1)
-					{
-						edges.erase(edges.begin() + foundid);
-						break;
-					}
-				}
-			}
-#endif
-		}
 	}
 
 	void OccReader::Discrete_Edge()
@@ -1149,118 +1001,193 @@ namespace CADMesher
 			auto &facer = faceshape[edge.main_face].Surface;
 			auto &pnts = edge.parameters;
 			Point4 UV = facer->Getbounds();
-			double u1 = UV(0), u2 = UV(1), v1 = UV(2), v2 = UV(3);
-			for (int j = 0; j < pnts.cols(); j++)
-			{
-				double &u = pnts(0, j);
-				double &v = pnts(1, j);
-				if (u <= u1) u = u1 + (u2 - u1)*10e-8;
-				else if (u >= u2) u = u2 - (u2 - u1)*10e-8;
-				if (v <= v1) v = v1 + (v2 - v1)*10e-8;
-				else if (v >= v2) v = v2 - (v2 - v1)*10e-8;
-			}
+			GeneralMathMethod::DataSet(UV, 10e-8, pnts);
 		}
 		dprint("face type done!");
 	}
 
-	void OccReader::C0_Feature()
+	void OccReader::C0_Feature()//通过计算相交线的两个面的法向内积来判断是否光滑
 	{
-		auto &edge = globalmodel.edgeshape;
-		auto &face = globalmodel.faceshape;
+		auto& edge = globalmodel.edgeshape;
+		auto& face = globalmodel.faceshape;
+		int discrete_num = 20;
 		for (int i = 0; i < edge.size(); i++)
 		{
-			//if (i != 11) continue;
-			auto &aedge = edge[i];
-			if (!aedge.if_exisited) continue;
+			auto& aedge = edge[i];
 			//dprint(i, aedge.main_face, aedge.secondary_face);
+			if (aedge.if_C0) continue;
+
+			//将边界曲线设置为C0
 			if (aedge.reversed_edge == -1)
 			{
 				aedge.if_C0 = true;
 				continue;
 			}
-			if (aedge.if_C0) continue;
-			double C0 = 0.92;
+
+			double C0 = 0.92;     //两个法向量内积的阈值
 			int single_flag = 0;
-			auto &face1 = face[aedge.main_face].Surface;
-			auto &face2 = face[aedge.secondary_face].Surface;
-			auto &pnts1 = aedge.parameters;
-			auto &pnts2 = edge[aedge.reversed_edge].parameters;
+			auto& face1 = face[aedge.main_face].Surface;
+			auto& face2 = face[aedge.secondary_face].Surface;
+
+			//得到边的等距离散点
+			Standard_Real first = 0, last = 0;
+			Matrix2Xd pnts1(2, discrete_num), pnts2(2, discrete_num);
+			double step;
+			gp_Pnt2d uv;
+			Handle_Geom2d_Curve thePCurve1 = BRep_Tool::CurveOnSurface(aedge.edge, face[aedge.main_face].face, first, last);
+			step = (last - first) / (discrete_num - 1);
+			if (aedge.edge.Orientation() == TopAbs_FORWARD)
+			{
+				for (int i = 0; i < discrete_num - 1; i++)
+				{
+					uv = thePCurve1->Value(first + i * step);
+					pnts1.col(i) << uv.X(), uv.Y();
+				}
+				uv = thePCurve1->Value(last);
+				pnts1.col(discrete_num - 1) << uv.X(), uv.Y();
+			}
+			else
+			{
+				for (int i = 0; i < discrete_num - 1; i++)
+				{
+					uv = thePCurve1->Value(last - i * step);
+					pnts1.col(i) << uv.X(), uv.Y();
+				}
+				uv = thePCurve1->Value(first);
+				pnts1.col(discrete_num - 1) << uv.X(), uv.Y();
+			}
+			Point4 UV = face1->Getbounds();
+			GeneralMathMethod::DataSet(UV, 10e-8, pnts1);
+			Handle_Geom2d_Curve thePCurve2 = BRep_Tool::CurveOnSurface(edge[aedge.reversed_edge].edge, face[aedge.secondary_face].face, first, last);
+			step = (last - first) / (discrete_num - 1);
+			if (edge[aedge.reversed_edge].edge.Orientation() == TopAbs_FORWARD)
+			{
+				for (int i = 0; i < discrete_num - 1; i++)
+				{
+					uv = thePCurve2->Value(first + i * step);
+					pnts2.col(i) << uv.X(), uv.Y();
+				}
+				uv = thePCurve2->Value(last);
+				pnts2.col(discrete_num - 1) << uv.X(), uv.Y();
+			}
+			else
+			{
+				for (int i = 0; i < discrete_num - 1; i++)
+				{
+					uv = thePCurve2->Value(last - i * step);
+					pnts2.col(i) << uv.X(), uv.Y();
+				}
+				uv = thePCurve2->Value(first);
+				pnts2.col(discrete_num - 1) << uv.X(), uv.Y();
+			}
+			UV = face2->Getbounds();
+			GeneralMathMethod::DataSet(UV, 10e-8, pnts2);
+
+			//计算采样点处的法向量内积
+			Vector3d n1, n2;
 			for (int j = 0; j < pnts1.cols(); j++)
 			{
-				if (j - single_flag > pnts1.cols()*0.4) break;
+				if (j - single_flag > pnts1.cols() * 0.4) break;
 				double u = pnts1(0, j), v = pnts1(1, j);
-				Point ru = face1->PartialDerivativeU(u, v);
-				Point rv = face1->PartialDerivativeV(u, v);
-				Point n1 = (ru.cross(rv)).normalized();
+				if (!face1->NormalValue(u, v, n1)) continue;
 				if ((face[aedge.main_face].face).Orientation() == TopAbs_REVERSED) n1 = -n1;
-
 				u = pnts2(0, pnts1.cols() - 1 - j), v = pnts2(1, pnts1.cols() - 1 - j);
-				ru = face2->PartialDerivativeU(u, v);
-				rv = face2->PartialDerivativeV(u, v);
-				Point n2 = (ru.cross(rv)).normalized();
+				bool a2 = face2->NormalValue(u, v, n2);
+				if (!face2->NormalValue(u, v, n2)) continue;
 				if ((face[aedge.secondary_face].face).Orientation() == TopAbs_REVERSED) n2 = -n2;
 				if (n1.dot(n2) < C0) single_flag++;
 			}
-			if (single_flag > pnts1.cols()*0.6)
+
+			//若有超过60%采样点是single_flag，则将该曲线标记为flag
+			if (single_flag > pnts1.cols() * 0.6)
 			{
 				aedge.if_C0 = true;
 				edge[aedge.reversed_edge].if_C0 = true;
 			}
 		}
 
-		//edge[3].if_C0 = true;
 		dprint("C0 feature done!");
 	}
 
-	void OccReader::curvature_feature()
+	//找到曲率变化较大的曲线并标记（类似机翼前端曲线，后期需要加密或做各向异性、四边形）
+	void OccReader::Curvature_Feature()
 	{
-		auto &edge = globalmodel.edgeshape;
-		auto &face = globalmodel.faceshape;
+		auto& edge = globalmodel.edgeshape;
+		auto& face = globalmodel.faceshape;
+
+		//边离散点数目，和沿(stepu, stepv)方向的踩点数
+		int discrete_num = 20, pnt_num = 15;
+
 		for (int i = 0; i < edge.size(); i++)
 		{
-			//if (i != 294) continue;
-			auto &aedge = edge[i];
-			if (!aedge.if_exisited) continue;
+			//if (i != 255) continue;
+			auto& aedge = edge[i];
 			if (!aedge.if_curvature) continue;
 
-			//已经为C0不予考虑
-			if (aedge.if_C0 && aedge.reversed_edge != -1)
+			//C0特征边不再考虑是否为曲率特征边
+			if (aedge.if_C0)
 			{
 				aedge.if_curvature = false;
 				continue;
 			}
 
-			//短边不予考虑
-			if (aedge.parameters.cols() < 10)
+			//得到边的等距离散点
+			Matrix2Xd pnts(2, discrete_num);
+			Standard_Real first = 0, last = 0;
+			double step0;
+			gp_Pnt2d uv;
+			Handle_Geom2d_Curve thePCurve = BRep_Tool::CurveOnSurface(aedge.edge, face[aedge.main_face].face, first, last);
+			step0 = (last - first) / (discrete_num - 1);
+			if (aedge.edge.Orientation() == TopAbs_FORWARD)
 			{
-				aedge.if_curvature = false;
-				continue;
+				for (int i = 0; i < discrete_num - 1; i++)
+				{
+					uv = thePCurve->Value(first + i * step0);
+					pnts.col(i) << uv.X(), uv.Y();
+				}
+				uv = thePCurve->Value(last);
+				pnts.col(discrete_num - 1) << uv.X(), uv.Y();
 			}
+			else
+			{
+				for (int i = 0; i < discrete_num - 1; i++)
+				{
+					uv = thePCurve->Value(last - i * step0);
+					pnts.col(i) << uv.X(), uv.Y();
+				}
+				uv = thePCurve->Value(first);
+				pnts.col(discrete_num - 1) << uv.X(), uv.Y();
+			}
+			auto & facer = face[aedge.main_face].Surface;
+			Point4 UV = facer->Getbounds();
+			GeneralMathMethod::DataSet(UV, 10e-8, pnts);
 
-			auto &facer = face[aedge.main_face].Surface;
-			auto &pnts = aedge.parameters;
-			double u1 = pnts(0, 0), v1 = pnts(1, 0), u2 = pnts(0, pnts.cols() - 1), v2 = pnts(1, pnts.cols() - 1);
+			//获取面的参数与边界和初始步长step
+			double u1 = pnts(0, 0), v1 = pnts(1, 0), u2 = pnts(0, discrete_num - 1), v2 = pnts(1, discrete_num - 1);
 			Eigen::Vector2d step(v1 - v2, u2 - u1);
-			step /= (pnts.cols() - 1) * 4;
+			step /= (discrete_num - 1) * 4;
 			if ((face[aedge.main_face].face).Orientation() == TopAbs_REVERSED) step = -step;
 			double base_stepu = step(0), base_stepv = step(1);
-			Point4 UV = facer->Getbounds();
 			double umin = UV(0), umax = UV(1), vmin = UV(2), vmax = UV(3);
+
+			//判断单个点是否满足曲率特征
 			int single_flag = 0;
 			for (int j = 1; j < pnts.cols() - 1; j++)
 			{
-				if (j - 1 - single_flag > (pnts.cols() - 2)*0.4) break;
+				if (j - 1 - single_flag > (pnts.cols() - 2) * 0.4) break;
+
+				//更新步长，使得所有采样点均落在参数域内
 				double stepu = base_stepu, stepv = base_stepv;
 				int count = 0;
 				while (true)
 				{
 					u1 = pnts(0, j);
 					v1 = pnts(1, j);
-					for (int m = 0; m < 15; m++)
+					for (int m = 0; m < pnt_num; m++)
 					{
 						u1 += stepu;
 						v1 += stepv;
-						if (m == 14 || u1 < umin || u1 > umax || v1 < vmin || v1 > vmax)
+						if (m == pnt_num - 1 || u1 < umin || u1 > umax || v1 < vmin || v1 > vmax)
 						{
 							count = m;
 							break;
@@ -1273,105 +1200,135 @@ namespace CADMesher
 						stepv *= 0.5;
 					}
 				}
-				stepu *= count * 0.06;
-				stepv *= count * 0.06;
-				u1 = pnts(0, j);
-				v1 = pnts(1, j);
+				stepu = (stepu * count) / pnt_num;
+				stepv = (stepv * count) / pnt_num;
+
+				//沿(stepu, stepv)方向按固定步长采样并计算相应的法曲率
+				int maxtime = 3;
 				std::vector<double> curvature;
-				double K, K1;
-				Point start_normal = ((facer->PartialDerivativeU(u1, v1)).cross(facer->PartialDerivativeV(u1, v1))).normalized(), end_normal;
-				for (int m = 0; m < 15; m++)
+				double K, decrease_ratio = 0.8;
+				Vector3d start_normal, end_normal;
+				bool is_normal_ok = facer->NormalValue(pnts(0, j), v1 = pnts(1, j), start_normal);
+				while (maxtime)
 				{
-					facer->NormalCurvature(u1, v1, stepu, stepv, K);
-					//dprint(j, u1, v1, K);
-					curvature.push_back(K);
-					if (m == 14)
+					u1 = pnts(0, j);
+					v1 = pnts(1, j);
+					curvature.clear();
+					for (int m = 0; m < pnt_num; m++)
 					{
-						end_normal = ((facer->PartialDerivativeU(u1, v1)).cross(facer->PartialDerivativeV(u1, v1))).normalized();
+						if (!facer->NormalCurvature(u1, v1, stepu, stepv, K)) K = -1;
+						curvature.push_back(K);
+						if (is_normal_ok && m == pnt_num - 1)
+							is_normal_ok = facer->NormalValue(u1, v1, end_normal);
+						u1 += stepu;
+						v1 += stepv;
 					}
-					u1 += stepu;
-					v1 += stepv;
-				}
-				if (start_normal.dot(end_normal) < 0.85 && If_decline(curvature))
-				{
-					//dprint("hh", j);
-					single_flag++;
+					if (is_normal_ok)
+					{
+						if (start_normal.dot(end_normal) < 0.85 && If_decline(curvature))
+						{
+							single_flag++;
+							break;
+						}
+					}
+					else if (If_decline(curvature))
+					{
+						single_flag++;
+						break;
+					}
+					stepu *= decrease_ratio;
+					stepv *= decrease_ratio;
+					maxtime--;
 				}
 			}
-			//dprint(single_flag, pnts.cols() - 2);
-			if (single_flag <= (pnts.cols() - 2)*0.6)
+
+			//如果有超过60%的采样点是曲率特征点，则将该边标记为曲率特征边
+			if (single_flag <= (pnts.cols() - 2) * 0.6)
 			{
 				aedge.if_curvature = false;
-				if (aedge.reversed_edge != -1) edge[aedge.reversed_edge].if_curvature = false;
+				edge[aedge.reversed_edge].if_curvature = false;
 			}
-			else if (aedge.reversed_edge == -1) aedge.if_C0 = false;
 		}
 
 		for (int i = 0; i < edge.size(); i++)
 		{
-			auto &aedge = edge[i];
+			auto& aedge = edge[i];
 			if (!aedge.if_curvature) continue;
-			//dprint("edge", i, aedge.main_face, aedge.secondary_face);
+			//dprint("edge", i);
 
+			//目前只考虑在无洞面片内做offset
 			if (face[aedge.main_face].wires.size() > 1) continue;
-			if (aedge.parameters.cols() < 10) continue;
-			face[aedge.main_face].if_quad = true;
+
+			//曲率特征边有一定长度才做offset
+			Bnd_Box aBound;
+			BRepBndLib::Add(face[aedge.main_face].face, aBound);
+			Standard_Real xmin, ymin, zmin, xmax, ymax, zmax;
+			aBound.Get(xmin, ymin, zmin, xmax, ymax, zmax);
+			double boundingbox = sqrt((xmin - xmax) * (xmin - xmax) + (ymin - ymax) * (ymin - ymax) +
+					(zmin - zmax) * (zmin - zmax));
+			if ((aedge.length) > 0.3 * boundingbox)
+				face[aedge.main_face].if_quad = true;
 		}
 
-		dprint("curvature feature done!");
+		dprint("Curvature feature done!");
 	}
 
 	bool OccReader::If_decline(vector<double>& curvature)
 	{
 		int n = (int)(curvature.size() * 0.5);
 
-		//前半段曲率平均值比后半段平均值2倍大
+		//前半段的曲率平均值比后半段的平均值要大一定倍数
 		double front_curv = 0, back_curv = 0;
 		for (int i = 0; i < n; i++)
 		{
 			front_curv += curvature[i];
 		}
-		for (int i = curvature.size() - 1; i >= curvature.size() - n; i--)
+		for (int i = curvature.size() - n; i < curvature.size(); i++)
 		{
 			back_curv += curvature[i];
 		}
-		//dprint("ave:", front_curv, back_curv);
-		if (front_curv < 2 * back_curv) return false;
+		double ration;
+		if (front_curv > 1000 * n) ration = 1.2;
+		else if (front_curv > n) ration = 1.5;
+		else ration = 2;
+		if (front_curv < ration * back_curv) return false;
 
-		//Cox Stuart趋势性检验，序关系比较
-		double p0 = 0.2;
+		//连续下降一定次数或通过Cox stuart趋势性检验
+		front_curv = curvature.front();
 		int T = 0;
-		if (curvature.size() % 2)
+		for (int i = 1; i < curvature.size(); i++)
 		{
-			for (int i = 0; i < n; i++)
-			{
-				if (curvature[i] > curvature[n + i + 1]) T++;
-			}
+			if (curvature[i] >= front_curv) break;
+			front_curv = curvature[i];
+			T++;
 		}
-		else
+		if (T < (curvature.size() - 1) * 0.25)
 		{
-			for (int i = 0; i < n; i++)
+			//Cox stuart趋势性检验
+			double p0 = 0.2;
+			T = 0;
+			if (curvature.size() % 2)
 			{
-				if (curvature[i] > curvature[n + i]) T++;
+				for (int i = 0; i < n; i++)
+				{
+					if (curvature[i] > curvature[n + i + 1]) T++;
+				}
 			}
+			else
+			{
+				for (int i = 0; i < n; i++)
+				{
+					if (curvature[i] > curvature[n + i]) T++;
+				}
+			}
+			if (2 * T <= n) return false;
+			if (GeneralMathMethod::Binomial(n, 0.5, T) > p0) return false;   //拒绝原假设，认为不存在下降趋势
 		}
-		//dprint("here", T);
-		if (2 * T <= n) return false;
-		if (GeneralMathMethod::Binomial(n, 0.5, T) > p0) return false;
 
-		//有一定数量的有效数据
-		std::sort(curvature.begin(), curvature.end());	
+		//存在一定数量的有效数据
+		std::sort(curvature.begin(), curvature.end());
 		if (curvature[(int)(curvature.size() * 0.8)] < 10e-4) return false;
 		else return true;
-
-		////曲率序关系变化
-		//int count = 0;
-		//for (int i = 0; i < mid; i++)
-		//{
-		//	if (initial[i] > curvature[mid]) count++;
-		//}
-		//if (count >= (int)(mid * 0.5)) return true;
-		//else return false;
 	}
 
 	void OccReader::Set_Offset_Grid()
@@ -1545,25 +1502,25 @@ namespace CADMesher
 				int t1 = prev_info.front(), t2 = next_info.front();
 				if (t1 >= t2)
 				{
-					re_discrete(edgeshape[i], t1, discrete_num, prev_info.back(), false);
-					re_discrete(edgeshape[i], t2, discrete_num, next_info.back(), true);
+					Re_discrete(edgeshape[i], t1, discrete_num, prev_info.back(), false);
+					Re_discrete(edgeshape[i], t2, discrete_num, next_info.back(), true);
 				}
 				else
 				{
-					re_discrete(edgeshape[i], (t1 + t2) / 2, discrete_num, prev_info.back(), false);
-					re_discrete(edgeshape[i], (t1 + t2) / 2, discrete_num, next_info.back(), true);
+					Re_discrete(edgeshape[i], (t1 + t2) / 2, discrete_num, prev_info.back(), false);
+					Re_discrete(edgeshape[i], (t1 + t2) / 2, discrete_num, next_info.back(), true);
 				}
 				continue;
 			}
 			if (!prev_info.empty())
 			{
 				int t1 = prev_info.front();
-				re_discrete(edgeshape[i], t1, discrete_num, prev_info.back(), false);
+				Re_discrete(edgeshape[i], t1, discrete_num, prev_info.back(), false);
 			}
 			else
 			{
 				int t2 = next_info.front();
-				re_discrete(edgeshape[i], t2, discrete_num, next_info.back(), true);
+				Re_discrete(edgeshape[i], t2, discrete_num, next_info.back(), true);
 			}
 		}
 
@@ -1602,7 +1559,7 @@ namespace CADMesher
 		}
 	}
 
-	void OccReader::re_discrete(ShapeEdge &edge, int id, int discrete_num, int quad_num, bool direction)
+	void OccReader::Re_discrete(ShapeEdge &edge, int id, int discrete_num, int quad_num, bool direction)
 	{
 		if (!quad_num) return;
 		int num = edge.parameters.cols(), id1 = id / discrete_num, id2 = id % discrete_num, left_segment;
