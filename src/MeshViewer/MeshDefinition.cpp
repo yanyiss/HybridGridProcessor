@@ -97,25 +97,6 @@ bool flip_openmesh(Mesh::EdgeHandle& eh, Mesh& mesh_)
 	return true;
 }
 
-void Tri_to_Poly(const TriMesh& mesh1, Mesh& mesh2)
-{
-	if (mesh2.n_faces()) return;
-	for (auto v : mesh1.vertices())
-	{
-		mesh2.add_vertex(Mesh::Point(mesh1.point(v)));
-	}
-	std::vector<Mesh::VertexHandle> fvh;
-	for (auto f : mesh1.faces())
-	{
-		fvh.clear();
-		for (auto fv : mesh1.fv_range(f))
-		{
-			fvh.push_back(mesh2.vertex_handle(fv.idx()));
-		}
-		mesh2.add_face(fvh);
-	}
-}
-
 bool check_in_triangle_face(const std::vector<OpenMesh::Vec3d>& tri, const OpenMesh::Vec3d& p)
 {
 	OpenMesh::Vec3d v1 = tri[1] - tri[0]; OpenMesh::Vec3d v2 = tri[2] - tri[0];
@@ -554,12 +535,15 @@ void TriMeshQualityHelper::print()
 	dprint("min, avg quality:", minQuality, avgQuality);
 }
 
-void tri2poly(TriMesh &tm, Mesh &m)
+void tri2poly(TriMesh &tm, Mesh &m, bool update_property)
 {
 	for (auto tv = tm.vertices_begin(); tv != tm.vertices_end(); ++tv)
 	{
 		auto v = m.add_vertex(tm.point(tv.handle()));
+		if (!update_property)
+			continue;
 		m.data(v).set_vertflag(tm.data(tv.handle()).get_vertflag());
+		m.data(v).GaussCurvature = tm.data(tv.handle()).GaussCurvature;
 	}
 	for (auto tf = tm.faces_begin(); tf != tm.faces_end(); ++tf)
 	{
@@ -570,6 +554,8 @@ void tri2poly(TriMesh &tm, Mesh &m)
 		}
 		m.add_face(vhs);
 	}
+	if (!update_property)
+		return;
 	for (auto te = tm.edges_begin(); te != tm.edges_end(); ++te)
 	{
 		auto th = tm.halfedge_handle(te.handle(), 0);

@@ -46,8 +46,8 @@ namespace CADMesher
 		occ_reader->Set_PolyMesh();
 		MergeModel();
 		SetPolyFeature();
-		//TriangleMeshRemeshing trm(&(globalmodel.initial_polymesh));
-		//trm.run();
+		TriangleMeshRemeshing trm(&(globalmodel.initial_polymesh));
+		trm.run();
 		//Write_Obj(globalmodel.initial_polymesh);
 #endif
 	}
@@ -186,7 +186,6 @@ namespace CADMesher
 		TriMesh temp(model_mesh);
 		globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(temp);
 #endif // USETRI
-
 
 		for (auto &te : model_mesh.edges())
 		{

@@ -295,7 +295,8 @@ namespace CADMesher
 				//Remesh in domain		
 				Riemannremesh Remesh(Surface, &aMesh);
 				Remesh.remesh();
-				Tri_to_Poly(aMesh, newmesh);
+				//Tri_to_Poly(aMesh, newmesh);
+				tri2poly(aMesh, newmesh);
 			}
 			else
 			{
@@ -666,7 +667,7 @@ namespace CADMesher
 				curve_length += a * GL_c[i] * d1.Magnitude();
 			}
 			edge->length = curve_length;
-			int segment_number = std::max(BRep_Tool::IsClosed(aedge) ? 4 : 4, int(curve_length / expected_edge_length));
+			int segment_number = std::max(/*BRep_Tool::IsClosed(aedge) ? 4 : 4*/2, int(curve_length / expected_edge_length));
 			edge->parameters.resize(2, segment_number + 1);
 			Handle_Geom2d_Curve thePCurve = BRep_Tool::CurveOnSurface(aedge, mainface, first, last);
 			double step = (last - first) / segment_number;
