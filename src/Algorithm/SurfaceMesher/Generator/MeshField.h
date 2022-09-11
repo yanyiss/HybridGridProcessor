@@ -11,8 +11,8 @@
 #include <Eigen\Core>
 #include "..\src\MeshViewer\MeshDefinition.h"
 //#include "Tooler/flow/flow.hpp"
-#include <tbb/tbb.h>
-
+//#include <tbb/tbb.h>
+#if 0
 #define DefaultDepth 16
 #define USING_SMALLMESH
 
@@ -535,5 +535,5 @@ private:
 	//remove singularity
 	void searchBFSTree(TriMesh &trimesh);
 };
-
+#endif
 

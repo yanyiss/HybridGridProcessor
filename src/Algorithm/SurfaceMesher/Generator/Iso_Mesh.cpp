@@ -5,7 +5,7 @@
 #include "..\src\Algorithm\SurfaceMesher\Optimizer\TriangleMeshRemeshing.h"
 #include "..\src\Algorithm\SurfaceMesher\Optimizer\AnisotropicMeshRemeshing.h"
 
-#define USETRI
+//#define USETRI
 
 namespace CADMesher
 {
@@ -23,7 +23,7 @@ namespace CADMesher
 #if 1
 		auto aniso_remesh = new AnisotropicMeshRemeshing();
 		aniso_remesh->SetMesh(&(globalmodel.initial_trimesh));
-		TriMesh temp(globalmodel.initial_trimesh);
+		TriMesh temp = globalmodel.initial_trimesh;
 		aniso_remesh->load_ref_mesh(&temp);
 		//aniso_remesh->load_ref_mesh(&mesh);
 		double tl = aniso_remesh->get_ref_mesh_ave_anisotropic_edge_length();
@@ -44,12 +44,10 @@ namespace CADMesher
 		//Write_Obj(globalmodel.initial_trimesh);
 #else 
 		occ_reader->Set_PolyMesh();
-		dprint(globalmodel.initial_polymesh.n_vertices());
 		MergeModel();
-		dprint(globalmodel.initial_polymesh.n_vertices());
 		ResetFeature1();
-		//TriangleMeshRemeshing trm(&(globalmodel.initial_polymesh));
-		//trm.run();
+		TriangleMeshRemeshing trm(&(globalmodel.initial_polymesh));
+		trm.run();
 		//Write_Obj(globalmodel.initial_polymesh);
 #endif
 	}

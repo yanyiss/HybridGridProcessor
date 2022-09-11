@@ -628,20 +628,18 @@ namespace CADMesher
 
 		for (unsigned ii = 0; ii < 5; ++ii)
 		{
+
 			clock_t iter_start = clock();
 			int no_split_collapse = 0;
 			flip_based_energy();
-
 			double step_length = 0.5 - 0.04*ii;
 			reposition_LCOT(step_length);
-
 			split_count = 0; nv = mesh_->n_vertices();
 
 			unsigned ne = mesh_->n_edges();
 			double cof = std::min(1.0, 0.1*ii + 0.7);
 			for (unsigned i = 0; i < mesh_->n_edges(); ++i)
 			{
-				if (i % 10000 == 0) std::cout << i << "," << mesh_->n_edges() << std::endl;
 				if (mesh_->n_edges() > ne*1.2) break;
 				Mesh::EdgeHandle eh = mesh_->edge_handle(i);
 				Mesh::HalfedgeHandle heh = mesh_->halfedge_handle(eh, 0);
@@ -714,19 +712,7 @@ namespace CADMesher
 			//if (ii == 0) break;
 			for (auto te = mesh_->edges_sbegin(); te != mesh_->edges_end(); ++te)
 			{
-				/*if (ii == 2 && te->idx() > 31540)
-				{
-					break;
-				}*/
-				/*if (ii == 2 && te->idx() == 31540)
-				{
-					auto hhh = mesh_->halfedge_handle(te.handle(), 0);
-					dprint(mesh_->point(mesh_->from_vertex_handle(hhh)), mesh_->point(mesh_->to_vertex_handle(hhh)));
-					break;
-				}*/
-				//if (i % 10000 == 0) std::cout << i << std::endl;
-				if (te->idx() % 10000 == 0) std::cout << te->idx() << std::endl;
-				Mesh::EdgeHandle eh = *te;
+				Mesh::EdgeHandle eh = te.handle();
 				Mesh::HalfedgeHandle heh = mesh_->halfedge_handle(eh, 0);
 				Mesh::VertexHandle vh0_ = mesh_->from_vertex_handle(heh);
 				Mesh::VertexHandle vh1_ = mesh_->to_vertex_handle(heh);
@@ -842,7 +828,6 @@ namespace CADMesher
 								mesh_->set_point(vh1_, pri);
 								continue;
 							}
-							dprint(te->idx());
 							//mesh_->collapse(heh);
 							collapse_one_edge(heh);
 							++collapse_count;
@@ -1239,7 +1224,8 @@ namespace CADMesher
 		for (Mesh::VertexIter v_it = mesh_->vertices_begin(); v_it != mesh_->vertices_end(); ++v_it)
 		{
 			int vertex_id = v_it->idx(); p = mesh_->point(v_it);
-			if (mesh_->data(v_it).get_vertflag())
+			auto &nn = vertex_f[vertex_id].n;
+			if (mesh_->data(v_it).get_vertflag() || isnan(nn[0]) || isnan(nn[1]) || isnan(nn[2]))
 			{
 				new_pos[vertex_id] = p;
 				continue;

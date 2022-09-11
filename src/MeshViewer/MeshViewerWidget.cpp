@@ -997,13 +997,6 @@ void MeshViewerWidget::draw_AnisotropicMesh()
 //<<<<<<< john
 void MeshViewerWidget::draw_feature()
 {	
-	//16.1938 14.0963 6.5 15.0065 13.2649 6.5
-	glBegin(GL_LINE);
-	glLineWidth(10);
-	glColor3d(0, 0, 0);
-	glVertex3d(16.1938, 14.0963, 6.5);
-	glVertex3d(15.0065, 13.2649, 6.5);
-	glEnd();
 #if 1
 	//画C0特征
 	glLineWidth(5);
@@ -1035,11 +1028,11 @@ void MeshViewerWidget::draw_feature()
 
 #endif
 	//draw triangles with low quality
-#if 0
+#if 1
 	glColor3d(0.9, 0.1, 0.9);
 	glPointSize(8);
 	glBegin(GL_POINTS);
-	for (auto &tf : mesh.faces())
+	/*for (auto &tf : mesh.faces())
 	{
 		for (auto &tfh : mesh.fh_range(tf))
 		{
@@ -1053,7 +1046,7 @@ void MeshViewerWidget::draw_feature()
 		}
 	}
 	glVertex3dv(mesh.point(mesh.vertex_handle(53)).data());
-	glVertex3dv(mesh.point(mesh.vertex_handle(0)).data());
+	glVertex3dv(mesh.point(mesh.vertex_handle(0)).data());*/
 	glEnd();
   
 #endif

@@ -239,6 +239,8 @@ double meshAverageLength(T &mesh)
 	}
 	return le / mesh.n_edges();
 }
+
+void tri2poly(TriMesh &tm, Mesh &m);
 #pragma endregion
 
 #endif
