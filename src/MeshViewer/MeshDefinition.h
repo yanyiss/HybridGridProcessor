@@ -153,8 +153,6 @@ double calc_mesh_ave_edge_length(Mesh* mesh_);
 bool is_flip_ok_openmesh(Mesh::EdgeHandle& eh, Mesh& mesh_);//just copy the code from openmesh
 bool flip_openmesh(Mesh::EdgeHandle& eh, Mesh& mesh_);
 
-void Tri_to_Poly(const TriMesh& mesh1, Mesh& mesh2);
-
 bool check_in_triangle_face(const std::vector<OpenMesh::Vec3d>& tri, const OpenMesh::Vec3d& p);
 bool baryCoord( const OpenMesh::Vec3d& _p, const OpenMesh::Vec3d& _u, const OpenMesh::Vec3d& _v, const OpenMesh::Vec3d& _w, OpenMesh::Vec3d&_result );
 
@@ -242,7 +240,7 @@ double meshAverageLength(T &mesh)
 	return le / mesh.n_edges();
 }
 
-void tri2poly(TriMesh &tm, Mesh &m);
+void tri2poly(TriMesh &tm, Mesh &m, bool update_property = false);
 #pragma endregion
 
 #endif

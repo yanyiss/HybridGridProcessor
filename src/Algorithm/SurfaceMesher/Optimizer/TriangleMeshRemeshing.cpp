@@ -827,6 +827,8 @@ namespace CADMesher
 					mesh->data(av).set_vertflag(true);
 					polymesh->data(pav).set_vertflag(true);
 				}
+				mesh->data(av).GaussCurvature = mesh_->data(tv).GaussCurvature;
+				polymesh->data(pav).GaussCurvature = mesh_->data(tv).GaussCurvature;
 			}
 		}
 		for (auto &tv : mesh_->vertices())
@@ -840,6 +842,7 @@ namespace CADMesher
 				{
 					mesh->data(av).set_vertflag(true);
 				}
+				mesh->data(av).GaussCurvature = mesh_->data(tv).GaussCurvature;
 				break;
 			}
 			case poly:
@@ -849,6 +852,7 @@ namespace CADMesher
 				{
 					polymesh->data(av).set_vertflag(true);
 				}
+				polymesh->data(av).GaussCurvature = mesh_->data(tv).GaussCurvature;
 				break;
 			}
 			default:
@@ -942,6 +946,7 @@ namespace CADMesher
 		{
 			expected_length = meshAverageLength(*mesh);
 		}
+		aabbtree = globalmodel.init_trimesh_tree;
 	}
 
 	void TriangleMeshRemeshing::assembleMesh()
