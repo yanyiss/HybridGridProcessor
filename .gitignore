@@ -6,3 +6,5 @@ Cmakelists.txt
 src/Dependency/BSpline/Cmakelists.txt
 Cmakelists.txt
 src/Dependency/BSpline/Cmakelists.txt
+src/Algorithm/SurfaceMesher/Generator/OccReader.cpp
+src/Algorithm/SurfaceMesher/Generator/OccReader.cpp

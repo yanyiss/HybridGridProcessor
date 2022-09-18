@@ -11,6 +11,7 @@ namespace CADMesher
 		Surface_TriMeshes.resize(faceshape.size());
 		for (int i = 0; i < faceshape.size(); i++)
 		{
+			if (i != 37) continue;
 			TriMesh &aMesh = Surface_TriMeshes[i];
 			auto &wires = faceshape[i].wires;
 			if (wires.empty() || !faceshape[i].if_exisited)
@@ -130,7 +131,6 @@ namespace CADMesher
 			dprint("domain remesh done!");
 
 			ClearBoundary(aMesh);
-
 			Set_Curvature(Surface, aMesh);
 			dprint("GaussCurvature compute done!");
 
@@ -295,7 +295,6 @@ namespace CADMesher
 				//Remesh in domain		
 				Riemannremesh Remesh(Surface, &aMesh);
 				Remesh.remesh();
-				//Tri_to_Poly(aMesh, newmesh);
 				tri2poly(aMesh, newmesh);
 			}
 			else
@@ -423,10 +422,6 @@ namespace CADMesher
 					v1 = v4;
 					v2 = v3;
 				}
-				//if (!OpenMesh::IO::write_mesh(newmesh, "2.obj"))
-				//{
-				//	std::cerr << "fail";
-				//}
 
 				//add internal faces
 				for (auto f : aMesh.faces())
@@ -441,6 +436,10 @@ namespace CADMesher
 					}
 					newmesh.add_face(facevhandle);
 				}
+				//if (!OpenMesh::IO::write_mesh(newmesh, "1.obj"))
+				//{
+				//	std::cerr << "fail";
+				//}
 			} 
 
 			Set_Curvature(Surface, newmesh);
@@ -1354,7 +1353,6 @@ namespace CADMesher
 		vector<vector<int>> edge_next_info(edgeshape.size());
 		for (int i = 0; i < faceshape.size(); i++)
 		{
-			//if (i != 32) continue;
 			if (!faceshape[i].if_quad) continue;
 			auto &edges = faceshape[i].wires.front();
 
@@ -1386,11 +1384,11 @@ namespace CADMesher
 			}
 			ave_len /= curv.parameters.cols() - 1;
 			double offset_height;
-			if(abs(offset_increase_ratio - 1) < DBL_EPSILON)
+			if (abs(offset_increase_ratio - 1) < DBL_EPSILON)
 				offset_height = ave_len * offset_initial_ratio * offset_quad_num;
 			else
 				offset_height = ave_len * offset_initial_ratio *(1 - pow(offset_increase_ratio, offset_quad_num)) / (1 - offset_increase_ratio);
-			
+
 			//whether the two nearby edges can construct the expect offet
 			bool flag = false;
 			auto &prev_para = edgeshape[prev].parameters;
@@ -1431,7 +1429,7 @@ namespace CADMesher
 					if (abs(offset_increase_ratio - 1) < DBL_EPSILON)
 						prev_quad_num = next_quad_num = std::max(4, (int)(next_height / (ave_len * offset_initial_ratio) + 0.5));
 					else
-						prev_quad_num = next_quad_num = std::max(4, (int)(log(1 - (next_height * (1 - offset_initial_ratio) / (ave_len * offset_initial_ratio))) / log(offset_increase_ratio) + 0.5));
+						prev_quad_num = next_quad_num = std::max(4, (int)(log(1 - (next_height * (1 - offset_increase_ratio) / (ave_len * offset_initial_ratio))) / log(offset_increase_ratio) + 0.5));
 					GeneralMathMethod::Find_Span(curv.parameters, prev_para, false, prev_id, discrete_num, next_height);
 					prev_end_flag = !prev_id;
 					if (!prev_end_flag) next_id = (next_para.cols() - 1) * discrete_num;
@@ -1446,7 +1444,7 @@ namespace CADMesher
 					if (abs(offset_increase_ratio - 1) < DBL_EPSILON)
 						prev_quad_num = next_quad_num = std::max(4, (int)(prev_height / (ave_len * offset_initial_ratio) + 0.5));
 					else
-						prev_quad_num = next_quad_num = std::max(4, (int)(log(1 - (prev_height * (1 - offset_initial_ratio) / (ave_len * offset_initial_ratio))) / log(offset_increase_ratio) + 0.5));
+						prev_quad_num = next_quad_num = std::max(4, (int)(log(1 - (prev_height * (1 - offset_increase_ratio) / (ave_len * offset_initial_ratio))) / log(offset_increase_ratio) + 0.5));
 					GeneralMathMethod::Find_Span(curv.parameters, next_para, true, next_id, discrete_num, prev_height);
 					next_end_flag = next_id == (next_para.cols() - 1) * discrete_num;
 					if (!next_end_flag) prev_id = 0;
@@ -1494,7 +1492,6 @@ namespace CADMesher
 		//re-discrete point in edge which is nearby curvature edge
 		for (int i = 0; i < edgeshape.size(); i++)
 		{
-			//if (i != 160 && i != 162) continue;
 			auto &prev_info = edge_prev_info[i];
 			auto &next_info = edge_next_info[i];
 			if (prev_info.empty() && next_info.empty()) continue;
