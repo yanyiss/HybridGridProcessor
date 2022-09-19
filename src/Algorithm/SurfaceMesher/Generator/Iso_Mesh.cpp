@@ -50,7 +50,7 @@ namespace CADMesher
 		trm.run();
 		//Write_Obj(globalmodel.initial_polymesh);
 #endif
-	}
+	} 
 
 	void Iso_Mesh::MergeModel()
 	{
@@ -354,7 +354,6 @@ namespace CADMesher
 	void Iso_Mesh::SetTriFeature()
 	{
 		TriMesh& model_mesh = globalmodel.initial_trimesh;
-		//������ߺͱ߽�ߵ����˵���Ϊ�����
 		for (auto te : model_mesh.edges())
 		{
 			if (!model_mesh.data(te).flag1 && !model_mesh.data(te).flag2 && !model_mesh.is_boundary(te)) continue;
@@ -370,7 +369,6 @@ namespace CADMesher
 	void Iso_Mesh::SetPolyFeature()
 	{
 		Mesh& model_mesh = globalmodel.initial_polymesh;
-		//������ߺͱ߽�ߵ����˵���Ϊ�����
 		for (auto te : model_mesh.edges())
 		{
 			if (!model_mesh.data(te).flag1 && !model_mesh.is_boundary(te)) continue;
