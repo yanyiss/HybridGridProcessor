@@ -171,21 +171,21 @@ void SurfaceMeshProcessing::createActions()
 	connect(moveVertexAction, SIGNAL(triggered()), this, SLOT(moveVertex()));
 
 	showFeatureAction = new QAction(tr("&Show Feature"), this);
-	showFeatureAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/move_vertex.png"));
+	showFeatureAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/feature.png"));
 	showFeatureAction->setStatusTip(tr("Show Feature of the mesh"));
 	showFeatureAction->setCheckable(true);
 	showFeatureAction->setChecked(false);
 	connect(showFeatureAction, SIGNAL(triggered()), this, SLOT(showFeature()));
 
 	showIsotropicMeshAction = new QAction(tr("&Show Isotropic Mesh"), this);
-	showIsotropicMeshAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/move_vertex.png"));
+	showIsotropicMeshAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/remesher.png"));
 	showIsotropicMeshAction->setStatusTip(tr("Show Isotropic Mesh"));
 	showIsotropicMeshAction->setCheckable(true);
 	showIsotropicMeshAction->setChecked(false);
 	connect(showIsotropicMeshAction, SIGNAL(triggered()), this, SLOT(showIsotropicMesh()));
 
 	showAnisotropicMeshAction = new QAction(tr("&Show Anisotropic Mesh"), this);
-	showAnisotropicMeshAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/move_vertex.png"));
+	showAnisotropicMeshAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/anisotropic.png"));
 	showAnisotropicMeshAction->setStatusTip(tr("Show Anisotropic Mesh"));
 	showAnisotropicMeshAction->setCheckable(true);
 	showAnisotropicMeshAction->setChecked(false);
@@ -345,7 +345,7 @@ void SurfaceMeshProcessing::createMenus()
 void SurfaceMeshProcessing::createToolBars()
 {
 	fileToolBar = addToolBar(tr("&File"));
-	fileToolBar->addAction(openAction);
+	//fileToolBar->addAction(openAction);
 	fileToolBar->addAction(openCADAction);
 	fileToolBar->addAction(saveAction);
 	fileToolBar->addAction(clearAction);
@@ -359,7 +359,7 @@ void SurfaceMeshProcessing::createToolBars()
 	viewToolBar->addAction(solidSmoothAction);
 	viewToolBar->addAction(pointSetAction);
 	viewToolBar->addAction(checkboardAction);
-	viewToolBar->addAction(diagonalmeshAction);
+	//viewToolBar->addAction(diagonalmeshAction);
 
 	otherViewBar = addToolBar("OtherView");
 	otherViewBar->addAction(drawBoundingBox);
@@ -375,7 +375,7 @@ void SurfaceMeshProcessing::createToolBars()
 	mouseToolBar->addAction(showFeatureAction);
 	mouseToolBar->addAction(showIsotropicMeshAction);
 	mouseToolBar->addAction(showAnisotropicMeshAction);
-	mouseToolBar->addAction(showDebugTestAction);
+	//mouseToolBar->addAction(showDebugTestAction);
 
 	localOperationBar = addToolBar(tr("Local Operation"));
 	localOperationBar->addAction(EditUndoAction);

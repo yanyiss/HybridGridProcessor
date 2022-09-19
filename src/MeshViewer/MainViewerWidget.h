@@ -85,7 +85,7 @@ public slots:
 				timeRecorder tr;
 				CADMesher::Iso_Mesh iso_mesh(fileName);
 				tr.out("time of generating isotropic mesh:");
-#if 0
+#if 1
 				Mesh me;
 				tri2poly(CADMesher::globalmodel.initial_trimesh, me, true);
 #else

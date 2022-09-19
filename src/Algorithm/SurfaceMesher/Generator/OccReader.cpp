@@ -126,8 +126,8 @@ namespace CADMesher
 			auto &Surface = faceshape[i].Surface;
 
 			//Remesh in domain		
-			//Riemannremesh Remesh(Surface, &aMesh);
-			//Remesh.remesh();
+			Riemannremesh Remesh(Surface, &aMesh);
+			Remesh.remesh();
 			dprint("domain remesh done!");
 
 			ClearBoundary(aMesh);
@@ -494,7 +494,7 @@ namespace CADMesher
 			ma(1) = std::max(ma(1), v.Y()); mi(1) = std::min(mi(1), v.Y());
 			ma(2) = std::max(ma(2), v.Z()); mi(2) = std::min(mi(2), v.Z());
 		}
-		initialRate = 0.01;
+		//initialRate = 0.05;
 		expected_edge_length = initialRate * (ma - mi).norm();
 		epsratio *= (ma - mi).norm();//根据Boundingbox设定网格和曲面之间的误差
 

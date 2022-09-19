@@ -5,6 +5,7 @@ namespace CADMesher
 	TriangleMeshRemeshing::TriangleMeshRemeshing(TriMesh* mesh_, double target_length)
 		:mesh(mesh_), expected_length(target_length)
 	{
+
 		if (expected_length <= 0)
 		{
 			expected_length = meshAverageLength(*mesh);
@@ -61,7 +62,7 @@ namespace CADMesher
 			if (processFeatureConstraintAngle() < 20)//处理最小角
 			{
 				tmqh.update();
-				if(tmqh.getAvgQuality() > 0.88)
+				if(tmqh.getAvgQuality() > 0.92)
 					break;
 			}
 
