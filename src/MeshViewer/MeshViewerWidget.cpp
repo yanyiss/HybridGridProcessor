@@ -1172,6 +1172,7 @@ void MeshViewerWidget::draw_feature()
 
 void MeshViewerWidget::calcCADStrip()
 {
+	strip.clear();
 	const auto &edgeshape = CADMesher::globalmodel.edgeshape;
 	for (const auto &edge : edgeshape)
 	{

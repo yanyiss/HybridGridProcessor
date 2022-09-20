@@ -27,6 +27,8 @@ InteractiveViewerWidget::InteractiveViewerWidget(QGLFormat& _fmt, QWidget* _pare
 InteractiveViewerWidget::~InteractiveViewerWidget()
 {
 	if(kdTree) delete kdTree;
+	if (occreader) { delete occreader; occreader = nullptr; }
+	if (iso_mesh) { delete iso_mesh; iso_mesh = nullptr; }
 }
 
 void InteractiveViewerWidget::setMouseMode(int mm)
@@ -623,7 +625,23 @@ void InteractiveViewerWidget::SetCADFileName(QString &fileName) {
 	//BrepFileName = fileName;
 };
 
-void InteractiveViewerWidget::showCADWireFrame()
+void InteractiveViewerWidget::generateTriMesh()
+{
+	occreader->Face_type();
+	occreader->C0_Feature();
+	occreader->Curvature_Feature();
+	occreader->Set_TriMesh();
+	occreader->MergeModel();
+	occreader->SetTriFeature();
+	tri2poly(CADMesher::globalmodel.initial_trimesh, mesh, true);
+	initMeshStatusAndNormal(mesh);
+	drawCAD = false;
+	setDrawMode(InteractiveViewerWidget::FLAT_POINTS);
+	setMouseMode(InteractiveViewerWidget::TRANS);
+	updateGL();
+}
+
+void InteractiveViewerWidget::generatePolyMesh()
 {
 
 }

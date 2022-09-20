@@ -68,16 +68,17 @@ public slots:
 		{
 			MeshViewer->SetCADFileName(fileName);
 			CADMesher::globalmodel.clear();
-			occreader = new CADMesher::OccReader(fileName);
+			if (MeshViewer->occreader)
+				delete MeshViewer->occreader;
+			MeshViewer->occreader = new CADMesher::OccReader(fileName);
+			auto occreader = MeshViewer->occreader;
+
 			MeshViewer->calcCADStrip();
 			MeshViewer->set_scene_pos(0.5*(occreader->bbmax + occreader->bbmin), 0.5*(occreader->bbmax - occreader->bbmin).norm());
 
 			MeshViewer->drawCAD = true;
 			MeshViewer->setDrawMode(InteractiveViewerWidget::WIRE_FRAME);
 			MeshViewer->setMouseMode(InteractiveViewerWidget::TRANS);
-
-			
-			//emit(haveLoadMesh(fileName));
 		}
 		else
 		{
@@ -222,26 +223,32 @@ protected:
 	virtual void save_screen_gui(QString fname);
 
 public:
-		void showFeature() {
-			MeshViewer->showFeature();
-
-		}
-		void showIsotropicMesh() {
-			MeshViewer->showIsotropicMesh();
-		}
-		void showAnisotropicMesh() {
-			MeshViewer->showAnisotropicMesh();
-		}
-		void showDebugTest() {
-			MeshViewer->showDebugTest();
-		}
+	void generateTriMesh()
+	{
+		MeshViewer->generateTriMesh();
+	}
+	void generatePolyMesh()
+	{
+		MeshViewer->generatePolyMesh();
+	}
+	void showFeature() {
+		MeshViewer->showFeature();
+	}
+	void showIsotropicMesh() {
+		MeshViewer->showIsotropicMesh();
+	}
+	void showAnisotropicMesh() {
+		MeshViewer->showAnisotropicMesh();
+	}
+	void showDebugTest() {
+		MeshViewer->showDebugTest();
+	}
 protected:
 	bool LoadMeshSuccess;
 
 private:
 	InteractiveViewerWidget* MeshViewer;
 	MeshParamDialog* MeshParam;
-	CADMesher::OccReader* occreader = nullptr;
 	
 	void SetMeshForALL( )
 	{

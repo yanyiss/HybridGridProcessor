@@ -170,6 +170,20 @@ void SurfaceMeshProcessing::createActions()
 	moveVertexAction->setChecked(false);
 	connect(moveVertexAction, SIGNAL(triggered()), this, SLOT(moveVertex()));
 
+	generateTriMeshAction = new QAction(tr("&Generate TriMesh"), this);
+	generateTriMeshAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/feature.png"));
+	generateTriMeshAction->setStatusTip(tr("Generate TriMesh"));
+	generateTriMeshAction->setCheckable(true);
+	generateTriMeshAction->setChecked(false);
+	connect(generateTriMeshAction, SIGNAL(triggered()), this, SLOT(generateTriMesh()));
+
+	generatePolyMeshAction = new QAction(tr("&Generate PolyMesh"), this);
+	generatePolyMeshAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/feature.png"));
+	generatePolyMeshAction->setStatusTip(tr("Generate PolyMesh"));
+	generatePolyMeshAction->setCheckable(true);
+	generatePolyMeshAction->setChecked(false);
+	connect(generatePolyMeshAction, SIGNAL(triggered()), this, SLOT(generatePolyMesh()));
+
 	showFeatureAction = new QAction(tr("&Show Feature"), this);
 	showFeatureAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/feature.png"));
 	showFeatureAction->setStatusTip(tr("Show Feature of the mesh"));
@@ -320,6 +334,8 @@ void SurfaceMeshProcessing::createMenus()
 	mouseMenu->addAction(EdgePickAction);
 	mouseMenu->addAction(clearSelectedAction);
 	mouseMenu->addAction(moveVertexAction);
+	mouseMenu->addAction(generateTriMeshAction);
+	mouseMenu->addAction(generatePolyMeshAction);
 	mouseMenu->addAction(showFeatureAction);
 	mouseMenu->addAction(showIsotropicMeshAction);
 	mouseMenu->addAction(showAnisotropicMeshAction);
@@ -372,6 +388,8 @@ void SurfaceMeshProcessing::createToolBars()
 	mouseToolBar->addAction(EdgePickAction);
 	mouseToolBar->addAction(clearSelectedAction);
 	mouseToolBar->addAction(moveVertexAction);
+	mouseToolBar->addAction(generateTriMeshAction);
+	mouseToolBar->addAction(generatePolyMeshAction);
 	mouseToolBar->addAction(showFeatureAction);
 	mouseToolBar->addAction(showIsotropicMeshAction);
 	mouseToolBar->addAction(showAnisotropicMeshAction);
@@ -511,6 +529,22 @@ void SurfaceMeshProcessing::moveVertex()
 	setAllMouseActionChecked(false);
 	moveVertexAction->setChecked(true);
 	viewer->setMouseMode(InteractiveViewerWidget::MOVE);
+}
+void SurfaceMeshProcessing::generateTriMesh()
+{
+	setAllViewActionChecked(false);
+	setAllMouseActionChecked(false);
+	generateTriMeshAction->setChecked(true);
+	viewer->setMouseMode(InteractiveViewerWidget::GTM);
+	viewer->generateTriMesh();
+}
+void SurfaceMeshProcessing::generatePolyMesh()
+{
+	setAllViewActionChecked(false);
+	setAllMouseActionChecked(false);
+	generatePolyMeshAction->setChecked(true);
+	viewer->setMouseMode(InteractiveViewerWidget::GPM);
+	viewer->generatePolyMesh();
 }
 void SurfaceMeshProcessing::showFeature()
 {

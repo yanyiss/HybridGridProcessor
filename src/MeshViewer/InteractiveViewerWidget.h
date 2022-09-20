@@ -83,7 +83,7 @@ public slots:
 	}
 
 public:
-	enum { TRANS, POINTPICK, VERTEXPICK, EDGEPICK, FACEPICK, EDGECOLLAPSE, EDGEFLIP, EDGESPLIT , MOVE, FEATURE, ISOTROPIC, ANISOTROPIC, DEBUGTEST, T2_MODE, N_MODE };
+	enum { TRANS, POINTPICK, VERTEXPICK, EDGEPICK, FACEPICK, EDGECOLLAPSE, EDGEFLIP, EDGESPLIT , MOVE, GTM, GPM, FEATURE, ISOTROPIC, ANISOTROPIC, DEBUGTEST, T2_MODE, N_MODE };
 	void setMouseMode(int mm);
 	int mouseMode() const { return mouse_mode_; }
 
@@ -135,12 +135,17 @@ protected:
 public:
 	void SetCADFileName(QString &fileName);
 public:
-	void showCADWireFrame();
+	CADMesher::OccReader* occreader = nullptr;
+	CADMesher::Iso_Mesh* iso_mesh = nullptr;
+	void generateTriMesh();
+	void generatePolyMesh();
 	void showFeature();
 	void showIsotropicMesh();
 	void showAnisotropicMesh();
 	void showDebugTest();
 private:
+	bool ifGenerateTriMesh = false;
+	bool ifGeneratePolyMesh = false;
 
 #pragma region Auxiliary_function
 public:

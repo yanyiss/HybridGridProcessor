@@ -56,6 +56,11 @@ namespace CADMesher
 		void Re_discrete(ShapeEdge &edge, int id, int discrete_num, int quad_num, bool direction);
 		bool If_decline(vector<double>& curvature);
 
+		void MergeModel();
+		int EndId(vector<ShapeEdge> &edgeshape, int edge_id);
+		void SetTriFeature();
+		void SetPolyFeature();
+
 		template<typename T>
 		void Set_Curvature(GeometryType * srf, T & aMesh)
 		{

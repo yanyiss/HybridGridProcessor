@@ -537,6 +537,7 @@ void TriMeshQualityHelper::print()
 
 void tri2poly(TriMesh &tm, Mesh &m, bool update_property)
 {
+	m.clear();
 	for (auto tv = tm.vertices_begin(); tv != tm.vertices_end(); ++tv)
 	{
 		auto v = m.add_vertex(tm.point(tv.handle()));
