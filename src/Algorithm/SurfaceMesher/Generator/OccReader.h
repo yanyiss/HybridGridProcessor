@@ -9,37 +9,7 @@ namespace CADMesher
 {
 	class OccReader {
 	public:
-		explicit OccReader(QString &fileName)
-		{
-			std::string filetype;
-			if (fileName.endsWith(".stp") || fileName.endsWith(".step") || fileName.endsWith(".STP") || fileName.endsWith(".STEP")) {
-				reader = new STEPControl_Reader();
-				dprint("CAD model from STEP file");
-				filetype = "STEP";
-			}
-			else if (fileName.endsWith(".igs") || fileName.endsWith(".iges") || fileName.endsWith(".IGS") || fileName.endsWith(".IGES")) {
-				reader = new IGESControl_Reader();
-				dprint("CAD model from IGES file");
-				filetype = "IGES";
-			}
-			else
-			{
-				dprinterror("Is anything wrong? It can't be other file types");
-				exit(0);
-			}
-
-			dprint(filetype + "file read beginning!\n");
-			reader->ReadFile(fileName.toLatin1().data());
-			Standard_Integer NbTrans = reader->TransferRoots();
-			globalmodel.aShape = reader->OneShape();
-			dprint(filetype + "file read finished\n");
-
-			ComputeFaceAndEdge();
-			Discrete_Edge();
-			Face_type();
-			C0_Feature();
-			Curvature_Feature();
-		}
+		explicit OccReader(QString &file);
 		OccReader(const OccReader& or) = delete;
 		~OccReader() {
 			if (reader) 
@@ -60,6 +30,7 @@ namespace CADMesher
 
 
 	public:
+		OpenMesh::Vec3d bbmin, bbmax;
 		double expected_edge_length;
 		double mu = 1.2;        //三角形面积允许扩张系数
 		double epsratio = 0.005;//网格和曲面的误差系数
@@ -69,6 +40,8 @@ namespace CADMesher
 		vector<TriMesh> Surface_TriMeshes;
 		vector<PolyMesh> Surface_PolyMeshes;
 
+		void SetShape();
+		void SetCADWireFrame();
 		void ComputeFaceAndEdge();
 		void Discrete_Edge();
 		bool ProcessTangentialBoundary(int fid, int bid);
@@ -115,6 +88,7 @@ namespace CADMesher
 		}
 
 	private:
+		QString fileName;
 		double initialRate = 0.01;
 		//double degeneratedRate = 0.02;
 	};

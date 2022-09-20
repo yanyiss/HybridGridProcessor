@@ -135,6 +135,7 @@ protected:
 public:
 	void SetCADFileName(QString &fileName);
 public:
+	void showCADWireFrame();
 	void showFeature();
 	void showIsotropicMesh();
 	void showAnisotropicMesh();

@@ -119,7 +119,6 @@ bool MeshViewerWidget::openMesh(const char* filename)
 	file = filename;
 	clearAllMesh();
 	bool read_OK = OpenMesh::IO::read_mesh( mesh, filename );
-
 	printf("%s\n", filename);
 	if ( read_OK )
 	{
@@ -168,6 +167,7 @@ void MeshViewerWidget::initMesh()
 	printBasicMeshInfo();
 	updateMesh();
 	ifUpdateMesh = true;
+	drawCAD = false;
 }
 
 void MeshViewerWidget::printBasicMeshInfo()
@@ -497,12 +497,15 @@ void MeshViewerWidget::draw_scene(int drawmode)
 		fclose(f_bde);*/
 	}
 
-	draw_scene_mesh(drawmode);
+	if (drawCAD)
+		drawCADWireFrame();
+	else
+		draw_scene_mesh(drawmode);
 }
 
 void MeshViewerWidget::draw_scene_mesh(int drawmode)
 {
-	if(mesh.n_vertices() == 0) { return; }
+	//if(mesh.n_vertices() == 0) { return; }
 
 	switch (drawmode)
 	{
@@ -600,52 +603,15 @@ void MeshViewerWidget::draw_mesh_wireframe()
 		for (; fIt != fEnd; ++fIt)
 		{
 			//GL::glNormal(dualMesh.normal(f_it));
-			fvIt = mesh.cfv_iter(fIt); 
+			fvIt = mesh.cfv_iter(fIt);
 			glBegin(GL_POLYGON);
-			for( fvIt; fvIt; ++fvIt )
+			for (fvIt; fvIt; ++fvIt)
 			{
-				glVertex3dv( mesh.point(fvIt).data() );
+				glVertex3dv(mesh.point(fvIt).data());
 			}
 			glEnd();
 		}
-		//std::cout<<"OK";
-		//glColor3d(1., 0., 0.);
-		//glBegin(GL_POLYGON);
-		//glVertex3dv(mesh.point(mesh.vertex_handle(19953)).data());
-		//glVertex3dv(mesh.point(mesh.vertex_handle(19952)).data());
-		//glVertex3dv(mesh.point(mesh.vertex_handle(37708)).data());
-		//glVertex3dv(mesh.point(mesh.vertex_handle(37707)).data());
-		//glEnd();
 	}
-
-	/*OpenMesh::Vec3d pos = mesh.point(mesh.vertex_handle(0));
-	GLdouble  winX, winY, winZ;
-	GLint     viewport[4];
-	glGetIntegerv(GL_VIEWPORT, viewport);
-	gluProject(pos[0],pos[1],pos[2],&ModelViewMatrix[0][0],&ProjectionMatrix[0][0],viewport,&winX,&winY,&winZ);
-	int x = (long)winX;
-	int y = viewport[3]-(long)winY;
-	QString str = "fxum";
-	render_text(x,y,str);*/
-	/*else
-	{
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glVertexPointer(3, GL_DOUBLE, 0, mesh.points());
-		switch(meshMode())
-		{
-		case TRIANGLE:
-			glDrawElements(GL_TRIANGLES,Indices.size(),GL_UNSIGNED_INT,&Indices[0]);
-			break;
-		case QUAD:
-			glDrawElements(GL_QUADS,Indices.size(),GL_UNSIGNED_INT,&Indices[0]);
-			break;
-		default:
-			break;
-		}
-
-		glDisableClientState(GL_VERTEX_ARRAY);
-	}*/
-
 }
 
 void MeshViewerWidget::draw_mesh_hidden_lines() const
@@ -764,15 +730,15 @@ void MeshViewerWidget::draw_mesh_solidflat() const
 	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, mat_s);
 	glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, shine);
 
-	switch(meshMode())
+	switch (meshMode())
 	{
 	case TRIANGLE:
 		glBegin(GL_TRIANGLES);
-		for (fIt; fIt != fEnd; ++fIt) 
+		for (fIt; fIt != fEnd; ++fIt)
 		{
 			glNormal3dv(mesh.normal(fIt).data());
 			fvIt = mesh.cfv_iter(fIt.handle());
-			for(fvIt; fvIt; ++fvIt)
+			for (fvIt; fvIt; ++fvIt)
 			{
 				glVertex3dv(mesh.point(fvIt).data());
 			}
@@ -781,11 +747,11 @@ void MeshViewerWidget::draw_mesh_solidflat() const
 		break;
 	case QUAD:
 		glBegin(GL_QUADS);
-		for (;fIt != fEnd; ++fIt) 
+		for (; fIt != fEnd; ++fIt)
 		{
 			glNormal3dv(&mesh.normal(fIt)[0]);
 			fvIt = mesh.cfv_iter(fIt.handle());
-			for(fvIt; fvIt; ++fvIt)
+			for (fvIt; fvIt; ++fvIt)
 			{
 				glVertex3dv(&mesh.point(fvIt)[0]);
 			}
@@ -793,12 +759,12 @@ void MeshViewerWidget::draw_mesh_solidflat() const
 		glEnd();
 		break;
 	default:
-		for (; fIt != fEnd; ++fIt) 
+		for (; fIt != fEnd; ++fIt)
 		{
 			glBegin(GL_POLYGON);
 			glNormal3dv(&mesh.normal(fIt)[0]);
 			fvIt = mesh.cfv_iter(fIt.handle());
-			for(fvIt; fvIt; ++fvIt)
+			for (fvIt; fvIt; ++fvIt)
 			{
 				glVertex3dv(&mesh.point(fvIt)[0]);
 			}
@@ -1202,3 +1168,41 @@ void MeshViewerWidget::draw_feature()
 //	}*/
 //}
 //>>>>>>> main
+
+
+void MeshViewerWidget::calcCADStrip()
+{
+	const auto &edgeshape = CADMesher::globalmodel.edgeshape;
+	for (const auto &edge : edgeshape)
+	{
+		if (edge.id < edge.reversed_edge)
+			continue;
+		const auto &para = edge.parameters;
+		TopLoc_Location loc;
+		Handle(Geom_Surface) asurface = BRep_Tool::Surface(CADMesher::globalmodel.faceshape[edge.main_face].face, loc);
+		int col = para.cols();
+		Eigen::Matrix3Xd s(3, col);
+		for (int i = 0; i < col; ++i)
+		{
+			auto pos = asurface->Value(para(0, i), para(1, i));
+			s.col(i) << pos.X(), pos.Y(), pos.Z();
+		}
+		strip.push_back(std::move(s));
+	}
+}
+
+void MeshViewerWidget::drawCADWireFrame()
+{
+	glLineWidth(3);
+	glColor3d(0.88, 0.1, 0.2);
+	for (auto &s : strip)
+	{
+		glBegin(GL_LINE_STRIP);
+		int col = s.cols();
+		for (int i = 0; i < col; ++i)
+		{
+			glVertex3d(s(0, i), s(1, i), s(2, i));
+		}
+		glEnd();
+	}
+}

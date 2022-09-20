@@ -345,7 +345,7 @@ void SurfaceMeshProcessing::createMenus()
 void SurfaceMeshProcessing::createToolBars()
 {
 	fileToolBar = addToolBar(tr("&File"));
-	//fileToolBar->addAction(openAction);
+	fileToolBar->addAction(openAction);
 	fileToolBar->addAction(openCADAction);
 	fileToolBar->addAction(saveAction);
 	fileToolBar->addAction(clearAction);

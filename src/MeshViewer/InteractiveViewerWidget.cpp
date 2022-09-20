@@ -590,7 +590,7 @@ void InteractiveViewerWidget::draw_selected_edge()
 
 void InteractiveViewerWidget::draw_scene(int drawmode)
 {
-	if (!mesh.n_vertices()) { return; }
+	//if (!mesh.n_vertices()) { return; }
 	draw_interactive_portion_mesh2();
 	draw_interactive_portion(drawmode);
 
@@ -622,6 +622,11 @@ void InteractiveViewerWidget::SetCADFileName(QString &fileName) {
 	dprint(fileName, "\nCAD name:", CADFileName);
 	//BrepFileName = fileName;
 };
+
+void InteractiveViewerWidget::showCADWireFrame()
+{
+
+}
 
 void InteractiveViewerWidget::showFeature()
 {
