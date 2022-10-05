@@ -8,7 +8,6 @@
 //main widget
 #include "InteractiveViewerWidget.h"
 #include "MeshParamDialog.h"
-#include "..\src\Algorithm\SurfaceMesher\Generator\Iso_Mesh.h"
 
 class MainViewerWidget : public QDialog
 {
@@ -51,6 +50,41 @@ public:
 	}
 
 public slots:
+	void open_query()
+	{
+		QString fileName = QFileDialog::getOpenFileName(this,
+			tr("Open mesh file"),
+			tr("../model/CAD"),
+			tr( "STEP Files (*.STEP;*.STP;*.step;*.stp);;"
+				"IGES Files (*.IGES;*.IGS;*.iges;*.igs);;"
+				"OBJ Files (*.obj);;""OFF Files (*.off);;""PLY Files (*.ply);;""STL Files (*.stl);;"
+				"All Files (*)"));
+		if (fileName.isEmpty())
+			return;
+		if (fileName.endsWith(".IGES") || fileName.endsWith(".STEP") ||
+			fileName.endsWith(".IGS") || fileName.endsWith(".STP") ||
+			fileName.endsWith(".iges") || fileName.endsWith(".step") ||
+			fileName.endsWith(".igs") || fileName.endsWith(".stp"))
+		{
+			MeshViewer->SetCADFileName(fileName);
+			CADMesher::globalmodel.clear();
+			if (MeshViewer->occreader)
+				delete MeshViewer->occreader;
+			MeshViewer->occreader = new CADMesher::OccReader(fileName);
+			auto occreader = MeshViewer->occreader;
+
+			MeshViewer->calcCADStrip();
+			MeshViewer->set_scene_pos(0.5*(occreader->bbmax + occreader->bbmin), 0.5*(occreader->bbmax - occreader->bbmin).norm());
+
+			MeshViewer->drawCAD = true;
+			MeshViewer->setDrawMode(InteractiveViewerWidget::WIRE_FRAME);
+			MeshViewer->setMouseMode(InteractiveViewerWidget::TRANS);
+		}
+		else
+		{
+			open_mesh_gui(fileName);
+		}
+	}
 	void open_mesh_query()
 	{
 		QString fileName = QFileDialog::getOpenFileName(this,
@@ -68,36 +102,38 @@ public slots:
 	}
 	void open_CAD_query()
 	{
-		QString fileName = QFileDialog::getOpenFileName(this,
-			tr("Open mesh file"),
-			tr("../model/CAD"),
-			tr("(*.STEP;*.STP;*.step;*.stp;*.IGES;*.IGS;*.iges;*.igs;*.obj);;")
-		);
-		if (!fileName.isEmpty())
-		{
-			if (fileName.endsWith(".stp") || fileName.endsWith(".igs") ||
-				fileName.endsWith(".step") || fileName.endsWith(".iges") ||
-				fileName.endsWith(".IGS") || fileName.endsWith(".STP") ||
-				fileName.endsWith(".STEP") || fileName.endsWith(".IGES"))
-			{
-				MeshViewer->SetCADFileName(fileName);
-				CADMesher::globalmodel.clear();
-				timeRecorder tr;
-				CADMesher::Iso_Mesh iso_mesh(fileName);
-				tr.out("time of generating isotropic mesh:");
-#if 0
-				Mesh me;
-				tri2poly(CADMesher::globalmodel.initial_trimesh, me, true);
-#else
-				Mesh me = CADMesher::globalmodel.initial_polymesh;
-#endif
-				initMeshStatusAndNormal(me);
-				open_mesh_gui(me);
-				/*Mesh me;
-				bool read_OK = OpenMesh::IO::read_mesh(me, "step_to_obj.obj");
-				open_mesh_gui(me);*/
-			}
-		}
+		open_query();
+//		QString fileName = QFileDialog::getOpenFileName(this,
+//			tr("Open mesh file"),
+//			tr("../model/CAD"),
+//			tr("IGES Files (*.IGES;*.IGS;*.iges;*.igs);;"
+//				"STEP Files (*.STEP;*.STP;*.step;*.stp);;")
+//		);
+//		if (!fileName.isEmpty())
+//		{
+//			if (fileName.endsWith(".stp") || fileName.endsWith(".igs") ||
+//				fileName.endsWith(".step") || fileName.endsWith(".iges") ||
+//				fileName.endsWith(".IGS") || fileName.endsWith(".STP") ||
+//				fileName.endsWith(".STEP") || fileName.endsWith(".IGES"))
+//			{
+//				MeshViewer->SetCADFileName(fileName);
+//				CADMesher::globalmodel.clear();
+//				timeRecorder tr;
+//				CADMesher::Iso_Mesh iso_mesh(fileName);
+//				tr.out("time of generating isotropic mesh:");
+//#if 1
+//				Mesh me;
+//				tri2poly(CADMesher::globalmodel.initial_trimesh, me, true);
+//#else
+//				Mesh me = CADMesher::globalmodel.initial_polymesh;
+//#endif
+//				initMeshStatusAndNormal(me);
+//				open_mesh_gui(me);
+//				/*Mesh me;
+//				bool read_OK = OpenMesh::IO::read_mesh(me, "step_to_obj.obj");
+//				open_mesh_gui(me);*/
+//			}
+//		}
 	}
 	void save_mesh_query() 
 	{
@@ -187,19 +223,26 @@ protected:
 	virtual void save_screen_gui(QString fname);
 
 public:
-		void showFeature() {
-			MeshViewer->showFeature();
-
-		}
-		void showIsotropicMesh() {
-			MeshViewer->showIsotropicMesh();
-		}
-		void showAnisotropicMesh() {
-			MeshViewer->showAnisotropicMesh();
-		}
-		void showDebugTest() {
-			MeshViewer->showDebugTest();
-		}
+	void generateTriMesh()
+	{
+		MeshViewer->generateTriMesh();
+	}
+	void generatePolyMesh()
+	{
+		MeshViewer->generatePolyMesh();
+	}
+	void showFeature() {
+		MeshViewer->showFeature();
+	}
+	void showIsotropicMesh() {
+		MeshViewer->showIsotropicMesh();
+	}
+	void showAnisotropicMesh() {
+		MeshViewer->showAnisotropicMesh();
+	}
+	void showDebugTest() {
+		MeshViewer->showDebugTest();
+	}
 protected:
 	bool LoadMeshSuccess;
 

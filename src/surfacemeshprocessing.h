@@ -47,6 +47,8 @@ private slots:
 	void edgePick();
 	void facePick();
 	void moveVertex();
+	void generateTriMesh();
+	void generatePolyMesh();
 	void showFeature();
 	void showIsotropicMesh();
 	void showAnisotropicMesh();
@@ -119,6 +121,8 @@ private:
 	QAction* EdgePickAction;
 	QAction* clearSelectedAction;
 	QAction* moveVertexAction;
+	QAction* generateTriMeshAction;
+	QAction* generatePolyMeshAction;
 	QAction* showFeatureAction;
 	QAction* showIsotropicMeshAction;
 	QAction* showAnisotropicMeshAction;

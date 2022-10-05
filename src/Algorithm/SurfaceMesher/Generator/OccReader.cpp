@@ -4,6 +4,45 @@
 
 namespace CADMesher
 {
+	OccReader::OccReader(QString &file)
+	{
+		fileName = file;
+		SetShape();
+		SetCADWireFrame();
+	}
+
+	void OccReader::SetShape()
+	{
+		std::string filetype;
+		if (fileName.endsWith(".stp") || fileName.endsWith(".step") || fileName.endsWith(".STP") || fileName.endsWith(".STEP")) {
+			reader = new STEPControl_Reader();
+			dprint("CAD model from STEP file");
+			filetype = "STEP";
+		}
+		else if (fileName.endsWith(".igs") || fileName.endsWith(".iges") || fileName.endsWith(".IGS") || fileName.endsWith(".IGES")) {
+			reader = new IGESControl_Reader();
+			dprint("CAD model from IGES file");
+			filetype = "IGES";
+		}
+		else
+		{
+			dprinterror("Is anything wrong? It can't be other file types");
+			exit(0);
+		}
+
+		dprint(filetype + "file read beginning!\n");
+		reader->ReadFile(fileName.toLatin1().data());
+		Standard_Integer NbTrans = reader->TransferRoots();
+		globalmodel.aShape = reader->OneShape();
+		dprint(filetype + "file read finished\n");
+	}
+
+	void OccReader::SetCADWireFrame()
+	{
+		ComputeFaceAndEdge();
+		Discrete_Edge();
+	}
+
 	void OccReader::Set_TriMesh()
 	{
 		vector<ShapeFace> &faceshape = globalmodel.faceshape;
@@ -11,7 +50,6 @@ namespace CADMesher
 		Surface_TriMeshes.resize(faceshape.size());
 		for (int i = 0; i < faceshape.size(); i++)
 		{
-			if (i != 37) continue;
 			TriMesh &aMesh = Surface_TriMeshes[i];
 			auto &wires = faceshape[i].wires;
 			if (wires.empty() || !faceshape[i].if_exisited)
@@ -126,8 +164,8 @@ namespace CADMesher
 			auto &Surface = faceshape[i].Surface;
 
 			//Remesh in domain		
-			//Riemannremesh Remesh(Surface, &aMesh);
-			//Remesh.remesh();
+			Riemannremesh Remesh(Surface, &aMesh);
+			Remesh.remesh();
 			dprint("domain remesh done!");
 
 			ClearBoundary(aMesh);
@@ -485,18 +523,18 @@ namespace CADMesher
 	{
 		TopoDS_Shape &aShape = globalmodel.aShape;
 
-		Vector3d ma(-DBL_MAX, -DBL_MAX, -DBL_MAX);
-		Vector3d mi(DBL_MAX, DBL_MAX, DBL_MAX);
+		bbmin[0] = DBL_MAX; bbmin[1] = DBL_MAX; bbmin[2] = DBL_MAX;
+		bbmax[0] = -DBL_MAX; bbmax[1] = -DBL_MAX; bbmax[2] = -DBL_MAX;
 		for (TopExp_Explorer vertexExp(aShape, TopAbs_VERTEX); vertexExp.More(); vertexExp.Next())
 		{
 			gp_Pnt v = BRep_Tool::Pnt(TopoDS::Vertex(vertexExp.Current()));
-			ma(0) = std::max(ma(0), v.X()); mi(0) = std::min(mi(0), v.X());
-			ma(1) = std::max(ma(1), v.Y()); mi(1) = std::min(mi(1), v.Y());
-			ma(2) = std::max(ma(2), v.Z()); mi(2) = std::min(mi(2), v.Z());
+			bbmin[0] = std::min(bbmin[0], v.X()); bbmax[0] = std::max(bbmax[0], v.X());
+			bbmin[1] = std::min(bbmin[1], v.Y()); bbmax[1] = std::max(bbmax[1], v.Y());
+			bbmin[2] = std::min(bbmin[2], v.Z()); bbmax[2] = std::max(bbmax[2], v.Z());
 		}
-		initialRate = 0.01;
-		expected_edge_length = initialRate * (ma - mi).norm();
-		epsratio *= (ma - mi).norm();//根据Boundingbox设定网格和曲面之间的误差
+		//initialRate = 0.05;
+		expected_edge_length = initialRate * (bbmin - bbmax).norm();
+		epsratio *= (bbmin - bbmax).norm();
 
 		vector<ShapeFace> &faceshape = globalmodel.faceshape;
 		faceshape.clear();
@@ -627,7 +665,7 @@ namespace CADMesher
 			}
 		}
 
-		dprint("CAD Info:\nModel Size: [", mi(0), ma(0), "],[", mi(1), ma(1), "],[", mi(2), ma(2), "]"
+		dprint("CAD Info:\nModel Size: [", bbmin[0], bbmax[0], "],[", bbmin[1], bbmax[1], "],[", bbmin[2], bbmax[2], "]"
 			"\nSurface Number: ", faceshape.size(),
 			"\nEdge Number: ", edgeshape.size(),
 			"\n\nCompute Topology Done!");
@@ -1680,6 +1718,62 @@ namespace CADMesher
 			}
 			offset_pnts.push_back(singleline);
 		}
+	}
+
+	int OccReader::EndId(vector<ShapeEdge> &edgeshape, int edge_id)
+	{
+		int id = edgeshape[edge_id].next_reversed_edge;
+		if (id == -1)
+		{
+			return edgeshape[edge_id].end_id;
+		}
+		else
+		{
+			return EndId(edgeshape, id);
+		}
+	}
+
+	void OccReader::SetTriFeature()
+	{
+		TriMesh& model_mesh = globalmodel.initial_trimesh;
+		for (auto te : model_mesh.edges())
+		{
+			if (!model_mesh.data(te).flag1 && !model_mesh.data(te).flag2 && !model_mesh.is_boundary(te)) continue;
+			if (model_mesh.is_boundary(te))
+				model_mesh.data(te).flag1 = true;
+			model_mesh.data(te.v0()).set_vertflag(true);
+			model_mesh.data(te.v1()).set_vertflag(true);
+		}
+
+		dprint("Reset Feature Done!");
+	}
+
+	void OccReader::SetPolyFeature()
+	{
+		Mesh& model_mesh = globalmodel.initial_polymesh;
+		for (auto te : model_mesh.edges())
+		{
+			if (!model_mesh.data(te).flag1 && !model_mesh.is_boundary(te)) continue;
+			if (model_mesh.is_boundary(te))
+				model_mesh.data(te).flag1 = true;
+			model_mesh.data(te.v0()).set_vertflag(true);
+			model_mesh.data(te.v1()).set_vertflag(true);
+		}
+		//���ı��ε�4�����Ϊ�����
+		for (auto f : model_mesh.faces())
+		{
+			if (f.valence() < 4) continue;
+			for (auto fv : model_mesh.fv_range(f))
+			{
+				model_mesh.data(fv).set_vertflag(true);
+			}
+			for (auto fe : model_mesh.fe_range(f))
+			{
+				model_mesh.data(fe).flag2 = true;
+			}
+		}
+
+		dprint("Reset Feature Done!");
 	}
 
 }

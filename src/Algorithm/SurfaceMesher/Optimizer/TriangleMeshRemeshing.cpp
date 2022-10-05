@@ -5,6 +5,7 @@ namespace CADMesher
 	TriangleMeshRemeshing::TriangleMeshRemeshing(TriMesh* mesh_, double target_length)
 		:mesh(mesh_), expected_length(target_length)
 	{
+
 		if (expected_length <= 0)
 		{
 			expected_length = meshAverageLength(*mesh);
@@ -61,7 +62,7 @@ namespace CADMesher
 			if (processFeatureConstraintAngle() < 20)//处理最小角
 			{
 				tmqh.update();
-				if(tmqh.getAvgQuality() > 0.88)
+				if(tmqh.getAvgQuality() > 0.92)
 					break;
 			}
 
@@ -681,6 +682,18 @@ namespace CADMesher
 			mesh->set_point(tv, project_pnt_to_surface(triangle_surface_index[fid], mesh->point(tv)));
 		}
 #endif
+
+		vector<unsigned>& triangle_surface_index = globalmodel.triangle_surface_index;
+		vector<vector<unsigned>> vertex_surface_index(globalmodel.faceshape.size());
+		for (auto tv : mesh->vertices()) {
+			OpenMesh::Vec3d &p = mesh->point(tv);
+			vertex_surface_index[triangle_surface_index[aabbtree->closest_point_and_face_handle(p).second.idx()]].push_back(tv.idx());
+			/*CGAL_AABB_Tree::Point_and_primitive_id point_primitive = AABB_tree->closest_point_and_primitive(CGAL_double_3_Point(p[0], p[1], p[2]));
+			CGAL_Triangle_Iterator it = point_primitive.second;
+			unsigned face_id = std::distance(triangle_vectors.begin(), it);
+			vertex_surface_index[triangle_surface_index[face_id]].push_back(tv.idx());*/
+		}
+		MeshProjectToSurface(mesh, vertex_surface_index, &globalmodel);
 	}
 
 	O3d TriangleMeshRemeshing::GravityPos(const OV &v)
