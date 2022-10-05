@@ -1,11 +1,11 @@
 #include "Iso_Mesh.h"
 #include <fstream>
 #include <iostream>
-#include<algorithm>
+#include <algorithm>
 #include "..\src\Algorithm\SurfaceMesher\Optimizer\TriangleMeshRemeshing.h"
 #include "..\src\Algorithm\SurfaceMesher\Optimizer\AnisotropicMeshRemeshing.h"
 
-//#define USETRI
+#define USETRI
 
 namespace CADMesher
 {

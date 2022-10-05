@@ -99,6 +99,7 @@ namespace CADMesher
 		ClosestPointSearch::AABBTree** init_surfacemesh_tree = nullptr;
 
 		PolyMesh initial_polymesh;
+		PolyMesh isotropic_polymesh;
 		GlobalGeometry() {}
 		void clear() {
 			faceshape.clear();

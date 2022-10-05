@@ -3,6 +3,8 @@
 
 #include "MeshViewerWidget.h"
 #include "..\src\Dependency\ANN\ANN.h"
+#include  "../src/Algorithm/SurfaceMesher/Optimizer/TriangleMeshRemeshing.h"
+#include "../src/Algorithm/SurfaceMesher/Optimizer/AnisotropicMeshRemeshing.h"
 
 class InteractiveViewerWidget : public MeshViewerWidget
 {
@@ -83,7 +85,7 @@ public slots:
 	}
 
 public:
-	enum { TRANS, POINTPICK, VERTEXPICK, EDGEPICK, FACEPICK, EDGECOLLAPSE, EDGEFLIP, EDGESPLIT , MOVE, FEATURE, ISOTROPIC, ANISOTROPIC, DEBUGTEST, T2_MODE, N_MODE };
+	enum { TRANS, POINTPICK, VERTEXPICK, EDGEPICK, FACEPICK, EDGECOLLAPSE, EDGEFLIP, EDGESPLIT , MOVE, GTM, GPM, FEATURE, ISOTROPIC, ANISOTROPIC, DEBUGTEST, T2_MODE, N_MODE };
 	void setMouseMode(int mm);
 	int mouseMode() const { return mouse_mode_; }
 
@@ -135,11 +137,19 @@ protected:
 public:
 	void SetCADFileName(QString &fileName);
 public:
+	CADMesher::OccReader* occreader = nullptr;
+	CADMesher::Iso_Mesh* iso_mesh = nullptr;
+	CADMesher::TriangleMeshRemeshing* tmr = nullptr;
+	CADMesher::AnisotropicMeshRemeshing* amr = nullptr;
+	void generateTriMesh();
+	void generatePolyMesh();
 	void showFeature();
 	void showIsotropicMesh();
 	void showAnisotropicMesh();
 	void showDebugTest();
 private:
+	bool ifGenerateTriMesh = false;
+	bool ifGeneratePolyMesh = false;
 
 #pragma region Auxiliary_function
 public:
