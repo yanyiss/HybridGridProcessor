@@ -631,19 +631,37 @@ void InteractiveViewerWidget::generateTriMesh()
 	occreader->C0_Feature();
 	occreader->Curvature_Feature();
 	occreader->Set_TriMesh();
-	occreader->MergeModel();
+	occreader->MergeModel(CADMesher::globalmodel.initial_trimesh, occreader->Surface_TriMeshes);
+	CADMesher::globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(CADMesher::globalmodel.initial_trimesh);
 	occreader->SetTriFeature();
 	tri2poly(CADMesher::globalmodel.initial_trimesh, mesh, true);
 	initMeshStatusAndNormal(mesh);
 	drawCAD = false;
 	setDrawMode(InteractiveViewerWidget::FLAT_POINTS);
 	setMouseMode(InteractiveViewerWidget::TRANS);
+	ifGenerateTriMesh = true;
+	ifGeneratePolyMesh = false;
 	updateGL();
 }
 
 void InteractiveViewerWidget::generatePolyMesh()
 {
-
+	occreader->Face_type();
+	occreader->C0_Feature();
+	occreader->Curvature_Feature();
+	occreader->Set_PolyMesh();
+	occreader->MergeModel(CADMesher::globalmodel.initial_polymesh, occreader->Surface_PolyMeshes);
+	TriMesh tm(CADMesher::globalmodel.initial_polymesh);
+	CADMesher::globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(tm);
+	occreader->SetPolyFeature();
+	mesh = CADMesher::globalmodel.initial_polymesh;
+	initMeshStatusAndNormal(mesh);
+	drawCAD = false;
+	setDrawMode(InteractiveViewerWidget::FLAT_POINTS);
+	setMouseMode(InteractiveViewerWidget::TRANS);
+	ifGenerateTriMesh = false;
+	ifGeneratePolyMesh = true;
+	updateGL();
 }
 
 void InteractiveViewerWidget::showFeature()
@@ -653,13 +671,48 @@ void InteractiveViewerWidget::showFeature()
 
 void InteractiveViewerWidget::showIsotropicMesh()
 {
-
+	if (ifGenerateTriMesh)
+	{
+		CADMesher::globalmodel.isotropic_trimesh = CADMesher::globalmodel.initial_trimesh;
+		tmr = new CADMesher::TriangleMeshRemeshing(&(CADMesher::globalmodel.isotropic_trimesh));
+		tmr->run();
+		tri2poly(CADMesher::globalmodel.isotropic_trimesh, mesh, true);
+		initMeshStatusAndNormal(mesh);
+	}
+	else if (ifGeneratePolyMesh)
+	{
+		CADMesher::globalmodel.isotropic_polymesh = CADMesher::globalmodel.initial_polymesh;
+		tmr = new CADMesher::TriangleMeshRemeshing(&(CADMesher::globalmodel.isotropic_polymesh));
+		tmr->run();
+		mesh = CADMesher::globalmodel.isotropic_polymesh;
+		initMeshStatusAndNormal(mesh);
+	}
+	drawCAD = false;
+	setDrawMode(InteractiveViewerWidget::FLAT_POINTS);
+	setMouseMode(InteractiveViewerWidget::TRANS);
+	updateGL();
 }
 
 //#include "..\src\Algorithm\SurfaceMesher\Optimizer\AnisotropicMeshRemeshing.h"
 void InteractiveViewerWidget::showAnisotropicMesh()
 {
+	if (ifGenerateTriMesh)
+	{
+		CADMesher::AnisotropicMeshRemeshing* amr = new CADMesher::AnisotropicMeshRemeshing();
+		CADMesher::globalmodel.isotropic_trimesh = CADMesher::globalmodel.initial_trimesh;
+		amr->SetMesh(&(CADMesher::globalmodel.isotropic_trimesh));
+		amr->load_ref_mesh(&(CADMesher::globalmodel.initial_trimesh));
+		double tl = amr->get_ref_mesh_ave_anisotropic_edge_length();
+		dprint("anisotropic edge length:", tl);
+		amr->do_remeshing(tl, 1.5);
 
+		tri2poly(CADMesher::globalmodel.isotropic_trimesh, mesh, true);
+		initMeshStatusAndNormal(mesh);
+	}
+	drawCAD = false;
+	setDrawMode(InteractiveViewerWidget::FLAT_POINTS);
+	setMouseMode(InteractiveViewerWidget::TRANS);
+	updateGL();
 }
 
 #include "..\src\Toolbox\filesOperator.h"

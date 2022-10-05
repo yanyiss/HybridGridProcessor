@@ -31,5 +31,7 @@
         <file>Images/edit-undo.png</file>
         <file>Images/anisotropic.png</file>
         <file>Images/feature.png</file>
+        <file>Images/tri.png</file>
+        <file>Images/poly.png</file>
     </qresource>
 </RCC>

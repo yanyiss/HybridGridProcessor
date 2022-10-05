@@ -171,14 +171,14 @@ void SurfaceMeshProcessing::createActions()
 	connect(moveVertexAction, SIGNAL(triggered()), this, SLOT(moveVertex()));
 
 	generateTriMeshAction = new QAction(tr("&Generate TriMesh"), this);
-	generateTriMeshAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/feature.png"));
+	generateTriMeshAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/tri.png"));
 	generateTriMeshAction->setStatusTip(tr("Generate TriMesh"));
 	generateTriMeshAction->setCheckable(true);
 	generateTriMeshAction->setChecked(false);
 	connect(generateTriMeshAction, SIGNAL(triggered()), this, SLOT(generateTriMesh()));
 
 	generatePolyMeshAction = new QAction(tr("&Generate PolyMesh"), this);
-	generatePolyMeshAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/feature.png"));
+	generatePolyMeshAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/poly.png"));
 	generatePolyMeshAction->setStatusTip(tr("Generate PolyMesh"));
 	generatePolyMeshAction->setCheckable(true);
 	generatePolyMeshAction->setChecked(false);
