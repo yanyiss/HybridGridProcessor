@@ -7,6 +7,7 @@
 
 #include "QGLViewerWidget.h"
 #include "MeshDefinition.h"
+#include "..\src\Algorithm\SurfaceMesher\Generator\Iso_Mesh.h"
 
 class MeshViewerWidget : public QGLViewerWidget 
 {
@@ -92,6 +93,11 @@ private:
 	void updateIndices();
 public:
 	// mesh modes.
+	bool drawCAD = false;
+	std::vector<Eigen::Matrix3Xd> strip;
+	void Setbb(OpenMesh::Vec3d &min, OpenMesh::Vec3d &max) { bbMin = min; bbMax = max; }
+	void calcCADStrip();
+	void drawCADWireFrame();
 	enum { TRIANGLE = 0, QUAD, N_MESH_MODES };
 	void setMeshMode(int mm) { mesh_mode_ = mm;}
 	int meshMode() const { return mesh_mode_; }
