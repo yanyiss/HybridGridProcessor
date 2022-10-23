@@ -93,6 +93,7 @@ private:
 	void updateIndices();
 public:
 	// mesh modes.
+	bool ifDrawFeature = true;
 	bool drawCAD = false;
 	std::vector<Eigen::Matrix3Xd> strip;
 	void Setbb(OpenMesh::Vec3d &min, OpenMesh::Vec3d &max) { bbMin = min; bbMax = max; }

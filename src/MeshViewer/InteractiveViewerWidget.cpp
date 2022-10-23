@@ -505,7 +505,7 @@ void InteractiveViewerWidget::draw_interactive_portion(int drawmode)
 			break;
 		}
 	}
-
+	showFeature();
 	if(draw_new_mesh)
 	{
 		draw_scene_mesh(drawmode);
@@ -625,8 +625,10 @@ void InteractiveViewerWidget::SetCADFileName(QString &fileName) {
 	//BrepFileName = fileName;
 };
 
-void InteractiveViewerWidget::generateTriMesh()
+void InteractiveViewerWidget::generateTriMesh(double ratio)
 {
+	occreader->initialRate = ratio;
+	occreader->Discrete_Edge();
 	occreader->Face_type();
 	occreader->C0_Feature();
 	occreader->Curvature_Feature();
@@ -641,11 +643,14 @@ void InteractiveViewerWidget::generateTriMesh()
 	setMouseMode(InteractiveViewerWidget::TRANS);
 	ifGenerateTriMesh = true;
 	ifGeneratePolyMesh = false;
+	dprint("Mesh Avg Length:", meshAverageLength(mesh));
 	updateGL();
 }
 
-void InteractiveViewerWidget::generatePolyMesh()
+void InteractiveViewerWidget::generatePolyMesh(double ratio)
 {
+	//occreader->initialRate = ratio;
+	//occreader->Discrete_Edge();
 	occreader->Face_type();
 	occreader->C0_Feature();
 	occreader->Curvature_Feature();
@@ -661,20 +666,53 @@ void InteractiveViewerWidget::generatePolyMesh()
 	setMouseMode(InteractiveViewerWidget::TRANS);
 	ifGenerateTriMesh = false;
 	ifGeneratePolyMesh = true;
+	dprint("Mesh Avg Length:", meshAverageLength(mesh));
 	updateGL();
 }
 
 void InteractiveViewerWidget::showFeature()
 {
+	//if (ifDrawFeature)
+	//{
+	//	//»­C0ÌØÕ÷
+	//	glLineWidth(4);
+	//	glColor3d(1.0, 0.0, 0.0);
+	//	glBegin(GL_LINES);
+	//	for (auto& te : mesh.edges())
+	//	{
+	//		if (mesh.data(te).flag1)
+	//		{
+	//			glVertex3dv(mesh.point(te.v0()).data());
+	//			glVertex3dv(mesh.point(te.v1()).data());
+	//		}
+	//	}
+	//	glEnd();
 
+	//	//»­ÇúÂÊÌØÕ÷
+	//	glLineWidth(4);
+	//	glColor3d(0.0, 1.0, 0.0);
+	//	glBegin(GL_LINES);
+	//	for (auto& te : mesh.edges())
+	//	{
+	//		if (mesh.data(te).flag2)
+	//		{
+	//			glVertex3dv(mesh.point(te.v0()).data());
+	//			glVertex3dv(mesh.point(te.v1()).data());
+	//		}
+	//	}
+	//	glEnd();
+	//}
+	//ifDrawFeature = !ifDrawFeature;
+	//setMouseMode(InteractiveViewerWidget::TRANS);
 }
 
-void InteractiveViewerWidget::showIsotropicMesh()
+void InteractiveViewerWidget::showIsotropicMesh(double tl)
 {
 	if (ifGenerateTriMesh)
 	{
+		dprint(tl);
 		CADMesher::globalmodel.isotropic_trimesh = CADMesher::globalmodel.initial_trimesh;
-		tmr = new CADMesher::TriangleMeshRemeshing(&(CADMesher::globalmodel.isotropic_trimesh));
+		tmr = new CADMesher::TriangleMeshRemeshing(&(CADMesher::globalmodel.isotropic_trimesh), tl);
 		tmr->run();
 		tri2poly(CADMesher::globalmodel.isotropic_trimesh, mesh, true);
 		initMeshStatusAndNormal(mesh);
