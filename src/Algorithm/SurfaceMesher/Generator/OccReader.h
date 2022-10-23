@@ -352,7 +352,7 @@ namespace CADMesher
 		}
 
 
-	private:
+	//private:
 		QString fileName;
 		double initialRate = 0.01;
 		//double degeneratedRate = 0.02;

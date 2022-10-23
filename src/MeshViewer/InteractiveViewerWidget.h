@@ -141,15 +141,16 @@ public:
 	CADMesher::Iso_Mesh* iso_mesh = nullptr;
 	CADMesher::TriangleMeshRemeshing* tmr = nullptr;
 	CADMesher::AnisotropicMeshRemeshing* amr = nullptr;
-	void generateTriMesh();
-	void generatePolyMesh();
+	void generateTriMesh(double ratio);
+	void generatePolyMesh(double ratio);
 	void showFeature();
-	void showIsotropicMesh();
+	void showIsotropicMesh(double tl);
 	void showAnisotropicMesh();
 	void showDebugTest();
 private:
 	bool ifGenerateTriMesh = false;
 	bool ifGeneratePolyMesh = false;
+	bool ifDrawFeature = true;
 
 #pragma region Auxiliary_function
 public:

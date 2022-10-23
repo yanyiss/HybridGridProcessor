@@ -225,17 +225,17 @@ protected:
 public:
 	void generateTriMesh()
 	{
-		MeshViewer->generateTriMesh();
+		MeshViewer->generateTriMesh(MeshParam->get_sample_ratio_AM());
 	}
 	void generatePolyMesh()
 	{
-		MeshViewer->generatePolyMesh();
+		MeshViewer->generatePolyMesh(MeshParam->get_sample_ratio_AM());
 	}
 	void showFeature() {
 		MeshViewer->showFeature();
 	}
 	void showIsotropicMesh() {
-		MeshViewer->showIsotropicMesh();
+		MeshViewer->showIsotropicMesh(MeshParam->get_target_edge_length_AM());
 	}
 	void showAnisotropicMesh() {
 		MeshViewer->showAnisotropicMesh();
