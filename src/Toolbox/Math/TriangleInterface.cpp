@@ -143,7 +143,7 @@ void triangulate(const Eigen::Matrix2Xd &all_pts, const std::vector<Eigen::Matri
 	in.numberofholes = sum;
 	in.holelist = (double*)calloc(sum * 2, sizeof(double));
 
-	int outerflag = 0;// outerFlag(all_pts, E);
+	int outerflag = outerFlag(all_pts, E);
 	/*if (outerflag != 0)
 	{
 		system("pause");

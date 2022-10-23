@@ -682,7 +682,7 @@ namespace CADMesher
 			mesh->set_point(tv, project_pnt_to_surface(triangle_surface_index[fid], mesh->point(tv)));
 		}
 #endif
-
+#if 0
 		vector<unsigned>& triangle_surface_index = globalmodel.triangle_surface_index;
 		vector<vector<unsigned>> vertex_surface_index(globalmodel.faceshape.size());
 		for (auto tv : mesh->vertices()) {
@@ -694,6 +694,7 @@ namespace CADMesher
 			vertex_surface_index[triangle_surface_index[face_id]].push_back(tv.idx());*/
 		}
 		MeshProjectToSurface(mesh, vertex_surface_index, &globalmodel);
+#endif
 	}
 
 	O3d TriangleMeshRemeshing::GravityPos(const OV &v)

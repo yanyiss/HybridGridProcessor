@@ -533,7 +533,6 @@ namespace CADMesher
 			bbmin[2] = std::min(bbmin[2], v.Z()); bbmax[2] = std::max(bbmax[2], v.Z());
 		}
 		//initialRate = 0.05;
-		expected_edge_length = initialRate * (bbmin - bbmax).norm();
 		epsratio *= (bbmin - bbmax).norm();
 
 		vector<ShapeFace> &faceshape = globalmodel.faceshape;
@@ -673,6 +672,7 @@ namespace CADMesher
 
 	void OccReader::Discrete_Edge()
 	{
+		expected_edge_length = initialRate * (bbmin - bbmax).norm();
 		vector<ShapeFace> &faceshape = globalmodel.faceshape;
 		vector<ShapeEdge> &edgeshape = globalmodel.edgeshape;
 
