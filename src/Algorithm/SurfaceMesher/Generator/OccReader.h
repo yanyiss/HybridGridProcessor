@@ -354,7 +354,7 @@ namespace CADMesher
 
 	//private:
 		QString fileName;
-		double initialRate = 0.01;
+		double initialRate = 0.003;
 		//double degeneratedRate = 0.02;
 	};
 

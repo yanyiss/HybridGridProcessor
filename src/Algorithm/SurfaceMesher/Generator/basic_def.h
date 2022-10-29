@@ -139,7 +139,7 @@ namespace CADMesher
 			opencascade::handle<Standard_Type> type = geom_surface->DynamicType();
 			if (type == STANDARD_TYPE(Geom_Plane)) {
 				surface_type[0]++;
-				dprint("Plane", itertimes++);
+				//dprint("Plane", itertimes++);
 				opencascade::handle<Geom_Plane> geom_plane = Handle(Geom_Plane)::DownCast(geom_surface);
 				Standard_Real a, b, c, d;
 				geom_plane->Coefficients(a, b, c, d);
@@ -163,7 +163,7 @@ namespace CADMesher
 			}
 			else if (type == STANDARD_TYPE(Geom_CylindricalSurface)) {
 				surface_type[1]++;
-				dprint("Cylinder", itertimes++);
+				//dprint("Cylinder", itertimes++);
 				opencascade::handle<Geom_CylindricalSurface> geom_cylindricalsurface = opencascade::handle<Geom_CylindricalSurface>::DownCast(geom_surface);
 				/*Standard_Real a1, a2, a3, b1, b2, b3, c1, c2, c3, d;
 				geom_cylindricalsurface->Coefficients(a1, a2, a3, b1, b2, b3, c1, c2, c3, d);*/
@@ -183,7 +183,7 @@ namespace CADMesher
 			}
 			else if (type == STANDARD_TYPE(Geom_ConicalSurface)) {
 				surface_type[2]++;
-				dprint("Cone", itertimes++);
+				//dprint("Cone", itertimes++);
 				opencascade::handle<Geom_ConicalSurface> geom_conicalsurface = opencascade::handle<Geom_ConicalSurface>::DownCast(geom_surface);
 
 				////???????????????????????????????????????????????????????????????????????????????????????��
@@ -203,7 +203,7 @@ namespace CADMesher
 			}
 			else if (type == STANDARD_TYPE(Geom_SphericalSurface)) {
 				surface_type[3]++;
-				dprint("Sphere", itertimes++);
+				//dprint("Sphere", itertimes++);
 				opencascade::handle<Geom_SphericalSurface> geom_sphericalsurface = opencascade::handle<Geom_SphericalSurface>::DownCast(geom_surface);
 				gp_Pnt loc = geom_sphericalsurface->Location();
 				OpenMesh::Vec3d p(loc.X(), loc.Y(), loc.Z());
@@ -218,7 +218,7 @@ namespace CADMesher
 			}
 			else if (type == STANDARD_TYPE(Geom_ToroidalSurface)) {
 				surface_type[4]++;
-				dprint("Torus", itertimes++);
+				//dprint("Torus", itertimes++);
 				opencascade::handle<Geom_ToroidalSurface> geom_toroidalsurface = opencascade::handle<Geom_ToroidalSurface>::DownCast(geom_surface);
 				double R = static_cast<double>(geom_toroidalsurface->MajorRadius());
 				double r = static_cast<double>(geom_toroidalsurface->MinorRadius());
@@ -237,7 +237,7 @@ namespace CADMesher
 			}
 			else if (type == STANDARD_TYPE(Geom_BezierSurface)) {
 				surface_type[5]++;
-				dprint("Bezier Surface", itertimes++);
+				//dprint("Bezier Surface", itertimes++);
 	//			BezierSurface beziersurface;
 	//			opencascade::handle<Geom_BezierSurface> geom_beziersurface = opencascade::handle<Geom_BezierSurface>::DownCast(geom_surface);
 
@@ -286,7 +286,7 @@ namespace CADMesher
 			}
 			else if (type == STANDARD_TYPE(Geom_BSplineSurface)) {
 				surface_type[6]++;
-				dprint("BSpline Surface", itertimes++);
+				//dprint("BSpline Surface", itertimes++);
 	//			BSplineSurface bsplinesurface;
 
 	//			opencascade::handle<Geom_BSplineSurface> geom_bsplinesurface = Handle(Geom_BSplineSurface)::DownCast(geom_surface);

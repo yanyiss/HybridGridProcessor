@@ -206,7 +206,7 @@ void SurfaceMeshProcessing::createActions()
 	connect(showAnisotropicMeshAction, SIGNAL(triggered()), this, SLOT(showAnisotropicMesh()));
 
 	showDebugTestAction = new QAction(tr("&Show Debug Test"), this);
-	showDebugTestAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/move_vertex.png"));
+	showDebugTestAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/debug.png"));
 	showDebugTestAction->setStatusTip(tr("Show Debug Test"));
 	showDebugTestAction->setCheckable(true);
 	showDebugTestAction->setChecked(false);
@@ -393,7 +393,7 @@ void SurfaceMeshProcessing::createToolBars()
 	mouseToolBar->addAction(showFeatureAction);
 	mouseToolBar->addAction(showIsotropicMeshAction);
 	mouseToolBar->addAction(showAnisotropicMeshAction);
-	//mouseToolBar->addAction(showDebugTestAction);
+	mouseToolBar->addAction(showDebugTestAction);
 
 	localOperationBar = addToolBar(tr("Local Operation"));
 	localOperationBar->addAction(EditUndoAction);

@@ -166,11 +166,11 @@ namespace CADMesher
 			//Remesh in domain		
 			Riemannremesh Remesh(Surface, &aMesh);
 			Remesh.remesh();
-			dprint("domain remesh done!");
+			//dprint("domain remesh done!");
 
 			ClearBoundary(aMesh);
 			Set_Curvature(Surface, aMesh);
-			dprint("GaussCurvature compute done!");
+			//dprint("GaussCurvature compute done!");
 
 			for (auto tv : aMesh.vertices())
 			{
