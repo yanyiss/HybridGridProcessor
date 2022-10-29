@@ -767,7 +767,7 @@ void InteractiveViewerWidget::showDebugTest()
 		std::ofstream fileWriter;
 
 #if 1   //导入各向同性数据
-		int i = 108;
+		int i = 186;
 		fileWriter.open("C:\\Users\\1\\Desktop\\test\\test2\\IsoRawData.csv", std::ios::app);
 		for (; i < allFileName.size();)
 		{

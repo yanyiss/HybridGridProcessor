@@ -15,13 +15,6 @@ namespace CADMesher
 			if (reader) 
 			{ 
 				delete reader; reader = nullptr; 
-				vector<ShapeFace> &faceshape = globalmodel.faceshape;
-				for (int i = 0; i < faceshape.size(); i++)
-				{
-					if (!faceshape[i].if_exisited) continue;
-					//delete faceshape[i].Surface;
-					faceshape[i].Surface = nullptr;
-				}
 			}
 		}
 
@@ -354,7 +347,7 @@ namespace CADMesher
 
 	//private:
 		QString fileName;
-		double initialRate = 0.003;
+		double initialRate = 0.002;
 		//double degeneratedRate = 0.02;
 	};
 

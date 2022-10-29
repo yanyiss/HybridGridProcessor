@@ -101,7 +101,14 @@ namespace CADMesher
 		PolyMesh initial_polymesh;
 		PolyMesh isotropic_polymesh;
 		GlobalGeometry() {}
-		void clear() {
+		void clear() 
+		{
+			for (int i = 0; i < faceshape.size(); i++)
+			{
+				if (!faceshape[i].if_exisited) continue;
+				delete faceshape[i].Surface;
+				faceshape[i].Surface = nullptr;
+			}
 			faceshape.clear();
 			edgeshape.clear();
 			triangle_surface_index.clear();
@@ -116,6 +123,7 @@ namespace CADMesher
 				delete[] init_surfacemesh_tree;
 				init_surfacemesh_tree = nullptr;
 			}
+
 			initial_polymesh.clear();
 		}
 	};
