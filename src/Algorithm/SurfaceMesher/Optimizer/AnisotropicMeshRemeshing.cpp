@@ -204,8 +204,8 @@ namespace CADMesher
 		for (unsigned int i = 0; i < nv; ++i)
 		{
 			Mesh::VertexHandle vh = ref_mesh_->vertex_handle(i);
-			double k1 = K1[i]; k1 = std::abs(k1) < 1.0e-4 ? 1.0e-4 : k1;
-			double k2 = K2[i]; k2 = std::abs(k2) < 1.0e-4 ? 1.0e-4 : k2;
+			double k1 = K1[i]; k1 = std::abs(k1) < 1.0e-3 ? 1.0e-3 : k1;
+			double k2 = K2[i]; k2 = std::abs(k2) < 1.0e-3 ? 1.0e-3 : k2;
 
 			OpenMesh::Vec3d d1 = D1[i];
 			OpenMesh::Vec3d d2 = D2[i];

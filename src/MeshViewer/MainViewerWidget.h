@@ -74,6 +74,7 @@ public slots:
 			auto occreader = MeshViewer->occreader;
 
 			MeshViewer->calcCADStrip();
+			MeshViewer->clearAllMesh();
 			MeshViewer->set_scene_pos(0.5*(occreader->bbmax + occreader->bbmin), 0.5*(occreader->bbmax - occreader->bbmin).norm());
 
 			MeshViewer->drawCAD = true;
