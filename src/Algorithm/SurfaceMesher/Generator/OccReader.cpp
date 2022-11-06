@@ -40,7 +40,7 @@ namespace CADMesher
 	void OccReader::SetCADWireFrame()
 	{
 		ComputeFaceAndEdge();
-		Discrete_Edge();
+		//Discrete_Edge();
 	}
 
 	void OccReader::Set_TriMesh()
@@ -168,11 +168,11 @@ namespace CADMesher
 			//Remesh in domain		
 			Riemannremesh Remesh(Surface, &aMesh);
 			Remesh.remesh();
-			dprint("domain remesh done!");
+			//dprint("domain remesh done!");
 
 			ClearBoundary(aMesh);
 			Set_Curvature(Surface, aMesh);
-			dprint("GaussCurvature compute done!");
+			//dprint("GaussCurvature compute done!");
 
 			for (auto tv : aMesh.vertices())
 			{
@@ -243,6 +243,7 @@ namespace CADMesher
 		Surface_PolyMeshes.resize(faceshape.size());
 		for (int i = 0; i < faceshape.size(); i++)
 		{
+			//if (i != 32) continue;
 			Mesh &newmesh = Surface_PolyMeshes[i];
 			TriMesh aMesh;
 			auto &wires = faceshape[i].wires;
@@ -406,6 +407,11 @@ namespace CADMesher
 					newmesh.add_vertex(newp);
 				}
 
+				//if (!OpenMesh::IO::write_mesh(newmesh, "1.obj"))
+				//{
+				//	std::cerr << "fail";
+				//}
+
 				//add offset points and internal points
 				for (int j = 0; j < quad_num; j++)
 				{
@@ -463,6 +469,11 @@ namespace CADMesher
 					v2 = v3;
 				}
 
+				//if (!OpenMesh::IO::write_mesh(newmesh, "2.obj"))
+				//{
+				//	std::cerr << "fail";
+				//}
+
 				//add internal faces
 				for (auto f : aMesh.faces())
 				{
@@ -476,7 +487,7 @@ namespace CADMesher
 					}
 					newmesh.add_face(facevhandle);
 				}
-				//if (!OpenMesh::IO::write_mesh(newmesh, "1.obj"))
+				//if (!OpenMesh::IO::write_mesh(newmesh, "3.obj"))
 				//{
 				//	std::cerr << "fail";
 				//}
@@ -491,7 +502,11 @@ namespace CADMesher
 				newmesh.set_point(tv, Mesh::Point(v.X(), v.Y(), v.Z()));
 			}
 
-			
+			//if (!OpenMesh::IO::write_mesh(newmesh, "4.obj"))
+			//{
+			//	std::cerr << "fail";
+			//}
+
 			//set flag1
 			int id = 0, begin, endid;
 			for (int j = 0; j < wires.size(); j++)
@@ -774,7 +789,7 @@ namespace CADMesher
 							double alpha = acos(v0.dot(v1))*(v0(0)*v1(1) < v0(1)*v1(0) ? 1 : -1);
 							alpha = alpha > 0 ? alpha : alpha + 2 * PI;
 							Matrix2d M; M << cos(alpha), -sin(alpha), cos(alpha), sin(alpha);
-							Vector2d v = (M*v1).normalized()*v1.norm()*0.1*(faceshape[fid].face.Orientation()?-1:1) + e1.col(0);
+							Vector2d v = (-M*v1).normalized()*v1.norm()*0.1*(faceshape[fid].face.Orientation()?-1:1) + e1.col(0);
 							e0.col(e0.cols() - 1) = v;
 							e1.col(0) = v;
 							flag = true;
@@ -1493,7 +1508,7 @@ namespace CADMesher
 					{
 						next_id = (next_para.cols() - 1) * discrete_num - 1;
 						prev_id = 1;
-					}
+					} 
 				}
 			}
 

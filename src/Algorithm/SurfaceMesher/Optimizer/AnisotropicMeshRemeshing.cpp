@@ -1034,11 +1034,16 @@ namespace CADMesher
 
 		ave_quality_error /= mesh_->n_faces();
 		printf("\n[Quality Error] Min : %f, Ave : %f\n", min_quality_error, ave_quality_error);
+		MQE = min_quality_error;
+		AQE = ave_quality_error;
 
 		double min_theta = min_angle; double ave_theta = ave_angle / (double)(mesh_->n_faces());
 		double theta_below_30 = (double)(below_30_count) / (double)(mesh_->n_faces());
 		double theta_above_90 = (double)(above_90_count) / (double)(mesh_->n_faces());
 		printf("[Angle] Min : %f, Max : %f, Ave : %f\n<30 : %f%%, %d; >90 : %f%%, %d\n", min_theta, max_angle, ave_theta, theta_below_30*100.0, below_30_count, theta_above_90, above_90_count);
+		MinAngle = min_theta;
+		MaxAngle = max_angle;
+		AveAngle = ave_theta;
 
 		ave_transfrom_area /= mesh_->n_faces(); double below_05_transform_area = 0; double above_2_transform_area = 0;
 		for (unsigned i = 0; i < transform_area.size(); ++i)
@@ -1051,11 +1056,15 @@ namespace CADMesher
 		printf("[Area Quality Error] Min : %f(%d), Max : %f(%d)\n", min_transfrom_area_ratio, min_transfrom_area_id, max_transfrom_area_ratio, max_transfrom_area_id);
 		printf("Below 0.5 : %f%%, %d, Above 2.0 : %f%%, %d\n", below_05_transform_area*100.0 / mesh_->n_faces(), (int)below_05_transform_area,
 			above_2_transform_area*100.0 / mesh_->n_faces(), (int)above_2_transform_area);
+		MinArea = min_transfrom_area_ratio;
+		MaxArea = max_transfrom_area_ratio;
 
 		avg_edge_length /= mesh_->n_edges();
 		printf("Edge Length : Min : %f(%d), Max : %f(%d); Avg : %f\n", smallest_edge_length, smallest_edge_id, largest_edge_length, largest_edge_id, avg_edge_length);
 		printf("Radius Edge Ratio : Min : %f, Max : %f\n", smallest_radius_edge_ratio, largest_radius_edge_ratio);
 		printf("Mesh vertices : %d\n\n", mesh_->n_vertices());
+		MinRER = smallest_radius_edge_ratio;
+		MaxRER = largest_radius_edge_ratio;
 	}
 
 	double AnisotropicMeshRemeshing::calc_flip_energy(const OpenMesh::Vec3d& p1, const OpenMesh::Vec3d& p2, const OpenMesh::Vec3d& p3, const OpenMesh::Vec6d& M, bool use_area)

@@ -15,13 +15,6 @@ namespace CADMesher
 			if (reader) 
 			{ 
 				delete reader; reader = nullptr; 
-				vector<ShapeFace> &faceshape = globalmodel.faceshape;
-				for (int i = 0; i < faceshape.size(); i++)
-				{
-					if (!faceshape[i].if_exisited) continue;
-					//delete faceshape[i].Surface;
-					faceshape[i].Surface = nullptr;
-				}
 			}
 		}
 
@@ -34,9 +27,9 @@ namespace CADMesher
 		double expected_edge_length;
 		double mu = 1.2;        //三角形面积允许扩张系数
 		double epsratio = 0.005;//网格和曲面的误差系数
-		int offset_quad_num = 15;
-		double offset_initial_ratio = 0.01;
-		double offset_increase_ratio = 1.2;
+		int offset_quad_num = 9;
+		double offset_initial_ratio = 0.02;
+		double offset_increase_ratio = 1.5;
 		vector<TriMesh> Surface_TriMeshes;
 		vector<PolyMesh> Surface_PolyMeshes;
 
@@ -354,7 +347,7 @@ namespace CADMesher
 
 	//private:
 		QString fileName;
-		double initialRate = 0.01;
+		double initialRate = 0.004;
 		//double degeneratedRate = 0.02;
 	};
 

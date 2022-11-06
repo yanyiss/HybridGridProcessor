@@ -7,7 +7,7 @@
 #include <Eigen/Dense>
 #include <numeric>
 #include "..\src\Algorithm\SurfaceMesher\Generator\basic_def.h"
-#define printRemeshingInfo
+//#define printRemeshingInfo
 
 namespace CADMesher
 {
