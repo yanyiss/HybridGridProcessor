@@ -682,7 +682,7 @@ namespace CADMesher
 			mesh->set_point(tv, project_pnt_to_surface(triangle_surface_index[fid], mesh->point(tv)));
 		}
 #endif
-#if 1
+#if 0
 		vector<unsigned>& triangle_surface_index = globalmodel.triangle_surface_index;
 		vector<vector<unsigned>> vertex_surface_index(globalmodel.faceshape.size());
 		for (auto tv : mesh->vertices()) {

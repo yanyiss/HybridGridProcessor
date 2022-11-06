@@ -108,6 +108,15 @@ namespace CADMesher
 	public:
 		AnisotropicMeshRemeshing();
 		~AnisotropicMeshRemeshing();
+		double MQE;
+		double AQE;
+		double MinAngle;
+		double MaxAngle;
+		double AveAngle;
+		double MinArea;
+		double MaxArea;
+		double MinRER;
+		double MaxRER;
 
 		void SetMesh(TriMesh* mesh)
 		{
