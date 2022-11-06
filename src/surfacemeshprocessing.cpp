@@ -157,6 +157,13 @@ void SurfaceMeshProcessing::createActions()
 	EdgePickAction->setCheckable(true);
 	EdgePickAction->setChecked(false);
 	connect(EdgePickAction, SIGNAL(triggered()), this, SLOT(edgePick()));
+	
+	CurvePickAction = new QAction(tr("&Select Curve"), this);
+	CurvePickAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/selectEdges.png"));
+	CurvePickAction->setStatusTip(tr("Select Curve of the model"));
+	CurvePickAction->setCheckable(true);
+	CurvePickAction->setChecked(false);
+	connect(CurvePickAction, SIGNAL(triggered()), this, SLOT(curvePick()));
 
 	clearSelectedAction = new QAction("Clear Selected",this);
 	clearSelectedAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/clear_select.png"));
@@ -332,6 +339,7 @@ void SurfaceMeshProcessing::createMenus()
 	mouseMenu->addAction(VertexPickAction);
 	mouseMenu->addAction(FacePickAction);
 	mouseMenu->addAction(EdgePickAction);
+	mouseMenu->addAction(CurvePickAction);
 	mouseMenu->addAction(clearSelectedAction);
 	mouseMenu->addAction(moveVertexAction);
 	mouseMenu->addAction(generateTriMeshAction);
@@ -386,6 +394,7 @@ void SurfaceMeshProcessing::createToolBars()
 	mouseToolBar->addAction(VertexPickAction);
 	mouseToolBar->addAction(FacePickAction);
 	mouseToolBar->addAction(EdgePickAction);
+	mouseToolBar->addAction(CurvePickAction);
 	mouseToolBar->addAction(clearSelectedAction);
 	mouseToolBar->addAction(moveVertexAction);
 	mouseToolBar->addAction(generateTriMeshAction);
@@ -522,6 +531,13 @@ void SurfaceMeshProcessing::facePick()
 	setAllMouseActionChecked(false);
 	FacePickAction->setChecked(true);
 	viewer->setMouseMode(InteractiveViewerWidget::FACEPICK);
+}
+void SurfaceMeshProcessing::curvePick()
+{
+	setAllViewActionChecked(false);
+	setAllMouseActionChecked(false);
+	CurvePickAction->setChecked(true);
+	viewer->setMouseMode(InteractiveViewerWidget::CURVEPICK);
 }
 void SurfaceMeshProcessing::moveVertex()
 {

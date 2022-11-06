@@ -998,15 +998,15 @@ void MeshViewerWidget::draw_feature()
 
 #endif
 	//draw triangles with low quality
-#if 0
+#if 1
 	glColor3d(0.9, 0.1, 0.9);
 	glPointSize(8);
 	glBegin(GL_POINTS);
-	/*for (auto &tf : mesh.faces())
+	for (auto &tf : mesh.faces())
 	{
 		for (auto &tfh : mesh.fh_range(tf))
 		{
-			if (mesh.calc_sector_angle(tfh) < 0.1)
+			if (mesh.calc_sector_angle(tfh) < 0.01)
 			{
 				glVertex3dv(mesh.point(tfh.from()).data());
 				glVertex3dv(mesh.point(tfh.to()).data());
@@ -1015,8 +1015,8 @@ void MeshViewerWidget::draw_feature()
 			}
 		}
 	}
-	glVertex3dv(mesh.point(mesh.vertex_handle(53)).data());
-	glVertex3dv(mesh.point(mesh.vertex_handle(0)).data());*/
+	//glVertex3dv(mesh.point(mesh.vertex_handle(53)).data());
+	//glVertex3dv(mesh.point(mesh.vertex_handle(0)).data());
 	glEnd();
   
 #endif
@@ -1194,12 +1194,13 @@ void MeshViewerWidget::calcCADStrip()
 		}
 		strip.push_back(std::move(s));
 	}
+	if_new_mesh = true;
 }
 
 void MeshViewerWidget::drawCADWireFrame()
 {
 	glLineWidth(3);
-	glColor3d(0.88, 0.1, 0.2);
+	glColor3d(0.18, 0.8, 0.2);
 	for (auto &s : strip)
 	{
 		glBegin(GL_LINE_STRIP);

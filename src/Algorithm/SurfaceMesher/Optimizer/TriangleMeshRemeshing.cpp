@@ -49,7 +49,7 @@ namespace CADMesher
 #endif
 		}
 		tr.mark();
-		globalProject();//点到曲面的投影
+		//globalProject();//点到曲面的投影
 		tr.pastMark("project to the origin surface time:");
 
 
@@ -81,7 +81,7 @@ namespace CADMesher
 		}
 
 		tr.mark();
-		globalProject();
+		//globalProject();
 		tr.pastMark("project to the origin surface time:");
 
 		//return;
