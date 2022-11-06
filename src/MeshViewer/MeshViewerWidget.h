@@ -93,6 +93,7 @@ private:
 	void updateIndices();
 public:
 	// mesh modes.
+	bool if_new_mesh = true;
 	bool ifDrawFeature = true;
 	bool drawCAD = false;
 	std::vector<Eigen::Matrix3Xd> strip;

@@ -46,6 +46,7 @@ private slots:
 	void vertexPick();
 	void edgePick();
 	void facePick();
+	void curvePick();
 	void moveVertex();
 	void generateTriMesh();
 	void generatePolyMesh();
@@ -119,6 +120,7 @@ private:
 	QAction* VertexPickAction;
 	QAction* FacePickAction;
 	QAction* EdgePickAction;
+	QAction* CurvePickAction;
 	QAction* clearSelectedAction;
 	QAction* moveVertexAction;
 	QAction* generateTriMeshAction;
