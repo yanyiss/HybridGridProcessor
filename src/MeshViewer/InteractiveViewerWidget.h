@@ -19,6 +19,7 @@ public:
 		selectedVertex.clear();
 		selectedFace.clear();
 		selectedEdge.clear();
+		selectedCurve.clear();
 	};
 
 	virtual void clearAllMesh()
@@ -85,7 +86,7 @@ public slots:
 	}
 
 public:
-	enum { TRANS, POINTPICK, VERTEXPICK, EDGEPICK, FACEPICK, EDGECOLLAPSE, EDGEFLIP, EDGESPLIT , MOVE, GTM, GPM, FEATURE, ISOTROPIC, ANISOTROPIC, DEBUGTEST, T2_MODE, N_MODE };
+	enum { TRANS, POINTPICK, VERTEXPICK, EDGEPICK, FACEPICK, CURVEPICK, EDGECOLLAPSE, EDGEFLIP, EDGESPLIT , MOVE, GTM, GPM, FEATURE, ISOTROPIC, ANISOTROPIC, DEBUGTEST, T2_MODE, N_MODE };
 	void setMouseMode(int mm);
 	int mouseMode() const { return mouse_mode_; }
 
@@ -102,6 +103,7 @@ protected:
 	void pick_face(int x,int y);
 	void pick_edge(int x,int y);
 	void pick_point(int x,int y);
+	void pick_curve(int x, int y);
 	void move_point_based_lastVertex(int x,int y);
 
 	int find_vertex_using_selected_point();
@@ -117,6 +119,7 @@ protected:
 	void draw_selected_vertex();
 	void draw_selected_face();
 	void draw_selected_edge();
+	void draw_selected_curve();
 	virtual void draw_scene(int drawmode);
 	bool draw_new_mesh;
 
@@ -151,6 +154,10 @@ private:
 	bool ifGenerateTriMesh = false;
 	bool ifGeneratePolyMesh = false;
 	bool ifDrawFeature = true;
+	ANNkd_tree* stripTree = nullptr;
+	std::vector<int> edgeshapeIndex;
+	std::vector<int> selectedCurve;
+	void BuildCurveIndex();
 
 #pragma region Auxiliary_function
 public:

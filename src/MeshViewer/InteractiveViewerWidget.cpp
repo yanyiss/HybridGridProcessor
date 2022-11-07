@@ -29,6 +29,7 @@ InteractiveViewerWidget::~InteractiveViewerWidget()
 	if(kdTree) delete kdTree;
 	if (occreader) { delete occreader; occreader = nullptr; }
 	if (iso_mesh) { delete iso_mesh; iso_mesh = nullptr; }
+	if (stripTree) { delete stripTree; stripTree = nullptr; }
 }
 
 void InteractiveViewerWidget::setMouseMode(int mm)
@@ -67,6 +68,11 @@ void InteractiveViewerWidget::mousePressEvent(QMouseEvent *_event)
 			}
 			else if(mouse_mode_ == POINTPICK)
 			{
+			}
+			else if (mouse_mode_ == CURVEPICK)
+			{
+				pick_curve(_event->x(), _event->y());
+				dprint("iowjm");
 			}
 			else if( mouse_mode_ == MOVE )
 			{
@@ -352,6 +358,29 @@ void InteractiveViewerWidget::pick_edge(int x,int y)
 	}
 	updateGL();
 }
+void InteractiveViewerWidget::pick_curve(int x, int y)
+{
+	if (if_new_mesh)
+		BuildCurveIndex();
+	ANNpoint tp = annAllocPt(3); tp[0] = selectedPoint[0]; tp[1] = selectedPoint[1]; tp[2] = selectedPoint[2];
+	ANNidxArray nnIdx = new ANNidx[1]; ANNdistArray dists = new ANNdist[1];
+	stripTree->annkSearch(tp, 1, nnIdx, dists);
+
+	int curveIndex = edgeshapeIndex[nnIdx[0]];
+	std::vector<int>::iterator it;
+	if ((it = std::find(selectedCurve.begin(), selectedCurve.end(), curveIndex)) == selectedCurve.end())
+	{
+		//selectedVertex.push_back(lastestVertex);
+		selectedCurve.push_back(curveIndex);
+	}
+	else
+	{
+		//selectedVertex.erase(it);
+		selectedCurve.erase(it);
+	}
+
+	updateGL();
+}
 void InteractiveViewerWidget::pick_point(int x,int y)
 {
 	GLint viewport[4];
@@ -465,6 +494,44 @@ void InteractiveViewerWidget::buildIndex()
 	kdTree = new ANNkd_tree(dataPts, nv, 3);
 }
 
+void InteractiveViewerWidget::BuildCurveIndex()
+{
+	const auto& edgeshape = CADMesher::globalmodel.edgeshape;
+	int nv = 0;
+	for (const auto& edge : edgeshape)
+	{
+		if (edge.id < edge.reversed_edge)
+			continue;
+		const auto& para = edge.parameters;
+		nv += para.cols();
+	}
+	ANNpointArray dataPts = annAllocPts(nv, 3);
+	edgeshapeIndex.clear();
+	edgeshapeIndex.reserve(nv);
+	int count = 0;
+	for (const auto& edge : edgeshape)
+	{
+		if (edge.id < edge.reversed_edge)
+			continue;
+		const auto& para = edge.parameters;
+		TopLoc_Location loc;
+		Handle(Geom_Surface) asurface = BRep_Tool::Surface(CADMesher::globalmodel.faceshape[edge.main_face].face, loc);
+		int col = para.cols();
+		//Eigen::Matrix3Xd s(3, col);
+		for (int i = 0; i < col; ++i)
+		{
+			auto pos = asurface->Value(para(0, i), para(1, i));
+			//dataPts[count][0] = p[0]; dataPts[count][1] = p[1]; dataPts[count][2] = p[2];
+			dataPts[count][0] = pos.X(); dataPts[count][1] = pos.Y(); dataPts[count][2] = pos.Z();
+			edgeshapeIndex.push_back(edge.id);
+			++count;
+		}
+	}
+	if (stripTree) delete stripTree;
+	stripTree = new ANNkd_tree(dataPts, nv, 3);
+	if_new_mesh = false;
+}
+
 //with the first mesh
 void InteractiveViewerWidget::draw_interactive_portion(int drawmode)
 {
@@ -498,15 +565,20 @@ void InteractiveViewerWidget::draw_interactive_portion(int drawmode)
 		case EDGEPICK:
 			draw_selected_edge();
 			break;
+		case CURVEPICK:
+			draw_selected_curve();
+			dprint("fio");
+			break;
 		default:
 			draw_selected_vertex();
 			draw_selected_face();
 			draw_selected_edge();
+			draw_selected_curve();
 			break;
 		}
 	}
 	showFeature();
-	if(draw_new_mesh)
+	if (draw_new_mesh)
 	{
 		draw_scene_mesh(drawmode);
 	}
@@ -523,22 +595,22 @@ void InteractiveViewerWidget::draw_selected_point()
 	glColor3f(1.0, 0.5, 0.0);
 	glPointSize(10);
 	glBegin(GL_POINTS);
-	glVertex3d(selectedPoint[0],selectedPoint[1],selectedPoint[2]);
+	glVertex3d(selectedPoint[0], selectedPoint[1], selectedPoint[2]);
 	glEnd();
 	glPointSize(1);
 }
 
 void InteractiveViewerWidget::draw_selected_vertex()
 {
-	if( selectedVertex.size() > 0 )
+	if (selectedVertex.size() > 0)
 	{
 		Mesh::Point p;
 		glColor3f(1.0, 0.5, 0.0);
 		glPointSize(12);
 		glBegin(GL_POINTS);
-		for(unsigned int i=0;i<selectedVertex.size();++i)
+		for (unsigned int i = 0; i < selectedVertex.size(); ++i)
 		{
-			p = mesh.point( mesh.vertex_handle(selectedVertex[i]) );
+			p = mesh.point(mesh.vertex_handle(selectedVertex[i]));
 			glVertex3dv(p.data());
 		}
 		glEnd();
@@ -548,18 +620,18 @@ void InteractiveViewerWidget::draw_selected_vertex()
 
 void InteractiveViewerWidget::draw_selected_face()
 {
-	if( selectedFace.size() > 0 )
+	if (selectedFace.size() > 0)
 	{
 		glColor3f(1.0, 0.5, 1.0);
 		Mesh::Point p;
 		Mesh::ConstFaceVertexIter fv_it;
 		Mesh::FaceHandle f_handle;
-		for( unsigned int i=0; i<selectedFace.size(); ++i )
+		for (unsigned int i = 0; i < selectedFace.size(); ++i)
 		{
 			f_handle = mesh.face_handle(selectedFace[i]);
 			fv_it = mesh.fv_iter(f_handle);
 			glBegin(GL_POLYGON);
-			for( fv_it; fv_it; ++fv_it )
+			for (fv_it; fv_it; ++fv_it)
 			{
 				glVertex3dv(&mesh.point(fv_it)[0]);
 			}
@@ -570,21 +642,45 @@ void InteractiveViewerWidget::draw_selected_face()
 
 void InteractiveViewerWidget::draw_selected_edge()
 {
-	if( selectedEdge.size() > 0)
+	if (selectedEdge.size() > 0)
 	{
 		glColor3f(1.0, 0.5, 1.0);
 		Mesh::Point p1; Mesh::Point p2;
 		Mesh::EdgeHandle e_handle;
 		Mesh::HalfedgeHandle he_handle;
-		for(unsigned int i=0;i<selectedEdge.size();++i)
+		for (unsigned int i = 0; i < selectedEdge.size(); ++i)
 		{
 			e_handle = mesh.edge_handle(selectedEdge[i]);
-			he_handle = mesh.halfedge_handle( e_handle, 0 );
-			p1 = mesh.point( mesh.from_vertex_handle( he_handle ) );
-			p2 = mesh.point( mesh.to_vertex_handle( he_handle ) );
+			he_handle = mesh.halfedge_handle(e_handle, 0);
+			p1 = mesh.point(mesh.from_vertex_handle(he_handle));
+			p2 = mesh.point(mesh.to_vertex_handle(he_handle));
 			glBegin(GL_LINES);
-			glVertex3dv( p1.data() );
-			glVertex3dv( p2.data() );
+			glVertex3dv(p1.data());
+			glVertex3dv(p2.data());
+			glEnd();
+		}
+	}
+}
+
+void InteractiveViewerWidget::draw_selected_curve()
+{
+	if (selectedCurve.size() > 0 && drawCAD)
+	{
+		const auto& edgeshape = CADMesher::globalmodel.edgeshape;
+		glColor3f(1.0, 0.5, 1.0);
+		for (auto c : selectedCurve)
+		{
+			const auto& para = edgeshape[c].parameters;
+			TopLoc_Location loc;
+			Handle(Geom_Surface) asurface = BRep_Tool::Surface(CADMesher::globalmodel.faceshape[edgeshape[c].main_face].face, loc);
+			int col = para.cols();
+			//Eigen::Matrix3Xd s(3, col);
+			glBegin(GL_LINE_STRIP);
+			for (int i = 0; i < col; ++i)
+			{
+				auto pos = asurface->Value(para(0, i), para(1, i));
+				glVertex3d(pos.X(), pos.Y(), pos.Z());
+			}
 			glEnd();
 		}
 	}
@@ -627,8 +723,7 @@ void InteractiveViewerWidget::SetCADFileName(QString &fileName) {
 
 void InteractiveViewerWidget::generateTriMesh(double ratio)
 {
-	//occreader->initialRate = ratio;
-	occreader->initialRate = 0.004;
+	occreader->initialRate = ratio;
 	occreader->Discrete_Edge();
 	occreader->Face_type();
 	occreader->C0_Feature();
@@ -673,49 +768,7 @@ void InteractiveViewerWidget::generatePolyMesh(double ratio)
 
 void InteractiveViewerWidget::showFeature()
 {
-	//std::vector<O3d> bb;
-	//for (auto v : mesh.vertices())
-	//{
-	//	if (v.is_boundary())
-	//	{
-	//		bb.push_back(mesh.point(v));
-	//	}
-	//}
-	////mesh.clear();
-
-	//glLineWidth(1);
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	//glBegin(GL_POLYGON);
-	//glColor3d(0.0, 0.0, 0.0);
-	//for (int i = 0; i < bb.size(); i++)
-	//{
-	//	glVertex2dv(bb[i].data());
-	//}
-	//glEnd();
-
-	//for (auto f : mesh.faces())
-	//{
-	//	//if (f.valence() < 4) continue;
-	//	glLineWidth(1);
-	//	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	//	glBegin(GL_POLYGON);
-	//	glColor3d(0.0, 0.0, 0.0);
-	//	for (auto fv : mesh.fv_range(f))
-	//	{
-	//		glVertex2dv(mesh.point(fv).data());
-	//	}
-	//	glEnd();
-	//}
-
-	//glPointSize(4);
-	//glBegin(GL_POINTS);
-	//glColor3d(1.0, 0.0, 0.0);
-	//for (int i = 0; i < bb.size(); i++)
-	//{
-	//	glVertex2dv(bb[i].data());
-	//}
-	//glEnd();
-
+	
 	//if (ifDrawFeature)
 	//{
 	//	//画C0特征
@@ -806,89 +859,40 @@ void InteractiveViewerWidget::showDebugTest()
 #pragma region step files test
 	{
 		std::vector<std::string> allFileName;
-		std::string path = "..\\model\\CAD";
+#if 0
+		std::string path = "..\\model\\CAD\\step files lib";
+#else
+		std::string path = "..\\model\\models from partya";
+#endif
 		getFiles(path, allFileName);
 		std::ofstream fileWriter;
-
-#if 0   //导入各向同性数据
+		fileWriter.open("C:\\Git Rep\\HybridGridProcessor\\model\\Isotropic Mesh\\IsoMeshLog.txt", std::ios::out);
+		using namespace CADMesher;
 		int i = 0;
-		fileWriter.open("C:\\Users\\1\\Desktop\\test\\test2\\New.csv", std::ios::app);
 		for (; i < allFileName.size();)
 		{
 			auto fileName = allFileName[i];
 			dprint("\n\n\nfile index:\t", i++, "\nfileName:\t", fileName);
-			auto time_start = clock();
-			CADMesher::OccReader occreader1(QString::fromStdString(fileName));
-			occreader1.initialRate = 0.003;
-			occreader1.Discrete_Edge();
-			occreader1.Face_type();
-			occreader1.C0_Feature();
-			occreader1.Curvature_Feature();
-			occreader1.Set_TriMesh();
-			occreader1.MergeModel(CADMesher::globalmodel.initial_trimesh, occreader1.Surface_TriMeshes);
-			CADMesher::globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(CADMesher::globalmodel.initial_trimesh);
-			occreader1.SetTriFeature();
-			CADMesher::globalmodel.isotropic_trimesh = CADMesher::globalmodel.initial_trimesh;
-			CADMesher::TriangleMeshRemeshing trm1(&(CADMesher::globalmodel.isotropic_trimesh));
-			trm1.run();
-			double iso_time = (clock() - time_start) / 1000.0;
+			globalmodel.clear();
+			Iso_Mesh iso_mesh(QString::fromStdString(fileName));
+			timeRecorder tr;
+			TriangleMeshRemeshing trm(&(globalmodel.initial_trimesh));
+			trm.run();
+			double iso_time = tr.out();
+
 			truncateFilePath(fileName);
 			truncateFileExtension(fileName);
-			//if (!OpenMesh::IO::write_mesh(CADMesher::globalmodel.isotropic_trimesh, "C:\\Users\\1\\Desktop\\test\\test2\\ISO\\" + fileName + ".obj"));
-			//{
-			//	std::cerr << "fail";
-			//}
-			TriMeshQualityHelper tmqh(&CADMesher::globalmodel.isotropic_trimesh);
-			fileWriter << fileName << ",";
-			fileWriter << CADMesher::globalmodel.isotropic_trimesh.n_vertices() << ",";
-			fileWriter << tmqh.getMinAngle() << "," << tmqh.getMaxAngle() << "," << tmqh.getAvgAngle() << ",";
-			fileWriter << tmqh.getMinQuality() << "," << tmqh.getAvgQuality() << "," << iso_time;
-			fileWriter << std::endl;
-			CADMesher::globalmodel.clear();
-		}
-#else   //导入各向异性数据
-		int i = 32;
-		fileWriter.open("C:\\Users\\1\\Desktop\\test\\test2\\AnIsoRawData.csv", std::ios::app);
-		for (; i < allFileName.size();)
-		{
-			auto fileName = allFileName[i];
-			dprint("\n\n\nfile index:\t", i++, "\nfileName:\t", fileName);
-			auto time_start = clock();
-			CADMesher::OccReader occreader1(QString::fromStdString(fileName));
-			occreader1.initialRate = 0.003;
-			occreader1.Discrete_Edge();
-			occreader1.Face_type();
-			occreader1.C0_Feature();
-			occreader1.Curvature_Feature();
-			occreader1.Set_TriMesh();
-			occreader1.MergeModel(CADMesher::globalmodel.initial_trimesh, occreader1.Surface_TriMeshes);
-			CADMesher::globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(CADMesher::globalmodel.initial_trimesh);
-			occreader1.SetTriFeature();
-			CADMesher::AnisotropicMeshRemeshing* amr = new CADMesher::AnisotropicMeshRemeshing();
-			CADMesher::globalmodel.isotropic_trimesh = CADMesher::globalmodel.initial_trimesh;
-			amr->SetMesh(&(CADMesher::globalmodel.isotropic_trimesh));
-			amr->load_ref_mesh(&(CADMesher::globalmodel.initial_trimesh));
-			double tl = amr->get_ref_mesh_ave_anisotropic_edge_length();
-			amr->do_remeshing(tl, 1.5);
-			double aniso_time = (clock() - time_start) / 1000.0;
-			truncateFilePath(fileName);
-			truncateFileExtension(fileName);
-			if (!OpenMesh::IO::write_mesh(CADMesher::globalmodel.isotropic_trimesh, "C:\\Users\\1\\Desktop\\test\\test2\\ANISO\\" + fileName + ".obj"));
+			if (!OpenMesh::IO::write_mesh(globalmodel.initial_trimesh, "C:\\Git Rep\\HybridGridProcessor\\model\\Isotropic Mesh\\" + fileName + "_iso.obj"));
 			{
 				std::cerr << "fail";
 			}
-			TriMeshQualityHelper tmqh(&CADMesher::globalmodel.isotropic_trimesh);
-			fileWriter << fileName << ",";
-			fileWriter << CADMesher::globalmodel.isotropic_trimesh.n_vertices() << ",";
-			fileWriter << amr->MQE << "," << amr->AQE << ",";
-			fileWriter << (amr->MinAngle / 180.) * PI << "," << (amr->MaxAngle / 180.) * PI << "," << (amr->AveAngle / 180.) * PI << ",";
-			fileWriter << amr->MinArea << "," << amr->MaxArea << ",";
-			fileWriter << amr->MinRER << "," << amr->MaxRER << "," << aniso_time;
-			fileWriter << std::endl;
-			CADMesher::globalmodel.clear();
+			TriMeshQualityHelper tmqh(&globalmodel.initial_trimesh);
+			fileWriter << fileName << std::endl;
+			fileWriter << "quantity: " << globalmodel.initial_trimesh.n_vertices() << std::endl;
+			fileWriter << "min, max, avg angle: " << tmqh.getMinAngle() << "," << tmqh.getMaxAngle() << "," << tmqh.getAvgAngle() << std::endl;
+			fileWriter << "min, avg quality: " << tmqh.getMinQuality() << "," << tmqh.getAvgQuality() << std::endl;
+			fileWriter << "remeshing times:" << iso_time << "\n\n";
 		}
-
-#endif
 		fileWriter.close();
 	}
 }

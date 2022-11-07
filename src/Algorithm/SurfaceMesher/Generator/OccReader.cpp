@@ -50,6 +50,8 @@ namespace CADMesher
 		Surface_TriMeshes.resize(faceshape.size());
 		for (int i = 0; i < faceshape.size(); i++)
 		{
+			//if (i != 8)
+				//continue;
 			TriMesh &aMesh = Surface_TriMeshes[i];
 			auto &wires = faceshape[i].wires;
 			if (wires.empty() || !faceshape[i].if_exisited)
@@ -750,6 +752,7 @@ namespace CADMesher
 
 	bool OccReader::ProcessTangentialBoundary(int fid, int bid)
 	{
+		//return false;
 		vector<ShapeFace> &faceshape = globalmodel.faceshape;
 		vector<ShapeEdge> &edgeshape = globalmodel.edgeshape;
 		auto &wires = faceshape[fid].wires;
