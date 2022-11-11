@@ -34,9 +34,33 @@ public:
 		return sample_ratio_line_AM->text().toDouble();
 	}
 
+	int get_quad_num()
+	{
+		int t = (int)(quad_num_line->text().toDouble());
+		if (t < 3) return 3;
+		if (t > 30) return 30;
+		return t;
+	}
+
+	double get_initial_ratio()
+	{
+		double t = initial_ratio_line->text().toDouble();
+		if (t < 1e-4 || t > 1) return 0.01;
+		return t;
+	}
+
+	double get_increase_ratio()
+	{
+		double t = increase_ratio_line->text().toDouble();
+		if (t < 1) return 1;
+		if (t > 3) return 3;
+		return t;
+	}
+
 signals:
 	void load_ref_mesh_AM_signal();
 	void do_remehsing_AM_signal();
+	void submit_info_signal();
 
 private:
 	QWidget* Basic_Operation_And_Information;
@@ -47,8 +71,12 @@ private:
 
 	QPushButton* load_ref_mesh_AM;
 	QPushButton* do_remehsing_AM;
+	QPushButton* submit_offset_info;
 	QLabel* target_edge_length_AM; QLineEdit* target_edge_length_line_AM;
 	QLabel* sample_ratio_AM; QLineEdit* sample_ratio_line_AM;
+	QLabel* quad_num; QLineEdit* quad_num_line;
+	QLabel* initial_ratio; QLineEdit* initial_ratio_line;
+	QLabel* increase_ratio; QLineEdit* increase_ratio_line;
 
 private:
 	void create_Basic_Operation_Information_Widget();
