@@ -364,7 +364,7 @@ void InteractiveViewerWidget::pick_curve(int x, int y)
 		BuildCurveIndex();
 	ANNpoint tp = annAllocPt(3); tp[0] = selectedPoint[0]; tp[1] = selectedPoint[1]; tp[2] = selectedPoint[2];
 	ANNidxArray nnIdx = new ANNidx[1]; ANNdistArray dists = new ANNdist[1];
-	stripTree->annkSearch(tp, 1, nnIdx, dists);
+	stripTree->annkSearch(tp, 1, nnIdx, dists, 4);
 
 	int curveIndex = edgeshapeIndex[nnIdx[0]];
 	std::vector<int>::iterator it;
@@ -772,7 +772,7 @@ void InteractiveViewerWidget::showFeature()
 	
 	//if (ifDrawFeature)
 	//{
-	//	//»­C0ÌØÕ÷
+	//	//ç”»C0ç‰¹å¾
 	//	glLineWidth(4);
 	//	glColor3d(1.0, 0.0, 0.0);
 	//	glBegin(GL_LINES);
@@ -786,7 +786,7 @@ void InteractiveViewerWidget::showFeature()
 	//	}
 	//	glEnd();
 
-	//	//»­ÇúÂÊÌØÕ÷
+	//	//ç”»æ›²ç‡ç‰¹å¾
 	//	glLineWidth(4);
 	//	glColor3d(0.0, 1.0, 0.0);
 	//	glBegin(GL_LINES);
@@ -871,7 +871,7 @@ void InteractiveViewerWidget::showDebugTest()
 		getFiles(path, allFileName);
 		std::ofstream fileWriter;
 
-#if 0   //µ¼Èë¸÷ÏòÍ¬ĞÔÊı¾İ
+#if 0   //å¯¼å…¥å„å‘åŒæ€§æ•°æ®
 		int i = 0;
 		fileWriter.open("C:\\Users\\1\\Desktop\\test\\test2\\New.csv", std::ios::app);
 		for (; i < allFileName.size();)
@@ -907,7 +907,7 @@ void InteractiveViewerWidget::showDebugTest()
 			fileWriter << std::endl;
 			CADMesher::globalmodel.clear();
 		}
-#else   //µ¼Èë¸÷ÏòÒìĞÔÊı¾İ
+#else   //å¯¼å…¥å„å‘å¼‚æ€§æ•°æ®
 		int i = 3200;
 		fileWriter.open("C:\\Users\\1\\Desktop\\test\\test2\\AnIsoRawData.csv", std::ios::app);
 		for (; i < allFileName.size();)
