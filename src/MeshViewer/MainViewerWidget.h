@@ -227,10 +227,12 @@ public:
 	void generateTriMesh()
 	{
 		MeshViewer->generateTriMesh(MeshParam->get_sample_ratio_AM());
+		MeshParam->set_target_edge_length_AM(MeshViewer->getAngLen());
 	}
 	void generatePolyMesh()
 	{
 		MeshViewer->generatePolyMesh(MeshParam->get_sample_ratio_AM());
+		MeshParam->set_target_edge_length_AM(MeshViewer->getAngLen());
 	}
 	void showFeature() {
 		MeshViewer->showFeature();

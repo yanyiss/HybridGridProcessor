@@ -33,7 +33,14 @@ public:
 	{
 		return sample_ratio_line_AM->text().toDouble();
 	}
-
+	void set_target_edge_length_AM(double tel)
+	{
+		target_edge_length_line_AM->setText(QString::number(tel,'g', 4));
+	}
+	void set_sample_ratio_AM(double tel)
+	{
+		sample_ratio_line_AM->setText(QString::number(tel, 'g', 4));
+	}
 signals:
 	void load_ref_mesh_AM_signal();
 	void do_remehsing_AM_signal();

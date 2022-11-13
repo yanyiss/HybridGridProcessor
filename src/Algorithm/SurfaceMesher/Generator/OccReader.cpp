@@ -40,7 +40,7 @@ namespace CADMesher
 	void OccReader::SetCADWireFrame()
 	{
 		ComputeFaceAndEdge();
-		//Discrete_Edge();
+		Discrete_Edge();
 	}
 
 	void OccReader::Set_TriMesh()

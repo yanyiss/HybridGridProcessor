@@ -364,7 +364,7 @@ void InteractiveViewerWidget::pick_curve(int x, int y)
 		BuildCurveIndex();
 	ANNpoint tp = annAllocPt(3); tp[0] = selectedPoint[0]; tp[1] = selectedPoint[1]; tp[2] = selectedPoint[2];
 	ANNidxArray nnIdx = new ANNidx[1]; ANNdistArray dists = new ANNdist[1];
-	stripTree->annkSearch(tp, 1, nnIdx, dists);
+	stripTree->annkSearch(tp, 1, nnIdx, dists, 4);
 
 	int curveIndex = edgeshapeIndex[nnIdx[0]];
 	std::vector<int>::iterator it;
@@ -723,8 +723,8 @@ void InteractiveViewerWidget::SetCADFileName(QString &fileName) {
 
 void InteractiveViewerWidget::generateTriMesh(double ratio)
 {
-	//occreader->initialRate = ratio;
-	occreader->initialRate = 0.004;
+	occreader->initialRate = ratio;
+	//occreader->initialRate = 0.004;
 	occreader->Discrete_Edge();
 	occreader->Face_type();
 	occreader->C0_Feature();

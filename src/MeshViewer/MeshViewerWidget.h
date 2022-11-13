@@ -93,6 +93,7 @@ private:
 	void updateIndices();
 public:
 	// mesh modes.
+	double getAngLen() { return meshAverageLength(mesh); }
 	bool if_new_mesh = true;
 	bool ifDrawFeature = true;
 	bool drawCAD = false;
