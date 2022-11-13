@@ -203,8 +203,9 @@ public slots:
 		emit( haveLoadMesh(fname) );
 	};
 
-	//
+private slots:
 	void print_info();
+	void submit_info();
 
 signals:
 	void haveLoadMesh(QString filePath);

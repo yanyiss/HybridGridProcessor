@@ -724,7 +724,6 @@ void InteractiveViewerWidget::SetCADFileName(QString &fileName) {
 void InteractiveViewerWidget::generateTriMesh(double ratio)
 {
 	occreader->initialRate = ratio;
-	//occreader->initialRate = 0.004;
 	occreader->Discrete_Edge();
 	occreader->Face_type();
 	occreader->C0_Feature();
@@ -751,6 +750,7 @@ void InteractiveViewerWidget::generatePolyMesh(double ratio)
 	occreader->Face_type();
 	occreader->C0_Feature();
 	occreader->Curvature_Feature();
+	occreader->Set_Offset_Info(selectedCurve);
 	occreader->Set_PolyMesh();
 	occreader->MergeModel(CADMesher::globalmodel.initial_polymesh, occreader->Surface_PolyMeshes);
 	TriMesh tm(CADMesher::globalmodel.initial_polymesh);
@@ -769,6 +769,39 @@ void InteractiveViewerWidget::generatePolyMesh(double ratio)
 
 void InteractiveViewerWidget::showFeature()
 {
+	
+	//if (ifDrawFeature)
+	//{
+	//	//画C0特征
+	//	glLineWidth(4);
+	//	glColor3d(1.0, 0.0, 0.0);
+	//	glBegin(GL_LINES);
+	//	for (auto& te : mesh.edges())
+	//	{
+	//		if (mesh.data(te).flag1)
+	//		{
+	//			glVertex3dv(mesh.point(te.v0()).data());
+	//			glVertex3dv(mesh.point(te.v1()).data());
+	//		}
+	//	}
+	//	glEnd();
+
+	//	//画曲率特征
+	//	glLineWidth(4);
+	//	glColor3d(0.0, 1.0, 0.0);
+	//	glBegin(GL_LINES);
+	//	for (auto& te : mesh.edges())
+	//	{
+	//		if (mesh.data(te).flag2)
+	//		{
+	//			glVertex3dv(mesh.point(te.v0()).data());
+	//			glVertex3dv(mesh.point(te.v1()).data());
+	//		}
+	//	}
+	//	glEnd();
+	//}
+	//ifDrawFeature = !ifDrawFeature;
+	//setMouseMode(InteractiveViewerWidget::TRANS);
 }
 
 void InteractiveViewerWidget::showIsotropicMesh(double tl)
@@ -794,6 +827,13 @@ void InteractiveViewerWidget::showIsotropicMesh(double tl)
 	setDrawMode(InteractiveViewerWidget::FLAT_POINTS);
 	setMouseMode(InteractiveViewerWidget::TRANS);
 	updateGL();
+}
+
+void InteractiveViewerWidget::offsetinfo(int quad_num, double initial_ratio, double increase_ratio)
+{
+	occreader->quad_mun_info.push_back(quad_num);
+	occreader->initial_ratio_info.push_back(initial_ratio);
+	occreader->increase_ratio_info.push_back(increase_ratio);
 }
 
 //#include "..\src\Algorithm\SurfaceMesher\Optimizer\AnisotropicMeshRemeshing.h"
@@ -831,7 +871,7 @@ void InteractiveViewerWidget::showDebugTest()
 		getFiles(path, allFileName);
 		std::ofstream fileWriter;
 
-#if 0   //µ¼Èë¸÷ÏòÍ¬ÐÔÊý¾Ý
+#if 0   //导入各向同性数据
 		int i = 0;
 		fileWriter.open("C:\\Users\\1\\Desktop\\test\\test2\\New.csv", std::ios::app);
 		for (; i < allFileName.size();)
@@ -867,8 +907,8 @@ void InteractiveViewerWidget::showDebugTest()
 			fileWriter << std::endl;
 			CADMesher::globalmodel.clear();
 		}
-#else   //µ¼Èë¸÷ÏòÒìÐÔÊý¾Ý
-		int i = 32;
+#else   //导入各向异性数据
+		int i = 3200;
 		fileWriter.open("C:\\Users\\1\\Desktop\\test\\test2\\AnIsoRawData.csv", std::ios::app);
 		for (; i < allFileName.size();)
 		{
@@ -913,4 +953,5 @@ void InteractiveViewerWidget::showDebugTest()
 		fileWriter.close();
 	}
 }
+
 

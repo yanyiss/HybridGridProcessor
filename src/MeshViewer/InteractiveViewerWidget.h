@@ -150,6 +150,7 @@ public:
 	void showIsotropicMesh(double tl);
 	void showAnisotropicMesh();
 	void showDebugTest();
+	void offsetinfo(int quad_num, double initial_ratio, double increase_ratio);
 private:
 	bool ifGenerateTriMesh = false;
 	bool ifGeneratePolyMesh = false;
