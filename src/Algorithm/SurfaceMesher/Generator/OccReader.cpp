@@ -40,7 +40,7 @@ namespace CADMesher
 	void OccReader::SetCADWireFrame()
 	{
 		ComputeFaceAndEdge();
-		//Discrete_Edge();
+		Discrete_Edge();
 	}
 
 	void OccReader::Set_TriMesh()
@@ -236,10 +236,30 @@ namespace CADMesher
 
 	void OccReader::Set_PolyMesh()
 	{
-		Set_Offset_Grid();
-
 		vector<ShapeFace> &faceshape = globalmodel.faceshape;
 		vector<ShapeEdge> &edgeshape = globalmodel.edgeshape;
+		for (int i = 0; i < edgeshape.size(); i++)
+		{
+			auto& aedge = edgeshape[i];
+			if (!aedge.if_curvature) continue;
+			//dprint("edge", i);
+
+			//目前只考虑在无洞面片内做offset
+			if (faceshape[aedge.main_face].wires.size() > 1) continue;
+
+			//曲率特征边有一定长度才做offset
+			Bnd_Box aBound;
+			BRepBndLib::Add(faceshape[aedge.main_face].face, aBound);
+			Standard_Real xmin, ymin, zmin, xmax, ymax, zmax;
+			aBound.Get(xmin, ymin, zmin, xmax, ymax, zmax);
+			double boundingbox = sqrt((xmin - xmax) * (xmin - xmax) + (ymin - ymax) * (ymin - ymax) +
+				(zmin - zmax) * (zmin - zmax));
+			if ((aedge.length) > 0.1 * boundingbox)
+				faceshape[aedge.main_face].if_quad = true;
+		}
+
+		Set_Offset_Grid();
+
 		Surface_PolyMeshes.resize(faceshape.size());
 		for (int i = 0; i < faceshape.size(); i++)
 		{
@@ -1306,26 +1326,6 @@ namespace CADMesher
 			}
 		}
 
-		for (int i = 0; i < edge.size(); i++)
-		{
-			auto& aedge = edge[i];
-			if (!aedge.if_curvature) continue;
-			//dprint("edge", i);
-
-			//目前只考虑在无洞面片内做offset
-			if (face[aedge.main_face].wires.size() > 1) continue;
-
-			//曲率特征边有一定长度才做offset
-			Bnd_Box aBound;
-			BRepBndLib::Add(face[aedge.main_face].face, aBound);
-			Standard_Real xmin, ymin, zmin, xmax, ymax, zmax;
-			aBound.Get(xmin, ymin, zmin, xmax, ymax, zmax);
-			double boundingbox = sqrt((xmin - xmax) * (xmin - xmax) + (ymin - ymax) * (ymin - ymax) +
-					(zmin - zmax) * (zmin - zmax));
-			if ((aedge.length) > 0.3 * boundingbox)
-				face[aedge.main_face].if_quad = true;
-		}
-
 		dprint("Curvature feature done!");
 	}
 
@@ -1387,18 +1387,45 @@ namespace CADMesher
 		else return true;
 	}
 
+	void OccReader::Set_Offset_Info(vector<int>& select_curve)
+	{
+		if (select_curve.empty()) return;
+		auto& edge = globalmodel.edgeshape;
+		int t = quad_mun_info.size();
+		for (int i = 0; i < select_curve.size(); i++)
+		{
+			auto &aedge = edge[select_curve[i]];
+			if (i < t)
+			{				
+				aedge.if_curvature = true;
+				aedge.quad_num = quad_mun_info[i];
+				aedge.initial_ratio = initial_ratio_info[i];
+				aedge.increase_ratio = increase_ratio_info[i];
+				if (aedge.reversed_edge < -0.5) continue;
+				auto &re_aedge = edge[aedge.reversed_edge];
+				re_aedge.if_curvature = true;
+				re_aedge.quad_num = quad_mun_info[i];
+				re_aedge.initial_ratio = initial_ratio_info[i];
+				re_aedge.increase_ratio = increase_ratio_info[i];
+				continue;
+			}
+			aedge.if_curvature = true;
+			if (aedge.reversed_edge != -1) edge[aedge.reversed_edge].if_curvature = true;
+		}
+	}
+
 	void OccReader::Set_Offset_Grid()
 	{
-		if (offset_quad_num <= 0)
-		{
-			dprint("the offset quad number must be positive!");
-			system("pause");
-		}
-		if (offset_increase_ratio < 1)
-		{
-			dprint("the offset increase ratio must more than 1!");
-			system("pause");
-		}
+		//if (offset_quad_num <= 0)
+		//{
+		//	dprint("the offset quad number must be positive!");
+		//	system("pause");
+		//}
+		//if (offset_increase_ratio < 1)
+		//{
+		//	dprint("the offset increase ratio must more than 1!");
+		//	system("pause");
+		//}
 
 		vector<ShapeFace> &faceshape = globalmodel.faceshape;
 		vector<ShapeEdge> &edgeshape = globalmodel.edgeshape;
@@ -1440,6 +1467,12 @@ namespace CADMesher
 			}
 			ave_len /= curv.parameters.cols() - 1;
 			double offset_height;
+			int offset_quad_num = curv.quad_num;
+			double offset_initial_ratio = curv.initial_ratio;
+			double offset_increase_ratio = curv.increase_ratio;
+			//注意下行代码更改了邻边的increase_ratio，在一个面做多个四边形会有问题
+			edgeshape[prev].increase_ratio = edgeshape[next].increase_ratio = offset_increase_ratio;
+
 			if (abs(offset_increase_ratio - 1) < DBL_EPSILON)
 				offset_height = ave_len * offset_initial_ratio * offset_quad_num;
 			else
@@ -1631,6 +1664,8 @@ namespace CADMesher
 		Standard_Real first = 0, last = 0;
 		Handle_Geom2d_Curve thePCurve = BRep_Tool::CurveOnSurface(edge.edge, faceshape[edge.main_face].face, first, last);
 		double t, t1, initial_step;
+		double offset_increase_ratio = edge.increase_ratio;
+
 		if (edge.edge.Orientation() == TopAbs_FORWARD)
 		{
 			t = (last - first) * id / ((num - 1.0) * discrete_num) + first;

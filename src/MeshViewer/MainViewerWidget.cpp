@@ -37,6 +37,8 @@ void MainViewerWidget::initViewerWindow()
 	connect(MeshViewer,SIGNAL(set_edit_redo_enable_viewer_signal(bool)),SIGNAL(set_edit_redo_enable_signal(bool)));
 
 	connect(MeshParam, SIGNAL(print_info_signal()), SLOT(print_info()));
+	connect(MeshParam, SIGNAL(submit_info_signal()), SLOT(submit_info()));
+
 }
 
 void MainViewerWidget::createParamIDialog()
@@ -123,4 +125,9 @@ void MainViewerWidget::save_screen_gui(QString fname)
 void MainViewerWidget::print_info()
 {
 	MeshViewer->printBasicMeshInfo();
+}
+
+void MainViewerWidget::submit_info()
+{
+	MeshViewer->offsetinfo(MeshParam->get_quad_num(), MeshParam->get_initial_ratio(), MeshParam->get_increase_ratio());
 }

@@ -64,6 +64,9 @@ namespace CADMesher
 		int begin_id;
 		int end_id;
 		double length;
+		int quad_num;
+		double initial_ratio;
+		double increase_ratio;
 
 		int next_edge;
 		bool if_visited;
@@ -84,6 +87,10 @@ namespace CADMesher
 
 			next_edge = -1;
 			if_visited = false;
+
+			quad_num = 15;
+			initial_ratio = 0.01;
+			increase_ratio = 1.4;
 		}
 	};
 
