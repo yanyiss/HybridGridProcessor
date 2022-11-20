@@ -159,6 +159,7 @@ private:
 	ANNkd_tree* stripTree = nullptr;
 	std::vector<int> edgeshapeIndex;
 	std::vector<int> selectedCurve;
+	std::pair<OpenMesh::VertexHandle, OpenMesh::Vec6d> metric_constraint;
 	void BuildCurveIndex();
 
 #pragma region Auxiliary_function

@@ -705,12 +705,6 @@ void InteractiveViewerWidget::draw_vector_set()
 	auto vh = mesh.vertex_handle(lastestVertex);
 	auto pos = mesh.point(vh);
 
-	glPointSize(5);
-	glBegin(GL_POINTS);
-	glColor3d(0.6, 0.6, 0.0);
-	glVertex3dv(pos.data());
-	glEnd();
-
 	double avg_len = 0;
 	for (auto ve : mesh.ve_range(vh))
 	{
@@ -724,6 +718,21 @@ void InteractiveViewerWidget::draw_vector_set()
 	}
 	auto xx = (yy - pos).cross(zz).normalized() * avg_len + pos;
 
+	Eigen::Matrix3d H, D;
+	H << xx[0], yy[0], zz[0],
+		xx[1], yy[1], zz[1],
+		xx[2], yy[2], zz[2];
+	D.setZero();
+	D(0, 0) = min_cur; D(1, 1) = (xx - pos).norm() / (yy - pos).norm();
+	auto Ht = H * D * H.transpose();
+	metric_constraint.first = vh;
+	metric_constraint.second = OpenMesh::Vec6d(Ht(0, 0), Ht(0, 1), Ht(0, 2), Ht(1, 1), Ht(1, 2), Ht(2, 2));
+
+	glPointSize(5);
+	glBegin(GL_POINTS);
+	glColor3d(0.6, 0.6, 0.0);
+	glVertex3dv(pos.data());
+	glEnd();
 	glLineWidth(5);
 	glBegin(GL_LINES);
 	glColor3d(0.3, 0.7, 0.4);
@@ -733,8 +742,6 @@ void InteractiveViewerWidget::draw_vector_set()
 	glVertex3dv(pos.data());
 	glVertex3dv(xx.data());
 	glEnd();
-	dprint(lastestVertex, mesh.point(mesh.vertex_handle(lastestVertex)));
-	dprint(yy); dprint();
 }
 
 void InteractiveViewerWidget::draw_scene(int drawmode)
@@ -900,6 +907,7 @@ void InteractiveViewerWidget::showAnisotropicMesh()
 		amr->load_ref_mesh(&(CADMesher::globalmodel.initial_trimesh));
 		double tl = amr->get_ref_mesh_ave_anisotropic_edge_length();
 		dprint("anisotropic edge length:", tl);
+		amr->set_metric(metric_constraint.first, metric_constraint.second);
 		amr->do_remeshing(tl, 1.5);
 
 		tri2poly(CADMesher::globalmodel.isotropic_trimesh, mesh, true);

@@ -204,8 +204,8 @@ namespace CADMesher
 		for (unsigned int i = 0; i < nv; ++i)
 		{
 			Mesh::VertexHandle vh = ref_mesh_->vertex_handle(i);
-			double k1 = K1[i]; k1 = std::abs(k1) < 1.0e-3 ? 1.0e-3 : k1;
-			double k2 = K2[i]; k2 = std::abs(k2) < 1.0e-3 ? 1.0e-3 : k2;
+			double k1 = K1[i]; k1 = std::abs(k1) < min_cur ? min_cur : k1;
+			double k2 = K2[i]; k2 = std::abs(k2) < min_cur ? min_cur : k2;
 
 			OpenMesh::Vec3d d1 = D1[i];
 			OpenMesh::Vec3d d2 = D2[i];
@@ -611,6 +611,11 @@ namespace CADMesher
 		calc_tri_quality();
 		//emit finish_one_editing_signal();
 		//emit updateGL_Manual_signal();
+	}
+
+	void AnisotropicMeshRemeshing::set_metric(OpenMesh::VertexHandle vh, OpenMesh::Vec6d& metric)
+	{
+		mesh_->data(vh).set_Hessian(metric);
 	}
 
 	void AnisotropicMeshRemeshing::do_remeshing(double ref_edge_len /* = 1.0 */, double a /* = 1.5 */)
