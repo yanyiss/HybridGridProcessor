@@ -718,21 +718,13 @@ void InteractiveViewerWidget::draw_vector_set()
 	}
 	auto xx = (yy - pos).cross(zz).normalized() * avg_len + pos;
 
-	Eigen::Matrix3d H, D;
-	H << xx[0], yy[0], zz[0],
-		xx[1], yy[1], zz[1],
-		xx[2], yy[2], zz[2];
-	D.setZero();
-	D(0, 0) = min_cur; D(1, 1) = (xx - pos).norm() / (yy - pos).norm();
-	auto Ht = H * D * H.transpose();
-	metric_constraint.first = vh;
-	metric_constraint.second = OpenMesh::Vec6d(Ht(0, 0), Ht(0, 1), Ht(0, 2), Ht(1, 1), Ht(1, 2), Ht(2, 2));
 
 	glPointSize(5);
 	glBegin(GL_POINTS);
 	glColor3d(0.6, 0.6, 0.0);
 	glVertex3dv(pos.data());
 	glEnd();
+
 	glLineWidth(5);
 	glBegin(GL_LINES);
 	glColor3d(0.3, 0.7, 0.4);
@@ -742,6 +734,20 @@ void InteractiveViewerWidget::draw_vector_set()
 	glVertex3dv(pos.data());
 	glVertex3dv(xx.data());
 	glEnd();
+
+	Eigen::Matrix3d D; D.setZero();
+	D(0, 0) = (yy - pos).norm() / (xx - pos).norm() * min_cur; D(1, 1) = min_cur;
+	zz.normalize();
+	yy -= pos; yy.normalize();
+	xx = yy.cross(zz);
+	Eigen::Matrix3d H;
+	H << xx[0], yy[0], zz[0],
+		xx[1], yy[1], zz[1],
+		xx[2], yy[2], zz[2];
+	dprint(D(0, 0), D(1, 1));
+	auto Ht = H * D * H.transpose();
+	metric_constraint.first = vh;
+	metric_constraint.second = OpenMesh::Vec6d(Ht(0, 0), Ht(0, 1), Ht(0, 2), Ht(1, 1), Ht(1, 2), Ht(2, 2));
 }
 
 void InteractiveViewerWidget::draw_scene(int drawmode)
