@@ -1,6 +1,7 @@
 #include "GeneralMathMethod.h"
 #include <iostream>
 
+
 namespace GeneralMathMethod {
 	Eigen::Vector2d ComputePolygonInteriorPoint(Polygon &polygon)
 	{
@@ -184,6 +185,76 @@ namespace GeneralMathMethod {
 			}
 		}
 	}
+
+	/*void Find_Span(Matrix2Xd& dir, Matrix2Xd &para, bool direction, int &id, int num, double height, GeometryType *Surface)
+	{
+		id = -1;
+		Vector2d p1, p2;
+		if (direction)
+		{
+			p1 = dir.col(dir.cols() - 1);
+			for (int i = 1; i < para.cols(); i++)
+			{
+				p2 = para.col(i);
+				if (Riemanlen(Surface, p1, p2) < height) continue;
+				id = i - 1;
+				break;
+			}
+			if (id < 0) return;
+			for (int i = 0; i <= num; i++)
+			{
+				p2 = ((num - i) * para.col(id) + i * para.col(id + 1)) / num;
+				if (Riemanlen(Surface, p1, p2) < height) continue;
+				id = i + id * num;
+				break;
+			}
+		}
+		else
+		{
+			p1 = dir.col(0);
+			for (int i = para.cols() - 2; i >= 0; i--)
+			{
+				p2 = para.col(i);
+				if (Riemanlen(Surface, p1, p2) < height) continue;
+				id = i;
+				break;
+			}
+			if (id < 0) return;
+			for (int i = num; i >= 0; i--)
+			{
+				p2 = ((num - i) * para.col(id) + i * para.col(id + 1)) / num;
+				if (Riemanlen(Surface, p1, p2) < height) continue;
+				id = i + id * num;
+				break;
+			}
+		}
+	}*/
+
+	/*double Riemanlen(GeometryType *Surface, Vector2d &p1, Vector2d &p2)
+	{
+		auto UV = Surface->Getbounds();
+		double u1 = UV(0), u2 = UV(1), v1 = UV(2), v2 = UV(3);
+		if (p1(0) < u1 || p1(0) > u2 || p1(1) < v1 || p1(1) > v2)
+			return (p1 - p2).norm();
+		if (p2(0) < u1 || p2(0) > u2 || p2(1) < v1 || p2(1) > v2)
+			return (p1 - p2).norm();
+		Eigen::MatrixXd xy = Eigen::MatrixXd::Zero(1, 2);
+		xy << p1[0] - p2[0], p1[1] - p2[1];
+		Eigen::Matrix2d M;
+		Point ru = Surface->PartialDerivativeU(p1(0), p1(1));
+		Point rv = Surface->PartialDerivativeV(p1(0), p1(1));
+		double E = ru.dot(ru);
+		double F = ru.dot(rv);
+		double G = rv.dot(rv);
+		ru = Surface->PartialDerivativeU(p2(0), p2(1));
+		rv = Surface->PartialDerivativeV(p2(0), p2(1));
+		E += ru.dot(ru);
+		F += ru.dot(rv);
+		G += rv.dot(rv);
+		M << E, F,
+			F, G;
+		return pow(abs((xy * (M *0.5) * xy.transpose()).determinant()), 0.5);
+	}*/
 
 	double Binomial(int n, double p, int m)
 	{

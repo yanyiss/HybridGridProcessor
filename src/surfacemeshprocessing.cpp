@@ -212,12 +212,12 @@ void SurfaceMeshProcessing::createActions()
 	showAnisotropicMeshAction->setChecked(false);
 	connect(showAnisotropicMeshAction, SIGNAL(triggered()), this, SLOT(showAnisotropicMesh()));
 
-	showDebugTestAction = new QAction(tr("&Show Debug Test"), this);
-	showDebugTestAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/debug.png"));
-	showDebugTestAction->setStatusTip(tr("Show Debug Test"));
-	showDebugTestAction->setCheckable(true);
-	showDebugTestAction->setChecked(false);
-	connect(showDebugTestAction, SIGNAL(triggered()), this, SLOT(showDebugTest()));
+	//showDebugTestAction = new QAction(tr("&Show Debug Test"), this);
+	//showDebugTestAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/debug.png"));
+	//showDebugTestAction->setStatusTip(tr("Show Debug Test"));
+	//showDebugTestAction->setCheckable(true);
+	//showDebugTestAction->setChecked(false);
+	//connect(showDebugTestAction, SIGNAL(triggered()), this, SLOT(showDebugTest()));
 
 	EditUndoAction = new QAction(tr("&Undo"), this);
 	EditUndoAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/edit-undo.png"));

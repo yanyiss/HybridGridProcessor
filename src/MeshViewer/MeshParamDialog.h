@@ -68,7 +68,7 @@ public:
 signals:
 	void load_ref_mesh_AM_signal();
 	void do_remehsing_AM_signal();
-	void submit_info_signal();
+	//void submit_info_signal();
 
 private:
 	QWidget* Basic_Operation_And_Information;

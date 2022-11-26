@@ -27,9 +27,9 @@ namespace CADMesher
 		double expected_edge_length;
 		double mu = 1.2;        //三角形面积允许扩张系数
 		double epsratio = 0.005;//网格和曲面的误差系数
-		//int offset_quad_num = 15;
-		//double offset_initial_ratio = 0.01;
-		//double offset_increase_ratio = 1.3;
+		int offset_quad_num = 15;
+		double offset_initial_ratio = 0.01;
+		double offset_increase_ratio = 1.3;
 		vector<TriMesh> Surface_TriMeshes;
 		vector<PolyMesh> Surface_PolyMeshes;
 		vector<int> quad_mun_info;
@@ -45,7 +45,7 @@ namespace CADMesher
 		void Face_type();
 		void C0_Feature();
 		void Curvature_Feature();
-		void Set_Offset_Info(vector<int>& select_curve);
+		//void Set_Offset_Info(vector<int>& select_curve);
 		void Set_TriMesh();
 		void Offset_lines(Matrix2Xd &parameters, vector<Matrix2Xd> &offset_pnts, int begin, int pntnum, int quadnum);
 		void Set_PolyMesh();
