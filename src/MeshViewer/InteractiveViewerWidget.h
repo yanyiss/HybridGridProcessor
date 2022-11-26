@@ -146,7 +146,7 @@ public:
 	CADMesher::TriangleMeshRemeshing* tmr = nullptr;
 	CADMesher::AnisotropicMeshRemeshing* amr = nullptr;
 	void generateTriMesh(double ratio);
-	void generatePolyMesh(double ratio);
+	void generatePolyMesh(double ratio, int quad_num, double initial_ratio, double increase_ratio);
 	void showFeature();
 	void showIsotropicMesh(double tl);
 	void showAnisotropicMesh();

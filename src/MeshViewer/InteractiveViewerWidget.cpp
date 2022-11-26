@@ -807,20 +807,33 @@ void InteractiveViewerWidget::generateTriMesh(double ratio)
 	updateGL();
 }
 
-void InteractiveViewerWidget::generatePolyMesh(double ratio)
+void InteractiveViewerWidget::generatePolyMesh(double ratio, int quad_num, double initial_ratio, double increase_ratio)
 {
 	occreader->initialRate = ratio;
+	occreader->offset_quad_num = quad_num;
+	occreader->offset_initial_ratio = initial_ratio;
+	occreader->offset_increase_ratio = increase_ratio;
 	occreader->Discrete_Edge();
 	occreader->Face_type();
 	occreader->C0_Feature();
 	occreader->Curvature_Feature();
-	occreader->Set_Offset_Info(selectedCurve);
+	//occreader->Set_Offset_Info(selectedCurve);
 	occreader->Set_PolyMesh();
 	occreader->MergeModel(CADMesher::globalmodel.initial_polymesh, occreader->Surface_PolyMeshes);
 	TriMesh tm(CADMesher::globalmodel.initial_polymesh);
 	CADMesher::globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(tm);
 	occreader->SetPolyFeature();
 	mesh = CADMesher::globalmodel.initial_polymesh;
+	//for (auto f : mesh.faces())
+	//{
+	//	if (f.valence() > 3) continue;
+	//	int flag = 0;
+	//	for (auto fv : mesh.fv_range(f))
+	//	{
+	//		if (mesh.data(fv).get_vertflag()) flag++;
+	//	}
+	//	if (flag > 2) dprint("here", f.idx());
+	//}
 	initMeshStatusAndNormal(mesh);
 	drawCAD = false;
 	setDrawMode(InteractiveViewerWidget::FLAT_POINTS);
