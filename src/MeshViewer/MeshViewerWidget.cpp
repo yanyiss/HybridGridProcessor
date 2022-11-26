@@ -963,7 +963,7 @@ void MeshViewerWidget::draw_AnisotropicMesh()
 //<<<<<<< john
 void MeshViewerWidget::draw_feature()
 {	
-#if 1
+#if 0
 	if (ifDrawFeature)
 	{
 		//画C0特征

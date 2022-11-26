@@ -3,6 +3,7 @@
 #include <Eigen/Dense>
 #include <vector>
 #include "..\src\MeshViewer\MeshDefinition.h"
+//#include "..\src\Dependency\BSpline\GeometryType.h"
 
 namespace GeneralMathMethod
 {
@@ -29,6 +30,8 @@ namespace GeneralMathMethod
 	double ComputePolygonsArea(Polygons &polygons);//外圈所占面积减去内圈所占面积
 
 	void Find_Span(Matrix2Xd &dir, Matrix2Xd &para, bool direction, int &id, int num, double height);
+	//void Find_Span(Matrix2Xd &dir, Matrix2Xd &para, bool direction, int &id, int num, double height, GeometryType *Surface);
+	//double Riemanlen(GeometryType *Surface, Vector2d &p1, Vector2d &p2);
 	double Binomial(int n, double p, int m);
 	void DataSet(Point4& UV, double eps, Matrix2Xd& pnts);
 

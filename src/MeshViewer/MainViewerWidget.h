@@ -80,6 +80,7 @@ public slots:
 			MeshViewer->drawCAD = true;
 			MeshViewer->setDrawMode(InteractiveViewerWidget::WIRE_FRAME);
 			MeshViewer->setMouseMode(InteractiveViewerWidget::TRANS);
+
 		}
 		else
 		{
@@ -232,7 +233,7 @@ public:
 	}
 	void generatePolyMesh()
 	{
-		MeshViewer->generatePolyMesh(MeshParam->get_sample_ratio_AM());
+		MeshViewer->generatePolyMesh(MeshParam->get_sample_ratio_AM(), MeshParam->get_quad_num(), MeshParam->get_initial_ratio(), MeshParam->get_increase_ratio());
 		MeshParam->set_target_edge_length_AM(MeshViewer->getAngLen());
 	}
 	void showFeature() {

@@ -166,13 +166,27 @@ namespace CADMesher
 			auto &Surface = faceshape[i].Surface;
 
 			//Remesh in domain		
-			Riemannremesh Remesh(Surface, &aMesh);
-			Remesh.remesh();
-			//dprint("domain remesh done!");
+			if (1)
+			{
+				Riemannremesh Remesh(Surface, &aMesh);
+				Remesh.remesh();
+				//dprint("domain remesh done!");
+			}
 
 			ClearBoundary(aMesh);
-			Set_Curvature(Surface, aMesh);
-			//dprint("GaussCurvature compute done!");
+			if (1)
+			{
+				Set_Curvature(Surface, aMesh);
+				//dprint("GaussCurvature compute done!");
+			}
+			else
+			{
+				for (auto tv : aMesh.vertices())
+				{
+					aMesh.data(tv).GaussCurvature = 0;
+				}
+			}
+			
 
 			for (auto tv : aMesh.vertices())
 			{
@@ -238,32 +252,13 @@ namespace CADMesher
 	{
 		vector<ShapeFace> &faceshape = globalmodel.faceshape;
 		vector<ShapeEdge> &edgeshape = globalmodel.edgeshape;
-		for (int i = 0; i < edgeshape.size(); i++)
-		{
-			auto& aedge = edgeshape[i];
-			if (!aedge.if_curvature) continue;
-			//dprint("edge", i);
-
-			//目前只考虑在无洞面片内做offset
-			if (faceshape[aedge.main_face].wires.size() > 1) continue;
-
-			//曲率特征边有一定长度才做offset
-			Bnd_Box aBound;
-			BRepBndLib::Add(faceshape[aedge.main_face].face, aBound);
-			Standard_Real xmin, ymin, zmin, xmax, ymax, zmax;
-			aBound.Get(xmin, ymin, zmin, xmax, ymax, zmax);
-			double boundingbox = sqrt((xmin - xmax) * (xmin - xmax) + (ymin - ymax) * (ymin - ymax) +
-				(zmin - zmax) * (zmin - zmax));
-			if ((aedge.length) > 0.1 * boundingbox)
-				faceshape[aedge.main_face].if_quad = true;
-		}
 
 		Set_Offset_Grid();
 
 		Surface_PolyMeshes.resize(faceshape.size());
 		for (int i = 0; i < faceshape.size(); i++)
 		{
-			//if (i != 32) continue;
+			//if (i != 37) continue;
 			Mesh &newmesh = Surface_PolyMeshes[i];
 			TriMesh aMesh;
 			auto &wires = faceshape[i].wires;
@@ -513,7 +508,20 @@ namespace CADMesher
 				//}
 			} 
 
-			Set_Curvature(Surface, newmesh);
+			if (0)
+			{
+				Set_Curvature(Surface, newmesh);
+				//dprint("GaussCurvature compute done!");
+			}
+			else
+			{
+				for (auto tv : newmesh.vertices())
+				{
+					newmesh.data(tv).GaussCurvature = 0;
+				}
+			}
+
+			//Set_Curvature(Surface, newmesh);
 
 			for (auto tv : newmesh.vertices())
 			{
@@ -841,8 +849,10 @@ namespace CADMesher
 
 		for (int i = 0; i < faceshape.size(); i++)
 		{
+			//dprint("face", i);
 			if (!faceshape[i].if_exisited) continue;
 			if (faceshape[i].wires.empty()) continue;
+			//if (i >= 6 && i <= 28) continue;
 			TopLoc_Location loca;
 			opencascade::handle<Geom_Surface> geom_surface = BRep_Tool::Surface(faceshape[i].face, loca);
 			opencascade::handle<Standard_Type> type = geom_surface->DynamicType();
@@ -1073,6 +1083,7 @@ namespace CADMesher
 		for (int i = 0; i < edgeshape.size(); i++)
 		{
 			auto &edge = edgeshape[i];
+			//if (edge.main_face >= 6 && edge.main_face <= 28) continue;
 			if (!edge.if_exisited) continue;
 			auto &facer = faceshape[edge.main_face].Surface;
 			auto &pnts = edge.parameters;
@@ -1099,6 +1110,19 @@ namespace CADMesher
 				aedge.if_C0 = true;
 				continue;
 			}
+
+			//if (aedge.main_face >= 6 && aedge.main_face <= 28)
+			//{
+			//	aedge.if_C0 = true;
+			//	edge[aedge.reversed_edge].if_C0 = true;
+			//	continue;  
+			//}
+			//else if (edge[aedge.reversed_edge].main_face >= 6 && edge[aedge.reversed_edge].main_face <= 28)
+			//{
+			//	aedge.if_C0 = true;
+			//	edge[aedge.reversed_edge].if_C0 = true;
+			//	continue;
+			//}
 
 			double C0 = 0.92;     //两个法向量内积的阈值
 			int single_flag = 0;
@@ -1326,6 +1350,26 @@ namespace CADMesher
 			}
 		}
 
+		for (int i = 0; i < edge.size(); i++)
+		{
+			auto& aedge = edge[i];
+			if (!aedge.if_curvature) continue;
+			//dprint("edge", i);
+
+			//目前只考虑在无洞面片内做offset
+			if (face[aedge.main_face].wires.size() > 1) continue;
+
+			//曲率特征边有一定长度才做offset
+			Bnd_Box aBound;
+			BRepBndLib::Add(face[aedge.main_face].face, aBound);
+			Standard_Real xmin, ymin, zmin, xmax, ymax, zmax;
+			aBound.Get(xmin, ymin, zmin, xmax, ymax, zmax);
+			double boundingbox = sqrt((xmin - xmax) * (xmin - xmax) + (ymin - ymax) * (ymin - ymax) +
+				(zmin - zmax) * (zmin - zmax));
+			if ((aedge.length) > 0.1 * boundingbox)
+				face[aedge.main_face].if_quad = true;
+		}
+
 		dprint("Curvature feature done!");
 	}
 
@@ -1387,7 +1431,7 @@ namespace CADMesher
 		else return true;
 	}
 
-	void OccReader::Set_Offset_Info(vector<int>& select_curve)
+	/*void OccReader::Set_Offset_Info(vector<int>& select_curve)
 	{
 		if (select_curve.empty()) return;
 		auto& edge = globalmodel.edgeshape;
@@ -1412,7 +1456,7 @@ namespace CADMesher
 			aedge.if_curvature = true;
 			if (aedge.reversed_edge != -1) edge[aedge.reversed_edge].if_curvature = true;
 		}
-	}
+	}*/
 
 	void OccReader::Set_Offset_Grid()
 	{
@@ -1467,11 +1511,11 @@ namespace CADMesher
 			}
 			ave_len /= curv.parameters.cols() - 1;
 			double offset_height;
-			int offset_quad_num = curv.quad_num;
-			double offset_initial_ratio = curv.initial_ratio;
-			double offset_increase_ratio = curv.increase_ratio;
+			//int offset_quad_num = curv.quad_num;
+			//double offset_initial_ratio = curv.initial_ratio;
+			//double offset_increase_ratio = curv.increase_ratio;
 			//注意下行代码更改了邻边的increase_ratio，在一个面做多个四边形会有问题
-			edgeshape[prev].increase_ratio = edgeshape[next].increase_ratio = offset_increase_ratio;
+			//edgeshape[prev].increase_ratio = edgeshape[next].increase_ratio = offset_increase_ratio;
 
 			if (abs(offset_increase_ratio - 1) < DBL_EPSILON)
 				offset_height = ave_len * offset_initial_ratio * offset_quad_num;
@@ -1633,6 +1677,25 @@ namespace CADMesher
 			else next = edges.front();
 			faceshape[i].quad_num = std::min(edge_prev_info[prev].back(), edge_next_info[next].back());
 		}
+		for (int i = 0; i < faceshape.size(); i++)
+		{
+			if (!faceshape[i].if_quad) continue;
+			auto &edges = faceshape[i].wires.front();
+
+			//find curvature edge
+			int now, prev, next;
+			for (int j = 0; j < edges.size(); j++)
+			{
+				if (edgeshape[edges[j]].if_curvature)
+				{
+					now = j;
+					break;
+				}
+			}
+			if (now) prev = edges[now - 1];
+			if (edgeshape[edges[now]].reversed_edge < -0.5) continue;
+			faceshape[i].quad_num = std::min(faceshape[i].quad_num, faceshape[edgeshape[edges[now]].secondary_face].quad_num);
+		}
 
 		for (int i = 0; i < edgeshape.size(); i++)
 		{
@@ -1642,6 +1705,7 @@ namespace CADMesher
 			if (a != b)
 			{
 				dprint("big bug!!!!!", i, edgeshape[i].reversed_edge);
+				system("pause");
 			}
 		}
 	}
@@ -1664,7 +1728,7 @@ namespace CADMesher
 		Standard_Real first = 0, last = 0;
 		Handle_Geom2d_Curve thePCurve = BRep_Tool::CurveOnSurface(edge.edge, faceshape[edge.main_face].face, first, last);
 		double t, t1, initial_step;
-		double offset_increase_ratio = edge.increase_ratio;
+		//double offset_increase_ratio = edge.increase_ratio;
 
 		if (edge.edge.Orientation() == TopAbs_FORWARD)
 		{
