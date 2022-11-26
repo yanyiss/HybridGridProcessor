@@ -102,6 +102,7 @@ namespace CADMesher
 	};
 
 #define PI 3.1415926535897932
+#define min_cur 1.0e-3
 	class AnisotropicMeshRemeshing// : public QObject
 	{
 		//Q_OBJECT
@@ -126,6 +127,7 @@ namespace CADMesher
 		}
 		void reset_all_State();
 
+		void set_metric(OpenMesh::VertexHandle vh, OpenMesh::Vec6d& metric);
 		void load_ref_mesh(TriMesh* aniso_ref_mesh);
 		void sample_mesh_anisotropic_edge_length(double ref_edge_len = 1.0, double a = 1.5, bool add_flip = true);
 		void do_remeshing(double ref_edge_len = 1.0, double a = 1.5);
@@ -152,7 +154,6 @@ namespace CADMesher
 
 	private:
 		bool draw_small_tri_ok;
-
 		void project_on_reference_mesh_with_metric(Mesh::VertexHandle vh, OpenMesh::Vec3d& p);
 		void project_on_reference_edge_with_metric(Mesh::VertexHandle vh, OpenMesh::Vec3d& p);
 		void find_nearst_point_on_reference_mesh(OpenMesh::Vec3d& p, bool is_boundary);
