@@ -86,7 +86,7 @@ public slots:
 	}
 
 public:
-	enum { TRANS, POINTPICK, VERTEXPICK, EDGEPICK, FACEPICK, CURVEPICK, EDGECOLLAPSE, EDGEFLIP, EDGESPLIT , MOVE, GTM, GPM, FEATURE, ISOTROPIC, ANISOTROPIC, DEBUGTEST, T2_MODE, N_MODE };
+	enum { TRANS, POINTPICK, VERTEXPICK, EDGEPICK, FACEPICK, CURVEPICK, EDGECOLLAPSE, EDGEFLIP, EDGESPLIT , MOVE, VECTOR_SET, GTM, GPM, FEATURE, ISOTROPIC, ANISOTROPIC, DEBUGTEST, T2_MODE, N_MODE };
 	void setMouseMode(int mm);
 	int mouseMode() const { return mouse_mode_; }
 
@@ -120,6 +120,7 @@ protected:
 	void draw_selected_face();
 	void draw_selected_edge();
 	void draw_selected_curve();
+	void draw_vector_set();
 	virtual void draw_scene(int drawmode);
 	bool draw_new_mesh;
 
@@ -158,6 +159,7 @@ private:
 	ANNkd_tree* stripTree = nullptr;
 	std::vector<int> edgeshapeIndex;
 	std::vector<int> selectedCurve;
+	std::pair<OpenMesh::VertexHandle, OpenMesh::Vec6d> metric_constraint;
 	void BuildCurveIndex();
 
 #pragma region Auxiliary_function

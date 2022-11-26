@@ -204,9 +204,9 @@ namespace CADMesher
 		for (unsigned int i = 0; i < nv; ++i)
 		{
 			Mesh::VertexHandle vh = ref_mesh_->vertex_handle(i);
-			double k1 = K1[i]; k1 = std::abs(k1) < 1.0e-3 ? 1.0e-3 : k1;
-			double k2 = K2[i]; k2 = std::abs(k2) < 1.0e-3 ? 1.0e-3 : k2;
-
+			//double k1 = K1[i]; k1 = std::abs(k1) < min_cur ? min_cur : k1;
+			//double k2 = K2[i]; k2 = std::abs(k2) < min_cur ? min_cur : k2;
+			double k1 = min_cur; double k2 = min_cur;
 			OpenMesh::Vec3d d1 = D1[i];
 			OpenMesh::Vec3d d2 = D2[i];
 
@@ -611,6 +611,38 @@ namespace CADMesher
 		calc_tri_quality();
 		//emit finish_one_editing_signal();
 		//emit updateGL_Manual_signal();
+	}
+
+	void AnisotropicMeshRemeshing::set_metric(OpenMesh::VertexHandle vh, OpenMesh::Vec6d& metric)
+	{
+		mesh_->data(vh).set_Hessian(metric);
+		for (int i = 0; i < 5; ++i)
+		{
+			std::deque<bool> visited(mesh_->n_vertices(), false);
+			for (auto v1 : mesh_->vv_range(vh))
+			{
+				if (visited[v1.idx()])
+					continue;
+				visited[v1.idx()] = true;
+				dprint("0", mesh_->data(v1).get_Hessian());
+				mesh_->data(v1).set_Hessian(0.5 * (mesh_->data(vh).get_Hessian() + mesh_->data(v1).get_Hessian()));
+				dprint("1", mesh_->data(v1).get_Hessian());
+				for (auto v2 : mesh_->vv_range(v1))
+				{
+					if (visited[v2.idx()] || v2.idx() == vh.idx())
+						continue;
+					visited[v2.idx()] = true;
+					mesh_->data(v2).set_Hessian(0.5 * (mesh_->data(v1).get_Hessian() + mesh_->data(v2).get_Hessian()));
+					for (auto v3 : mesh_->vv_range(v2))
+					{
+						if (visited[v3.idx()] || v3.idx() == vh.idx())
+							continue;
+						visited[v3.idx()] = true;
+						mesh_->data(v3).set_Hessian(0.5 * (mesh_->data(v2).get_Hessian() + mesh_->data(v3).get_Hessian()));
+					}
+				}
+			}
+		}
 	}
 
 	void AnisotropicMeshRemeshing::do_remeshing(double ref_edge_len /* = 1.0 */, double a /* = 1.5 */)

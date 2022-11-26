@@ -78,6 +78,10 @@ void InteractiveViewerWidget::mousePressEvent(QMouseEvent *_event)
 			{
 				pick_vertex( _event->x(), _event->y() );//set the selected handle
 			}
+			else if( mouse_mode_ == VECTOR_SET )
+			{
+				pick_point( _event->x(), _event->y() );//set the selected handle
+			}
 			else if(mouse_mode_ == EDGECOLLAPSE)
 			{
 				int desired_edge = find_edge_using_selected_point();
@@ -227,6 +231,11 @@ void InteractiveViewerWidget::mouseMoveEvent(QMouseEvent *_event)
 				move_point_based_lastVertex( _event->x(), _event->y() );
 				Mesh::Point P(selectedPoint[0],selectedPoint[1],selectedPoint[2]);
 				mesh.set_point( mesh.vertex_handle(lastestVertex), P );
+				updateGL();
+			}
+			if (mouse_mode_ == VECTOR_SET)
+			{
+				move_point_based_lastVertex(_event->x(), _event->y());
 				updateGL();
 			}
 		}
@@ -569,6 +578,9 @@ void InteractiveViewerWidget::draw_interactive_portion(int drawmode)
 			draw_selected_curve();
 			dprint("fio");
 			break;
+		case VECTOR_SET:
+			draw_vector_set();
+			break;
 		default:
 			draw_selected_vertex();
 			draw_selected_face();
@@ -577,6 +589,7 @@ void InteractiveViewerWidget::draw_interactive_portion(int drawmode)
 			break;
 		}
 	}
+	
 	showFeature();
 	if (draw_new_mesh)
 	{
@@ -686,6 +699,57 @@ void InteractiveViewerWidget::draw_selected_curve()
 	}
 }
 
+void InteractiveViewerWidget::draw_vector_set()
+{
+	Mesh::Point yy(selectedPoint[0], selectedPoint[1], selectedPoint[2]);
+	auto vh = mesh.vertex_handle(lastestVertex);
+	auto pos = mesh.point(vh);
+
+	double avg_len = 0;
+	for (auto ve : mesh.ve_range(vh))
+	{
+		avg_len += mesh.calc_edge_length(ve);
+	}
+	avg_len /= mesh.valence(vh);
+	Mesh::Point zz(0, 0, 0);
+	for (auto vf : mesh.vf_range(vh))
+	{
+		zz += mesh.calc_face_normal(vf);
+	}
+	auto xx = (yy - pos).cross(zz).normalized() * avg_len + pos;
+
+
+	glPointSize(5);
+	glBegin(GL_POINTS);
+	glColor3d(0.6, 0.6, 0.0);
+	glVertex3dv(pos.data());
+	glEnd();
+
+	glLineWidth(5);
+	glBegin(GL_LINES);
+	glColor3d(0.3, 0.7, 0.4);
+	glVertex3dv(pos.data());
+	glVertex3dv(yy.data());
+	glColor3d(0.8, 0.1, 0.7);
+	glVertex3dv(pos.data());
+	glVertex3dv(xx.data());
+	glEnd();
+
+	Eigen::Matrix3d D; D.setZero();
+	D(0, 0) = (yy - pos).norm() / (xx - pos).norm() * min_cur; D(1, 1) = min_cur;
+	zz.normalize();
+	yy -= pos; yy.normalize();
+	xx = yy.cross(zz);
+	Eigen::Matrix3d H;
+	H << xx[0], yy[0], zz[0],
+		xx[1], yy[1], zz[1],
+		xx[2], yy[2], zz[2];
+	dprint(D(0, 0), D(1, 1));
+	auto Ht = H * D * H.transpose();
+	metric_constraint.first = vh;
+	metric_constraint.second = OpenMesh::Vec6d(Ht(0, 0), Ht(0, 1), Ht(0, 2), Ht(1, 1), Ht(1, 2), Ht(2, 2));
+}
+
 void InteractiveViewerWidget::draw_scene(int drawmode)
 {
 	//if (!mesh.n_vertices()) { return; }
@@ -782,39 +846,41 @@ void InteractiveViewerWidget::generatePolyMesh(double ratio, int quad_num, doubl
 
 void InteractiveViewerWidget::showFeature()
 {
-	
-	//if (ifDrawFeature)
-	//{
-	//	//画C0特征
-	//	glLineWidth(4);
-	//	glColor3d(1.0, 0.0, 0.0);
-	//	glBegin(GL_LINES);
-	//	for (auto& te : mesh.edges())
-	//	{
-	//		if (mesh.data(te).flag1)
-	//		{
-	//			glVertex3dv(mesh.point(te.v0()).data());
-	//			glVertex3dv(mesh.point(te.v1()).data());
-	//		}
-	//	}
-	//	glEnd();
+#if 0
+	if (ifDrawFeature)
+	{
+		//画C0特征
+		glLineWidth(4);
+		glColor3d(1.0, 0.0, 0.0);
+		glBegin(GL_LINES);
+		for (auto& te : mesh.edges())
+		{
+			if (mesh.data(te).flag1)
+			{
+				glVertex3dv(mesh.point(te.v0()).data());
+				glVertex3dv(mesh.point(te.v1()).data());
+			}
+		}
+		glEnd();
 
-	//	//画曲率特征
-	//	glLineWidth(4);
-	//	glColor3d(0.0, 1.0, 0.0);
-	//	glBegin(GL_LINES);
-	//	for (auto& te : mesh.edges())
-	//	{
-	//		if (mesh.data(te).flag2)
-	//		{
-	//			glVertex3dv(mesh.point(te.v0()).data());
-	//			glVertex3dv(mesh.point(te.v1()).data());
-	//		}
-	//	}
-	//	glEnd();
-	//}
-	//ifDrawFeature = !ifDrawFeature;
-	//setMouseMode(InteractiveViewerWidget::TRANS);
+		//画曲率特征
+		glLineWidth(4);
+		glColor3d(0.0, 1.0, 0.0);
+		glBegin(GL_LINES);
+		for (auto& te : mesh.edges())
+		{
+			if (mesh.data(te).flag2)
+			{
+				glVertex3dv(mesh.point(te.v0()).data());
+				glVertex3dv(mesh.point(te.v1()).data());
+			}
+		}
+		glEnd();
+	}
+	ifDrawFeature = !ifDrawFeature;
+	setMouseMode(InteractiveViewerWidget::TRANS);
+	//updateGL();
+#endif
 }
 
 void InteractiveViewerWidget::showIsotropicMesh(double tl)
@@ -860,6 +926,7 @@ void InteractiveViewerWidget::showAnisotropicMesh()
 		amr->load_ref_mesh(&(CADMesher::globalmodel.initial_trimesh));
 		double tl = amr->get_ref_mesh_ave_anisotropic_edge_length();
 		dprint("anisotropic edge length:", tl);
+		amr->set_metric(metric_constraint.first, metric_constraint.second);
 		amr->do_remeshing(tl, 1.5);
 
 		tri2poly(CADMesher::globalmodel.isotropic_trimesh, mesh, true);
