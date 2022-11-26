@@ -258,7 +258,7 @@ namespace CADMesher
 		Surface_PolyMeshes.resize(faceshape.size());
 		for (int i = 0; i < faceshape.size(); i++)
 		{
-			//if (i != 37) continue;
+			//if (i != 68) continue;
 			Mesh &newmesh = Surface_PolyMeshes[i];
 			TriMesh aMesh;
 			auto &wires = faceshape[i].wires;
@@ -348,10 +348,19 @@ namespace CADMesher
 					auto pos = aMesh.point(tv);
 					aMesh.set_point(tv, TriMesh::Point(pos[0], pos[1] * ra_inv, 0));
 				}
+
+				//if (!OpenMesh::IO::write_mesh(aMesh, "1.obj"))
+				//{
+				//	std::cerr << "fail";
+				//}
 				//Remesh in domain		
 				Riemannremesh Remesh(Surface, &aMesh);
 				Remesh.remesh();
 				tri2poly(aMesh, newmesh);
+				//if (!OpenMesh::IO::write_mesh(newmesh, "2.obj"))
+				//{
+				//	std::cerr << "fail";
+				//}
 			}
 			else
 			{

@@ -46,6 +46,16 @@ void Riemannremesh::calclength()
 	lowlength = 0.8 * len;
 }
 
+bool Riemannremesh::if_reverse_face(TriMesh::FaceHandle& f)
+{
+	auto itr = mesh->fh_begin(f);
+	auto v1 = mesh->calc_edge_vector(*itr);
+	itr++;
+	auto v2 = mesh->calc_edge_vector(*itr);
+	if ((v1[0] * v2[1] - v1[1] * v2[0] > 0) ^ direction) return true;
+	else return false;
+}
+
 void Riemannremesh::split()
 {
 	TriMesh::VertexHandle vh, vh1, vh2;
@@ -115,7 +125,46 @@ void Riemannremesh::collapse()
 				break;
 			}
 		}
-		if (is_collapse) mesh->collapse(he);
+		if (!is_collapse) continue;
+
+		auto pos = mesh->is_boundary(p2) ? mesh->point(p2) : mesh->calc_centroid(he);
+		TriMesh::HalfedgeHandle flipH = mesh->opposite_halfedge_handle(mesh->prev_halfedge_handle(he));
+		auto& fromPos = mesh->point(mesh->from_vertex_handle(he));
+		int endId = (mesh->next_halfedge_handle(mesh->opposite_halfedge_handle(he))).idx();
+		while (flipH.idx() != endId)
+		{
+			auto& p0 = mesh->point(mesh->to_vertex_handle(flipH));
+			auto& p1 = mesh->point(mesh->to_vertex_handle(mesh->next_halfedge_handle(flipH)));
+			if ((p0 - fromPos).cross(p1 - fromPos).dot((p0 - pos).cross(p1 - pos)) < 0)
+			{
+				is_collapse = false;
+				break;
+			}
+			flipH = mesh->opposite_halfedge_handle(mesh->prev_halfedge_handle(flipH));
+		}
+		if (!mesh->is_boundary(p2) && is_collapse)
+		{
+			auto& toPos = mesh->point(mesh->to_vertex_handle(he));
+			flipH = mesh->prev_halfedge_handle(mesh->opposite_halfedge_handle(he));
+			endId = mesh->opposite_halfedge_handle(mesh->next_halfedge_handle(he)).idx();
+			while (flipH.idx() != endId)
+			{
+				auto& p0 = mesh->point(mesh->from_vertex_handle(flipH));
+				auto& p1 = mesh->point(mesh->from_vertex_handle(mesh->prev_halfedge_handle(flipH)));
+				if ((p0 - toPos).cross(p1 - toPos).dot((p0 - pos).cross(p1 - pos)) < 0)
+				{
+					is_collapse = false;
+					break;
+				}
+				flipH = mesh->prev_halfedge_handle(mesh->opposite_halfedge_handle(flipH));
+			}
+		}
+
+		if (is_collapse)
+		{
+			mesh->set_point(p2, pos);
+			mesh->collapse(he);
+		}
 	}
 	mesh->garbage_collection();
 }
@@ -161,29 +210,49 @@ void Riemannremesh::equalize_valence()
 
 void Riemannremesh::updatepoint()
 {
-	double count;
-	TriMesh::Point newpoint;
+	int count;
+	TriMesh::Point newpoint, oldpoint;
 	for (auto v : mesh->vertices())
 	{
 		if (mesh->is_boundary(v)) continue;
-		count = 0.0;
+		oldpoint = mesh->point(v);
+		count = 0;
 		newpoint = Mesh::Point(0, 0, 0);
-		auto &M = mesh->data(v).M;
-		M.setZero();
 		for (auto vv : mesh->vv_range(v))
 		{
 			newpoint += mesh->point(vv);
-			M += mesh->data(vv).M;
 			count += 1;
 		}
 		mesh->set_point(v, newpoint / count);
-		M /= count;
+		bool is_update = true;
+		for (auto f : mesh->vf_range(v))
+		{
+			if (!if_reverse_face(f)) continue;
+			is_update = false;
+			break;
+		}
+		if (is_update)
+		{
+			auto& M = mesh->data(v).M;
+			M.setZero();
+			for (auto vv : mesh->vv_range(v)) M += mesh->data(vv).M;
+			M /= count;
+		}
+		else mesh->set_point(v, oldpoint);
 	}
 }
 
 void Riemannremesh::remesh()
 {
 	calclength();
+	auto f = mesh->face_handle(0);
+	auto itr = mesh->fh_begin(f);
+	auto v1 = mesh->calc_edge_vector(*itr);
+	itr++;
+	auto v2 = mesh->calc_edge_vector(*itr);
+	if (v1[0] * v2[1] - v1[1] * v2[0] > 0) direction = true;
+	else direction = false;
+
 	for (int i = 0; i < 5; i++)
 	{
 		split();

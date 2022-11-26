@@ -733,6 +733,16 @@ void InteractiveViewerWidget::generateTriMesh(double ratio)
 	CADMesher::globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(CADMesher::globalmodel.initial_trimesh);
 	occreader->SetTriFeature();
 	tri2poly(CADMesher::globalmodel.initial_trimesh, mesh, true);
+	//for (auto f : mesh.faces())
+ //   {
+	//	if (f.valence() > 3) continue;
+	//	int flag = 0;
+	//	for (auto fv : mesh.fv_range(f))
+	//	{
+	//		if (mesh.data(fv).get_vertflag()) flag++;
+	//	}
+	//	if (flag > 2) dprint("here", f.idx());
+ //   }
 	initMeshStatusAndNormal(mesh);
 	drawCAD = false;
 	setDrawMode(InteractiveViewerWidget::FLAT_POINTS);
@@ -768,7 +778,7 @@ void InteractiveViewerWidget::generatePolyMesh(double ratio, int quad_num, doubl
 	//	{
 	//		if (mesh.data(fv).get_vertflag()) flag++;
 	//	}
-	//	if (flag > 2) dprint("here", f.idx());
+	//	if (flag > 2) dprint("after", f.idx());
 	//}
 	initMeshStatusAndNormal(mesh);
 	drawCAD = false;
