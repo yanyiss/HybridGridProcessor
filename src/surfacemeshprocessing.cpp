@@ -176,6 +176,13 @@ void SurfaceMeshProcessing::createActions()
 	moveVertexAction->setCheckable(true);
 	moveVertexAction->setChecked(false);
 	connect(moveVertexAction, SIGNAL(triggered()), this, SLOT(moveVertex()));
+	
+	vectorSetAction = new QAction(tr("&Set Vector"), this);
+	vectorSetAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/move_vertex.png"));
+	vectorSetAction->setStatusTip(tr("Set Vector for metric"));
+	vectorSetAction->setCheckable(true);
+	vectorSetAction->setChecked(false);
+	connect(vectorSetAction, SIGNAL(triggered()), this, SLOT(vectorSet()));
 
 	generateTriMeshAction = new QAction(tr("&Generate TriMesh"), this);
 	generateTriMeshAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/tri.png"));
@@ -342,6 +349,7 @@ void SurfaceMeshProcessing::createMenus()
 	mouseMenu->addAction(CurvePickAction);
 	mouseMenu->addAction(clearSelectedAction);
 	mouseMenu->addAction(moveVertexAction);
+	mouseMenu->addAction(vectorSetAction);
 	mouseMenu->addAction(generateTriMeshAction);
 	mouseMenu->addAction(generatePolyMeshAction);
 	mouseMenu->addAction(showFeatureAction);
@@ -397,6 +405,7 @@ void SurfaceMeshProcessing::createToolBars()
 	mouseToolBar->addAction(CurvePickAction);
 	mouseToolBar->addAction(clearSelectedAction);
 	mouseToolBar->addAction(moveVertexAction);
+	mouseToolBar->addAction(vectorSetAction);
 	mouseToolBar->addAction(generateTriMeshAction);
 	mouseToolBar->addAction(generatePolyMeshAction);
 	mouseToolBar->addAction(showFeatureAction);
@@ -545,6 +554,13 @@ void SurfaceMeshProcessing::moveVertex()
 	setAllMouseActionChecked(false);
 	moveVertexAction->setChecked(true);
 	viewer->setMouseMode(InteractiveViewerWidget::MOVE);
+}
+void SurfaceMeshProcessing::vectorSet()
+{
+	setAllViewActionChecked(false);
+	setAllMouseActionChecked(false);
+	vectorSetAction->setChecked(true);
+	viewer->setMouseMode(InteractiveViewerWidget::VECTOR_SET);
 }
 void SurfaceMeshProcessing::generateTriMesh()
 {
