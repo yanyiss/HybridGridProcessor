@@ -128,7 +128,7 @@ namespace CADMesher
 		void reset_all_State();
 
 		void set_metric(OpenMesh::VertexHandle vh, OpenMesh::Vec6d& metric);
-		void load_ref_mesh(TriMesh* aniso_ref_mesh);
+		void load_ref_mesh(TriMesh* aniso_ref_mesh, double tl);
 		void sample_mesh_anisotropic_edge_length(double ref_edge_len = 1.0, double a = 1.5, bool add_flip = true);
 		void do_remeshing(double ref_edge_len = 1.0, double a = 1.5);
 		void calc_tri_quality();

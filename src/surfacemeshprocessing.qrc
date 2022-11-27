@@ -33,5 +33,7 @@
         <file>Images/feature.png</file>
         <file>Images/tri.png</file>
         <file>Images/poly.png</file>
+        <file>Images/select_curve.png</file>
+        <file>Images/select_vector.png</file>
     </qresource>
 </RCC>

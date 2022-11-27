@@ -159,7 +159,7 @@ void SurfaceMeshProcessing::createActions()
 	connect(EdgePickAction, SIGNAL(triggered()), this, SLOT(edgePick()));
 	
 	CurvePickAction = new QAction(tr("&Select Curve"), this);
-	CurvePickAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/selectEdges.png"));
+	CurvePickAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/select_curve.png"));
 	CurvePickAction->setStatusTip(tr("Select Curve of the model"));
 	CurvePickAction->setCheckable(true);
 	CurvePickAction->setChecked(false);
@@ -178,7 +178,7 @@ void SurfaceMeshProcessing::createActions()
 	connect(moveVertexAction, SIGNAL(triggered()), this, SLOT(moveVertex()));
 	
 	vectorSetAction = new QAction(tr("&Set Vector"), this);
-	vectorSetAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/move_vertex.png"));
+	vectorSetAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/select_vector.png"));
 	vectorSetAction->setStatusTip(tr("Set Vector for metric"));
 	vectorSetAction->setCheckable(true);
 	vectorSetAction->setChecked(false);
@@ -355,7 +355,7 @@ void SurfaceMeshProcessing::createMenus()
 	mouseMenu->addAction(showFeatureAction);
 	mouseMenu->addAction(showIsotropicMeshAction);
 	mouseMenu->addAction(showAnisotropicMeshAction);
-	mouseMenu->addAction(showDebugTestAction);
+	//mouseMenu->addAction(showDebugTestAction);
 
 	Auxiliary_Menu = menuBar()->addMenu("Auxiliary");
 	Auxiliary_Menu->addAction(inverse_mesh_connectivity);
@@ -411,7 +411,7 @@ void SurfaceMeshProcessing::createToolBars()
 	mouseToolBar->addAction(showFeatureAction);
 	mouseToolBar->addAction(showIsotropicMeshAction);
 	mouseToolBar->addAction(showAnisotropicMeshAction);
-	mouseToolBar->addAction(showDebugTestAction);
+	//mouseToolBar->addAction(showDebugTestAction);
 
 	localOperationBar = addToolBar(tr("Local Operation"));
 	localOperationBar->addAction(EditUndoAction);
@@ -510,6 +510,7 @@ void SurfaceMeshProcessing::setAllViewActionChecked(bool b)
 	pointSetAction->setChecked(b);
 	checkboardAction->setChecked(b);
 	diagonalmeshAction->setChecked(b);
+
 }
 
 void SurfaceMeshProcessing::pointPick()
@@ -641,7 +642,14 @@ void SurfaceMeshProcessing::setAllMouseActionChecked(bool b)
 	VertexPickAction->setChecked(b);
 	FacePickAction->setChecked(b);
 	EdgePickAction->setChecked(b);
+	CurvePickAction->setChecked(b);
 	moveVertexAction->setChecked(b);
+	vectorSetAction->setChecked(b);
+	generateTriMeshAction->setChecked(b);
+	generatePolyMeshAction->setChecked(b);
+	showFeatureAction->setChecked(b);
+	showIsotropicMeshAction->setChecked(b);
+	showAnisotropicMeshAction->setChecked(b);
 	EditUndoAction->setChecked(b);
 	EditRedoAction->setChecked(b);
 	EdgeCollpaseAction->setChecked(b);

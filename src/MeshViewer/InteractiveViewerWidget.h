@@ -149,7 +149,7 @@ public:
 	void generatePolyMesh(double ratio, int quad_num, double initial_ratio, double increase_ratio);
 	void showFeature();
 	void showIsotropicMesh(double tl);
-	void showAnisotropicMesh();
+	void showAnisotropicMesh(double tl);
 	void showDebugTest();
 	void offsetinfo(int quad_num, double initial_ratio, double increase_ratio);
 private:
