@@ -180,7 +180,7 @@ namespace CADMesher
 		}
 	}
 
-	void AnisotropicMeshRemeshing::load_ref_mesh(TriMesh* aniso_ref_mesh)
+	void AnisotropicMeshRemeshing::load_ref_mesh(TriMesh* aniso_ref_mesh, double tl)
 	{
 		if (ref_mesh_) delete ref_mesh_;
 		ref_mesh_ = new TriMesh(*aniso_ref_mesh);
@@ -204,9 +204,26 @@ namespace CADMesher
 		for (unsigned int i = 0; i < nv; ++i)
 		{
 			Mesh::VertexHandle vh = ref_mesh_->vertex_handle(i);
-			//double k1 = K1[i]; k1 = std::abs(k1) < min_cur ? min_cur : k1;
-			//double k2 = K2[i]; k2 = std::abs(k2) < min_cur ? min_cur : k2;
-			double k1 = min_cur; double k2 = min_cur;
+			double k1 = K1[i]; k1 = std::fabs(k1) < min_cur ? min_cur : k1;
+			double k2 = K2[i]; k2 = std::fabs(k2) < min_cur ? min_cur : k2;
+			dprint(i, k1, k2);
+			double multi = fabs(k1 * k2);
+			if (multi < 1.0)
+			{
+				multi = 1.0 / std::sqrt(multi);
+				k1 *= multi;
+				k2 *= multi;
+			}
+			//dprint(i, k1, k2);
+			/*if (fabs(k1 / k2) > 3.0)
+			{
+				k1 = (k1 > 0 ? 1.0 : -1.0) * fabs(k2) * 3.0;
+			}
+			else if (fabs(k2 / k1) > 3.0)
+			{
+				k2 = (k2 > 0 ? 1.0 : -1.0) * fabs(k1) * 3.0;
+			}*/
+			//double k1 = min_cur; double k2 = min_cur;
 			OpenMesh::Vec3d d1 = D1[i];
 			OpenMesh::Vec3d d2 = D2[i];
 
@@ -615,6 +632,8 @@ namespace CADMesher
 
 	void AnisotropicMeshRemeshing::set_metric(OpenMesh::VertexHandle vh, OpenMesh::Vec6d& metric)
 	{
+		if (!vh.is_valid())
+			return;
 		mesh_->data(vh).set_Hessian(metric);
 		for (int i = 0; i < 5; ++i)
 		{
@@ -660,7 +679,6 @@ namespace CADMesher
 
 		for (unsigned ii = 0; ii < 5; ++ii)
 		{
-
 			clock_t iter_start = clock();
 			int no_split_collapse = 0;
 			flip_based_energy();

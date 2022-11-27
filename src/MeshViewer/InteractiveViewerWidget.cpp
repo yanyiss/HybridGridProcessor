@@ -355,7 +355,8 @@ void InteractiveViewerWidget::pick_edge(int x,int y)
 	int desiredEdge = find_edge_using_selected_point();
 	if(desiredEdge < 0) return;
 	lastestEdge = desiredEdge;
-	printf("Select Edge : %d\n", desiredEdge);
+	printf("\nSelect Edge : %d\n", desiredEdge);
+	dprint("Edge Length:", mesh.calc_edge_length(mesh.edge_handle(desiredEdge)));
 	std::vector<int>::iterator it;
 	if( (it = std::find(selectedEdge.begin(),selectedEdge.end(),desiredEdge)) == selectedEdge.end() )
 	{
@@ -721,16 +722,16 @@ void InteractiveViewerWidget::draw_vector_set()
 
 	glPointSize(5);
 	glBegin(GL_POINTS);
-	glColor3d(0.6, 0.6, 0.0);
+	glColor3d(0.8, 0.1, 0.0);
 	glVertex3dv(pos.data());
 	glEnd();
 
 	glLineWidth(5);
 	glBegin(GL_LINES);
-	glColor3d(0.3, 0.7, 0.4);
+	glColor3d(0.9, 0.1, 0.0);
 	glVertex3dv(pos.data());
 	glVertex3dv(yy.data());
-	glColor3d(0.8, 0.1, 0.7);
+	glColor3d(0.1, 0.9, 0.0);
 	glVertex3dv(pos.data());
 	glVertex3dv(xx.data());
 	glEnd();
@@ -787,6 +788,7 @@ void InteractiveViewerWidget::SetCADFileName(QString &fileName) {
 
 void InteractiveViewerWidget::generateTriMesh(double ratio)
 {
+	if (!occreader) return;
 	occreader->initialRate = ratio;
 	occreader->Discrete_Edge();
 	occreader->Face_type();
@@ -809,6 +811,7 @@ void InteractiveViewerWidget::generateTriMesh(double ratio)
 
 void InteractiveViewerWidget::generatePolyMesh(double ratio, int quad_num, double initial_ratio, double increase_ratio)
 {
+	if (!occreader) return;
 	occreader->initialRate = ratio;
 	occreader->offset_quad_num = quad_num;
 	occreader->offset_initial_ratio = initial_ratio;
@@ -916,15 +919,15 @@ void InteractiveViewerWidget::offsetinfo(int quad_num, double initial_ratio, dou
 }
 
 //#include "..\src\Algorithm\SurfaceMesher\Optimizer\AnisotropicMeshRemeshing.h"
-void InteractiveViewerWidget::showAnisotropicMesh()
+void InteractiveViewerWidget::showAnisotropicMesh(double tl)
 {
 	if (ifGenerateTriMesh)
 	{
 		CADMesher::AnisotropicMeshRemeshing* amr = new CADMesher::AnisotropicMeshRemeshing();
 		CADMesher::globalmodel.isotropic_trimesh = CADMesher::globalmodel.initial_trimesh;
 		amr->SetMesh(&(CADMesher::globalmodel.isotropic_trimesh));
-		amr->load_ref_mesh(&(CADMesher::globalmodel.initial_trimesh));
-		double tl = amr->get_ref_mesh_ave_anisotropic_edge_length();
+		amr->load_ref_mesh(&(CADMesher::globalmodel.initial_trimesh), tl);
+		//double tl = amr->get_ref_mesh_ave_anisotropic_edge_length();
 		dprint("anisotropic edge length:", tl);
 		amr->set_metric(metric_constraint.first, metric_constraint.second);
 		amr->do_remeshing(tl, 1.5);
@@ -1008,7 +1011,7 @@ void InteractiveViewerWidget::showDebugTest()
 			CADMesher::AnisotropicMeshRemeshing* amr = new CADMesher::AnisotropicMeshRemeshing();
 			CADMesher::globalmodel.isotropic_trimesh = CADMesher::globalmodel.initial_trimesh;
 			amr->SetMesh(&(CADMesher::globalmodel.isotropic_trimesh));
-			amr->load_ref_mesh(&(CADMesher::globalmodel.initial_trimesh));
+			amr->load_ref_mesh(&(CADMesher::globalmodel.initial_trimesh), amr->get_ref_mesh_ave_anisotropic_edge_length());
 			double tl = amr->get_ref_mesh_ave_anisotropic_edge_length();
 			amr->do_remeshing(tl, 1.5);
 			double aniso_time = (clock() - time_start) / 1000.0;
