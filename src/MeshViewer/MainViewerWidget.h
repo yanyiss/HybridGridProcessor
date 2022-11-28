@@ -243,7 +243,7 @@ public:
 		MeshViewer->showIsotropicMesh(MeshParam->get_target_edge_length_AM());
 	}
 	void showAnisotropicMesh() {
-		MeshViewer->showAnisotropicMesh();
+		MeshViewer->showAnisotropicMesh(MeshParam->get_target_edge_length_AM());
 	}
 	void showDebugTest() {
 		MeshViewer->showDebugTest();

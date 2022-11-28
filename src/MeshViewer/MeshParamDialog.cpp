@@ -28,7 +28,7 @@ void MeshParamDialog::createWidget()
 void MeshParamDialog::createLayout()
 {
 	tabWidget = new QTabWidget();
-	tabWidget->addTab(view_BOI, "QP");
+	tabWidget->addTab(view_BOI, "Parameter Setting");
 
 	QGridLayout *layout = new QGridLayout();
 	layout->addWidget(tabWidget, 0, 0, 1, 1);
@@ -37,7 +37,7 @@ void MeshParamDialog::createLayout()
 
 void MeshParamDialog::create_Basic_Operation_Information_Widget()
 {
-	print_info = new QPushButton("Print Mesh Information");
+	//print_info = new QPushButton("Print Mesh Information");
 	load_ref_mesh_AM = new QPushButton("Load Ref Mesh");
 	do_remehsing_AM = new QPushButton("Do Re meshing");
 	//submit_offset_info = new QPushButton("Submit");
@@ -63,7 +63,8 @@ void MeshParamDialog::create_Basic_Operation_Information_Widget()
 
 
 	QGridLayout* LCOT_layout = new QGridLayout(); int LCOT_layout_index = 0;
-	LCOT_layout->addWidget(print_info, LCOT_layout_index, 0, 1, 20); LCOT_layout_index += 1;
+	LCOT_layout->setSizeConstraint(QLayout::SetFixedSize);
+	//LCOT_layout->addWidget(print_info, LCOT_layout_index, 0, 1, 20); LCOT_layout_index += 1;
 	//LCOT_layout->addWidget(leftLabel_BOI, LCOT_layout_index, 0, 1, 40);
 	//LCOT_layout->addWidget(load_ref_mesh_AM, LCOT_layout_index, 0, 1, 2); LCOT_layout_index += 1;
 	LCOT_layout->addWidget(sample_ratio_AM, LCOT_layout_index, 0, 1, 1);
@@ -85,6 +86,9 @@ void MeshParamDialog::create_Basic_Operation_Information_Widget()
 
 	Basic_Operation_And_Information = new QWidget();
 	Basic_Operation_And_Information->setLayout(LCOT_layout);
+	//Basic_Operation_And_Information->setAutoFillBackground(true);
+	//Basic_Operation_And_Information->setBackgroundRole(QPalette::Background); 
+	//Basic_Operation_And_Information->setPalette(QPalette(QColor(255, 255, 0)));
 
 	view_BOI = new QScrollArea;
 	view_BOI->setFocusPolicy(Qt::NoFocus);
@@ -92,7 +96,7 @@ void MeshParamDialog::create_Basic_Operation_Information_Widget()
 	view_BOI->setWidget(Basic_Operation_And_Information);
 	view_BOI->setWidgetResizable(true);
 
-	connect(print_info, SIGNAL(clicked()), SIGNAL(print_info_signal()));
+	//connect(print_info, SIGNAL(clicked()), SIGNAL(print_info_signal()));
 	connect(load_ref_mesh_AM, SIGNAL(clicked()), SIGNAL(load_ref_mesh_AM_signal()));
 	connect(do_remehsing_AM, SIGNAL(clicked()), SIGNAL(do_remehsing_AM_signal()));
 	//connect(submit_offset_info, SIGNAL(clicked()), SIGNAL(submit_info_signal()));
