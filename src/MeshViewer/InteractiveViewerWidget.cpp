@@ -591,7 +591,7 @@ void InteractiveViewerWidget::draw_interactive_portion(int drawmode)
 		}
 	}
 	
-	showFeature();
+	//showFeature();
 	if (draw_new_mesh)
 	{
 		draw_scene_mesh(drawmode);
@@ -799,20 +799,11 @@ void InteractiveViewerWidget::generateTriMesh(double ratio)
 	CADMesher::globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(CADMesher::globalmodel.initial_trimesh);
 	occreader->SetTriFeature();
 	tri2poly(CADMesher::globalmodel.initial_trimesh, mesh, true);
-	//for (auto f : mesh.faces())
- //   {
-	//	if (f.valence() > 3) continue;
-	//	int flag = 0;
-	//	for (auto fv : mesh.fv_range(f))
-	//	{
-	//		if (mesh.data(fv).get_vertflag()) flag++;
-	//	}
-	//	if (flag > 2) dprint("here", f.idx());
- //   }
 	initMeshStatusAndNormal(mesh);
 	drawCAD = false;
 	setDrawMode(InteractiveViewerWidget::FLAT_POINTS);
 	setMouseMode(InteractiveViewerWidget::TRANS);
+	dprint("kkk", meshMode());
 	ifGenerateTriMesh = true;
 	ifGeneratePolyMesh = false;
 	dprint("Mesh Avg Length:", meshAverageLength(mesh));
@@ -836,17 +827,7 @@ void InteractiveViewerWidget::generatePolyMesh(double ratio, int quad_num, doubl
 	TriMesh tm(CADMesher::globalmodel.initial_polymesh);
 	CADMesher::globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(tm);
 	occreader->SetPolyFeature();
-	mesh = CADMesher::globalmodel.initial_polymesh;
-	//for (auto f : mesh.faces())
-	//{
-	//	if (f.valence() > 3) continue;
-	//	int flag = 0;
-	//	for (auto fv : mesh.fv_range(f))
-	//	{
-	//		if (mesh.data(fv).get_vertflag()) flag++;
-	//	}
-	//	if (flag > 2) dprint("after", f.idx());
-	//}
+	polycopy(CADMesher::globalmodel.initial_polymesh, mesh, true);
 	initMeshStatusAndNormal(mesh);
 	drawCAD = false;
 	setDrawMode(InteractiveViewerWidget::FLAT_POINTS);
@@ -854,46 +835,15 @@ void InteractiveViewerWidget::generatePolyMesh(double ratio, int quad_num, doubl
 	ifGenerateTriMesh = false;
 	ifGeneratePolyMesh = true;
 	dprint("Mesh Avg Length:", meshAverageLength(mesh));
+	setMeshMode(2);
 	updateGL();
 }
 
 void InteractiveViewerWidget::showFeature()
 {
-#if 0
-	if (ifDrawFeature)
-	{
-		//画C0特征
-		glLineWidth(4);
-		glColor3d(1.0, 0.0, 0.0);
-		glBegin(GL_LINES);
-		for (auto& te : mesh.edges())
-		{
-			if (mesh.data(te).flag1)
-			{
-				glVertex3dv(mesh.point(te.v0()).data());
-				glVertex3dv(mesh.point(te.v1()).data());
-			}
-		}
-		glEnd();
-
-		//画曲率特征
-		glLineWidth(4);
-		glColor3d(0.0, 1.0, 0.0);
-		glBegin(GL_LINES);
-		for (auto& te : mesh.edges())
-		{
-			if (mesh.data(te).flag2)
-			{
-				glVertex3dv(mesh.point(te.v0()).data());
-				glVertex3dv(mesh.point(te.v1()).data());
-			}
-		}
-		glEnd();
-	}
 	ifDrawFeature = !ifDrawFeature;
 	setMouseMode(InteractiveViewerWidget::TRANS);
-	//updateGL();
-#endif
+	updateGL();
 }
 
 void InteractiveViewerWidget::showIsotropicMesh(double tl)

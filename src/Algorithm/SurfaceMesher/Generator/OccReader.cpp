@@ -1106,12 +1106,28 @@ namespace CADMesher
 	{
 		auto& edge = globalmodel.edgeshape;
 		auto& face = globalmodel.faceshape;
+
+		//计算每个面的bounding box长度
+		double bbox = 0;
+		for (int i = 0; i < face.size(); i++)
+		{
+			Bnd_Box aBound;
+			BRepBndLib::Add(face[i].face, aBound);
+			Standard_Real xmin, ymin, zmin, xmax, ymax, zmax;
+			aBound.Get(xmin, ymin, zmin, xmax, ymax, zmax);
+			double boundingbox = sqrt((xmin - xmax) * (xmin - xmax) + (ymin - ymax) * (ymin - ymax) +
+				(zmin - zmax) * (zmin - zmax));
+			face[i].bbox = boundingbox;
+			bbox += boundingbox;
+		}
+		bbox /= face.size();
+		
 		int discrete_num = 20;
 		for (int i = 0; i < edge.size(); i++)
 		{
 			auto& aedge = edge[i];
 			//dprint(i, aedge.main_face, aedge.secondary_face);
-			if (aedge.if_C0) continue;
+			if (aedge.if_C0 || aedge.if_visited) continue;
 
 			//将边界曲线设置为C0
 			if (aedge.reversed_edge == -1)
@@ -1120,16 +1136,10 @@ namespace CADMesher
 				continue;
 			}
 
-			//if (aedge.main_face >= 6 && aedge.main_face <= 28)
+			//if (aedge.length < 0.2 * bbox)
 			//{
-			//	aedge.if_C0 = true;
-			//	edge[aedge.reversed_edge].if_C0 = true;
-			//	continue;  
-			//}
-			//else if (edge[aedge.reversed_edge].main_face >= 6 && edge[aedge.reversed_edge].main_face <= 28)
-			//{
-			//	aedge.if_C0 = true;
-			//	edge[aedge.reversed_edge].if_C0 = true;
+			//	aedge.if_visited = true;
+			//	edge[aedge.reversed_edge].if_visited = true;
 			//	continue;
 			//}
 
@@ -1369,13 +1379,7 @@ namespace CADMesher
 			if (face[aedge.main_face].wires.size() > 1) continue;
 
 			//曲率特征边有一定长度才做offset
-			Bnd_Box aBound;
-			BRepBndLib::Add(face[aedge.main_face].face, aBound);
-			Standard_Real xmin, ymin, zmin, xmax, ymax, zmax;
-			aBound.Get(xmin, ymin, zmin, xmax, ymax, zmax);
-			double boundingbox = sqrt((xmin - xmax) * (xmin - xmax) + (ymin - ymax) * (ymin - ymax) +
-				(zmin - zmax) * (zmin - zmax));
-			if ((aedge.length) > 0.1 * boundingbox)
+			if ((aedge.length) > 0.1 * face[aedge.main_face].bbox)
 				face[aedge.main_face].if_quad = true;
 		}
 
@@ -1469,16 +1473,16 @@ namespace CADMesher
 
 	void OccReader::Set_Offset_Grid()
 	{
-		//if (offset_quad_num <= 0)
-		//{
-		//	dprint("the offset quad number must be positive!");
-		//	system("pause");
-		//}
-		//if (offset_increase_ratio < 1)
-		//{
-		//	dprint("the offset increase ratio must more than 1!");
-		//	system("pause");
-		//}
+		if (offset_quad_num <= 0)
+		{
+			dprint("the offset quad number must be positive!");
+			system("pause");
+		}
+		if (offset_increase_ratio < 1)
+		{
+			dprint("the offset increase ratio must more than 1!");
+			system("pause");
+		}
 
 		vector<ShapeFace> &faceshape = globalmodel.faceshape;
 		vector<ShapeEdge> &edgeshape = globalmodel.edgeshape;
