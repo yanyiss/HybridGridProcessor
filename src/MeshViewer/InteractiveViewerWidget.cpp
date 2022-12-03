@@ -803,7 +803,6 @@ void InteractiveViewerWidget::generateTriMesh(double ratio)
 	drawCAD = false;
 	setDrawMode(InteractiveViewerWidget::FLAT_POINTS);
 	setMouseMode(InteractiveViewerWidget::TRANS);
-	dprint("kkk", meshMode());
 	ifGenerateTriMesh = true;
 	ifGeneratePolyMesh = false;
 	dprint("Mesh Avg Length:", meshAverageLength(mesh));
