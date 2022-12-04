@@ -180,7 +180,7 @@ namespace CADMesher
 		}
 	}
 
-	void AnisotropicMeshRemeshing::load_ref_mesh(TriMesh* aniso_ref_mesh, double tl)
+	void AnisotropicMeshRemeshing::load_ref_mesh(TriMesh* aniso_ref_mesh, double tl, double model_size)
 	{
 		if (ref_mesh_) delete ref_mesh_;
 		ref_mesh_ = new TriMesh(*aniso_ref_mesh);
@@ -198,22 +198,26 @@ namespace CADMesher
 		std::vector<double> K1, K2; std::vector<OpenMesh::Vec3d> D1, D2;
 		compute_principal_curvature(ref_mesh_, K1, K2, D1, D2);
 
+
 		int nv = ref_mesh_->n_vertices();
 		Eigen::Matrix3d H; Eigen::Matrix3d D; D.setZero();
 		std::vector<Eigen::Matrix3d> vH(nv); OpenMesh::Vec6d h;
+		min_cur = 4.0 / model_size;
+		//min_cur = 0.01;
+		dprint("model size:", model_size);
 		for (unsigned int i = 0; i < nv; ++i)
 		{
 			Mesh::VertexHandle vh = ref_mesh_->vertex_handle(i);
 			double k1 = K1[i]; k1 = std::fabs(k1) < min_cur ? min_cur : k1;
 			double k2 = K2[i]; k2 = std::fabs(k2) < min_cur ? min_cur : k2;
 			//dprint(i, k1, k2);
-			double multi = fabs(k1 * k2);
+			/*double multi = fabs(k1 * k2);
 			if (multi < 1.0)
 			{
 				multi = 1.0 / std::sqrt(multi);
 				k1 *= multi;
 				k2 *= multi;
-			}
+			}*/
 			//dprint(i, k1, k2);
 			/*if (fabs(k1 / k2) > 3.0)
 			{
@@ -242,30 +246,54 @@ namespace CADMesher
 		//double ave_len = calc_mesh_ave_edge_length(ref_mesh_);
 		double ave_len = meshAverageLength(*ref_mesh_);
 		double alpha = 2.0 / (ave_len*ave_len);
-		for (unsigned ii = 0; ii < 0; ++ii)
-		{
-			for (Mesh::VertexIter v_it = ref_mesh_->vertices_begin(); v_it != ref_mesh_->vertices_end(); ++v_it)
-			{
-				OpenMesh::Vec3d p = ref_mesh_->point(v_it); H = vH[v_it.handle().idx()]; double vv_num = 1.0;
-				for (Mesh::VertexVertexIter vv_it = ref_mesh_->vv_iter(v_it); vv_it; ++vv_it)
-				{
-					OpenMesh::Vec3d tp = ref_mesh_->point(vv_it);
-					double d = (tp - p).sqrnorm(); d = std::exp(-d * alpha);
-					int vv_id = vv_it.handle().idx();
-					H += d * vH[vv_id];
-					vv_num += d;
-				}
-				H /= vv_num; vH2[v_it->idx()] = H;
-				h[0] = H(0, 0); h[1] = H(0, 1); h[2] = H(0, 2);
-				h[3] = H(1, 1); h[4] = H(1, 2); h[5] = H(2, 2);
-				ref_mesh_->data(v_it).set_Hessian(h);
-			}
-			vH = vH2;
-		}
 
 		project_on_reference();
 		calc_tri_quality();
 		compute_src_mesh_ave_anisotropic_edge_length();
+
+		return;
+		double min_cur = std::sqrt(ref_mesh_ave_anisotropic_edge_length / ave_len) * 0.25;
+		//min_cur = 0.01;
+		dprint("min_cur:", min_cur);
+		//double min_cur = 0.001;
+		for (unsigned int i = 0; i < nv; ++i)
+		{
+			Mesh::VertexHandle vh = ref_mesh_->vertex_handle(i);
+			
+			double k1 = K1[i]; //k1 = std::fabs(k1) < min_cur ? min_cur : k1;
+			double k2 = K2[i]; //k2 = std::fabs(k2) < min_cur ? min_cur : k2;
+			if (fabs(k1) < min_cur || fabs(k2) < min_cur)
+			{
+				if (fabs(k1) < min_cur && fabs(k2) < min_cur)
+				{
+					k1 = min_cur;
+					k2 = min_cur;
+				}
+				else if (fabs(k1) < fabs(k2))
+				{
+					k1 = sqrt(fabs(k1) * min_cur);
+				}
+				else if (fabs(k2) < fabs(k1))
+				{
+					k2 = sqrt(fabs(k2) * min_cur);
+				}
+			}
+			else
+				continue;
+			OpenMesh::Vec3d d1 = D1[i];
+			OpenMesh::Vec3d d2 = D2[i];
+
+			OpenMesh::Vec3d n = OpenMesh::cross(d1, d2).normalize();
+			H(0, 0) = d1[0]; H(1, 0) = d1[1]; H(2, 0) = d1[2];
+			H(0, 1) = d2[0]; H(1, 1) = d2[1]; H(2, 1) = d2[2];
+			H(0, 2) = n[0]; H(1, 2) = n[1]; H(2, 2) = n[2];
+			D(0, 0) = std::abs(k1); D(1, 1) = std::abs(k2);// D(2,2) = std::abs(k2) < std::abs(k1) ? std::abs(k2) : std::abs(k1);
+			vH[i] = H * D * H.transpose();
+
+			h[0] = vH[i](0, 0); h[1] = vH[i](0, 1); h[2] = vH[i](0, 2);
+			h[3] = vH[i](1, 1); h[4] = vH[i](1, 2); h[5] = vH[i](2, 2);
+			ref_mesh_->data(vh).set_Hessian(h);
+		}
 	}
 
 	void AnisotropicMeshRemeshing::compute_src_mesh_ave_anisotropic_edge_length()
@@ -899,6 +927,33 @@ namespace CADMesher
 
 		LCOT_Optimize(10, 1.0);
 		LCOT_Optimize(5, 0.25);
+		
+		int itertimes = 0;
+		bool ff = true;
+		while (itertimes < 3 && ff)
+		{
+			ff = false;
+			for (auto tv : mesh_->vertices())
+			{
+				if (mesh_->data(tv).get_vertflag())
+					continue;
+				for (auto tvih : mesh_->voh_range(tv))
+				{
+					if (mesh_->calc_sector_angle(tvih) < 0.001)
+					{
+						OpenMesh::Vec3d sum(0.0, 0.0, 0.0);
+						for (auto tvv : mesh_->vv_range(tv))
+						{
+							sum += mesh_->point(tvv);
+						}
+						mesh_->set_point(tv, sum / mesh_->valence(tv));
+						ff = true;
+						break;
+					}
+				}
+			}
+			++itertimes;
+		}
 		/*vector<unsigned> &triangle_surface_index = globalmodel.triangle_surface_index;
 		vector<vector<unsigned>> vertex_surface_index(globalmodel.faceshape.size());
 		for (auto tv : mesh_->vertices()) {

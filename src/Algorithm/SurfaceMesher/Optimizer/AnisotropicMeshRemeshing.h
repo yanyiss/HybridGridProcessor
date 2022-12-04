@@ -102,7 +102,6 @@ namespace CADMesher
 	};
 
 #define PI 3.1415926535897932
-#define min_cur 1.0e-3
 	class AnisotropicMeshRemeshing// : public QObject
 	{
 		//Q_OBJECT
@@ -128,7 +127,7 @@ namespace CADMesher
 		void reset_all_State();
 
 		void set_metric(OpenMesh::VertexHandle vh, OpenMesh::Vec6d& metric);
-		void load_ref_mesh(TriMesh* aniso_ref_mesh, double tl);
+		void load_ref_mesh(TriMesh* aniso_ref_mesh, double tl, double model_size);
 		void sample_mesh_anisotropic_edge_length(double ref_edge_len = 1.0, double a = 1.5, bool add_flip = true);
 		void do_remeshing(double ref_edge_len = 1.0, double a = 1.5);
 		void calc_tri_quality();
@@ -169,7 +168,7 @@ namespace CADMesher
 		TriMesh* mesh_; TriMesh* ref_mesh_;
 		ClosestPointSearch::AABBTree* aabbtree;
 		SegmentTree* segtree;
-
+		double min_cur;
 		std::vector<int> below_30_tri;
 		std::vector<double> below_30_tri_angle;
 		double smallest_angle_th;
