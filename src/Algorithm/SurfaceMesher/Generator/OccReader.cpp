@@ -148,7 +148,7 @@ namespace CADMesher
 
 			Matrix2Xd boundary = all_pnts.block(0, 0, 2, pointsnumber);
 			all_pnts.block(1, 0, 1, all_pnts.cols()) *= ra;
-			triangulate(all_pnts, bnd, sqrt(3) * x_step * x_step *0.25 * mu, aMesh); 
+			triangulate(all_pnts, bnd, sqrt(3) * x_step * x_step *0.25 * mu, aMesh);
 			double ra_inv = 1.0 / ra;
 			for (auto tv : aMesh.vertices())
 			{
@@ -186,7 +186,7 @@ namespace CADMesher
 					aMesh.data(tv).GaussCurvature = 0;
 				}
 			}
-			
+
 
 			for (auto tv : aMesh.vertices())
 			{
@@ -209,9 +209,9 @@ namespace CADMesher
 					{
 						if (k == edges.size() - 1) endid = begin;
 						else endid = id + cols;
-						for (int m = id; m < id + cols-1; m++)
+						for (int m = id; m < id + cols - 1; m++)
 						{
-							auto e = aMesh.edge_handle(aMesh.find_halfedge(aMesh.vertex_handle(m), aMesh.vertex_handle(m+1)));
+							auto e = aMesh.edge_handle(aMesh.find_halfedge(aMesh.vertex_handle(m), aMesh.vertex_handle(m + 1)));
 							aMesh.data(e).flag1 = true;
 						}
 						auto e = aMesh.edge_handle(aMesh.find_halfedge(aMesh.vertex_handle(id + cols - 1), aMesh.vertex_handle(endid)));
@@ -258,7 +258,7 @@ namespace CADMesher
 		Surface_PolyMeshes.resize(faceshape.size());
 		for (int i = 0; i < faceshape.size(); i++)
 		{
-			//if (i != 37) continue;
+			//if (i != 68) continue;
 			Mesh &newmesh = Surface_PolyMeshes[i];
 			TriMesh aMesh;
 			auto &wires = faceshape[i].wires;
@@ -348,10 +348,19 @@ namespace CADMesher
 					auto pos = aMesh.point(tv);
 					aMesh.set_point(tv, TriMesh::Point(pos[0], pos[1] * ra_inv, 0));
 				}
+
+				//if (!OpenMesh::IO::write_mesh(aMesh, "1.obj"))
+				//{
+				//	std::cerr << "fail";
+				//}
 				//Remesh in domain		
 				Riemannremesh Remesh(Surface, &aMesh);
 				Remesh.remesh();
 				tri2poly(aMesh, newmesh);
+				//if (!OpenMesh::IO::write_mesh(newmesh, "2.obj"))
+				//{
+				//	std::cerr << "fail";
+				//}
 			}
 			else
 			{
@@ -363,7 +372,7 @@ namespace CADMesher
 				{
 					if (!edgeshape[edges[j]].if_curvature)
 					{
-						beginid += (edgeshape[edges[j]].parameters).cols()-1;
+						beginid += (edgeshape[edges[j]].parameters).cols() - 1;
 						continue;
 					}
 					offset_pnt_num = (edgeshape[edges[j]].parameters).cols();
@@ -431,7 +440,7 @@ namespace CADMesher
 				for (int j = 0; j < quad_num; j++)
 				{
 					auto &offsetline = offset_pnts[j];
-					for (int k = 0; k < offset_pnt_num - 2; k++) 
+					for (int k = 0; k < offset_pnt_num - 2; k++)
 					{
 						auto newp = Mesh::Point(offsetline(0, k), offsetline(1, k)* if_reverse, 0);
 						newmesh.add_vertex(newp);
@@ -506,7 +515,7 @@ namespace CADMesher
 				//{
 				//	std::cerr << "fail";
 				//}
-			} 
+			}
 
 			if (0)
 			{
@@ -612,7 +621,7 @@ namespace CADMesher
 				TopoDS_Wire awire = TopoDS::Wire(wireExp.Current());
 				vector<int> edges;
 				edges.reserve(awire.NbChildren());
-				
+
 				for (TopExp_Explorer edgeExp(awire, TopAbs_EDGE); edgeExp.More(); edgeExp.Next())
 				{
 					auto &aedge = TopoDS::Edge(edgeExp.Current());
@@ -724,7 +733,7 @@ namespace CADMesher
 		const double GL_c[8] = { 0.1012285363,0.2223810345,0.3137066459,0.3626837834,0.3626837834 ,0.3137066459,0.2223810345,0.1012285363 };
 		const double GL_x[8] = { -0.9602898565,-0.7966664774,-0.5255354099,-0.1834346425,0.1834346425,0.5255354099,0.7966664774,0.9602898565 };
 
-		for(auto edge = edgeshape.begin(); edge != edgeshape.end(); ++edge)
+		for (auto edge = edgeshape.begin(); edge != edgeshape.end(); ++edge)
 		{
 			/*static int ti = 0;
 			dprint(ti++);*/
@@ -817,7 +826,7 @@ namespace CADMesher
 							double alpha = acos(v0.dot(v1))*(v0(0)*v1(1) < v0(1)*v1(0) ? 1 : -1);
 							alpha = alpha > 0 ? alpha : alpha + 2 * PI;
 							Matrix2d M; M << cos(alpha), -sin(alpha), cos(alpha), sin(alpha);
-							Vector2d v = (-M*v1).normalized()*v1.norm()*0.1*(faceshape[fid].face.Orientation()?-1:1) + e1.col(0);
+							Vector2d v = (-M * v1).normalized()*v1.norm()*0.1*(faceshape[fid].face.Orientation() ? -1 : 1) + e1.col(0);
 							e0.col(e0.cols() - 1) = v;
 							e1.col(0) = v;
 							flag = true;
@@ -856,7 +865,7 @@ namespace CADMesher
 			TopLoc_Location loca;
 			opencascade::handle<Geom_Surface> geom_surface = BRep_Tool::Surface(faceshape[i].face, loca);
 			opencascade::handle<Standard_Type> type = geom_surface->DynamicType();
-			if (type == STANDARD_TYPE(Geom_Plane)) 
+			if (type == STANDARD_TYPE(Geom_Plane))
 			{
 				//dprint(i, "plane");
 				opencascade::handle<Geom_Plane> geom_plane = Handle(Geom_Plane)::DownCast(geom_surface);
@@ -866,7 +875,7 @@ namespace CADMesher
 				gp_Dir ydir = local_coordinate->YDirection();
 				faceshape[i].Surface = new PlaneType(Point(oringe.X(), oringe.Y(), oringe.Z()), Point(xdir.X(), xdir.Y(), xdir.Z()), Point(ydir.X(), ydir.Y(), ydir.Z()));
 			}
-			else if (type == STANDARD_TYPE(Geom_CylindricalSurface)) 
+			else if (type == STANDARD_TYPE(Geom_CylindricalSurface))
 			{
 				//dprint(i, "CylindricalSurface");
 				opencascade::handle<Geom_CylindricalSurface> geom_cylindricalsurface = opencascade::handle<Geom_CylindricalSurface>::DownCast(geom_surface);;
@@ -878,7 +887,7 @@ namespace CADMesher
 				double r = geom_cylindricalsurface->Radius();
 				faceshape[i].Surface = new CylindricalType(Point(oringe.X(), oringe.Y(), oringe.Z()), Point(xdir.X(), xdir.Y(), xdir.Z()), Point(ydir.X(), ydir.Y(), ydir.Z()), Point(zdir.X(), zdir.Y(), zdir.Z()), r);
 			}
-			else if (type == STANDARD_TYPE(Geom_ConicalSurface)) 
+			else if (type == STANDARD_TYPE(Geom_ConicalSurface))
 			{
 				//dprint(i, "ConicalSurface");
 				opencascade::handle<Geom_ConicalSurface> geom_ConicalSurface = opencascade::handle<Geom_ConicalSurface>::DownCast(geom_surface);
@@ -891,7 +900,7 @@ namespace CADMesher
 				double ang = geom_ConicalSurface->SemiAngle();
 				faceshape[i].Surface = new ConicalType(Point(oringe.X(), oringe.Y(), oringe.Z()), Point(xdir.X(), xdir.Y(), xdir.Z()), Point(ydir.X(), ydir.Y(), ydir.Z()), Point(zdir.X(), zdir.Y(), zdir.Z()), r, ang);
 			}
-			else if (type == STANDARD_TYPE(Geom_SphericalSurface)) 
+			else if (type == STANDARD_TYPE(Geom_SphericalSurface))
 			{
 				//dprint(i, "SphericalSurface");
 				opencascade::handle<Geom_SphericalSurface> geom_SphericalSurface = opencascade::handle<Geom_SphericalSurface>::DownCast(geom_surface);
@@ -903,7 +912,7 @@ namespace CADMesher
 				double r = geom_SphericalSurface->Radius();
 				faceshape[i].Surface = new SphericalType(Point(oringe.X(), oringe.Y(), oringe.Z()), Point(xdir.X(), xdir.Y(), xdir.Z()), Point(ydir.X(), ydir.Y(), ydir.Z()), Point(zdir.X(), zdir.Y(), zdir.Z()), r);
 			}
-			else if (type == STANDARD_TYPE(Geom_ToroidalSurface)) 
+			else if (type == STANDARD_TYPE(Geom_ToroidalSurface))
 			{
 				//dprint(i, "ToroidalSurface");
 				opencascade::handle<Geom_ToroidalSurface> geom_ToroidalSurface = opencascade::handle<Geom_ToroidalSurface>::DownCast(geom_surface);
@@ -916,7 +925,7 @@ namespace CADMesher
 				double r2 = geom_ToroidalSurface->MinorRadius();
 				faceshape[i].Surface = new ToroidalType(Point(oringe.X(), oringe.Y(), oringe.Z()), Point(xdir.X(), xdir.Y(), xdir.Z()), Point(ydir.X(), ydir.Y(), ydir.Z()), Point(zdir.X(), zdir.Y(), zdir.Z()), r1, r2);
 			}
-			else if (type == STANDARD_TYPE(Geom_BezierSurface)) 
+			else if (type == STANDARD_TYPE(Geom_BezierSurface))
 			{
 				//dprint(i, "BezierSurface");
 				opencascade::handle<Geom_BezierSurface> geom_beziersurface = opencascade::handle<Geom_BezierSurface>::DownCast(geom_surface);
@@ -943,7 +952,7 @@ namespace CADMesher
 					faceshape[i].Surface = new BezierSurface(geom_beziersurface->UDegree(), geom_beziersurface->VDegree(), U1, U2, V1, V2, w, cp);
 				}
 				else
-					faceshape[i].Surface = new BezierSurface(geom_beziersurface->UDegree(), geom_beziersurface->VDegree(), U1, U2, V1, V2, cp );
+					faceshape[i].Surface = new BezierSurface(geom_beziersurface->UDegree(), geom_beziersurface->VDegree(), U1, U2, V1, V2, cp);
 			}
 			else if (type == STANDARD_TYPE(Geom_BSplineSurface))
 			{
@@ -968,7 +977,7 @@ namespace CADMesher
 						gp_Pnt pos = controlpoints.Value(r, c);
 						cp[r - 1].emplace_back(pos.X(), pos.Y(), pos.Z());
 					}
-					if(isvclosed) cp[r - 1].push_back(cp[r - 1][0]);
+					if (isvclosed) cp[r - 1].push_back(cp[r - 1][0]);
 				}
 				if (isuclosed) cp.push_back(cp.front());
 				const TColStd_Array2OfReal* weights = geom_bsplinesurface->Weights();
@@ -979,7 +988,7 @@ namespace CADMesher
 						w[r - 1].reserve(weights->NbColumns());
 						for (int c = 1; c <= weights->NbColumns(); c++)
 							w[r - 1].push_back(weights->Value(r, c));
-						if(isvclosed) w[r - 1].push_back(w[r - 1][0]);
+						if (isvclosed) w[r - 1].push_back(w[r - 1][0]);
 					}
 					if (isuclosed) w.push_back(w.front());
 					faceshape[i].Surface = new BSplineSurface(geom_bsplinesurface->UDegree(), geom_bsplinesurface->VDegree(), u, v, w, cp);
@@ -1024,13 +1033,13 @@ namespace CADMesher
 					{
 						u.push_back(*itr);
 					}
-					for (int r = 1; r <= ctrpnts.Size(); r++) 
+					for (int r = 1; r <= ctrpnts.Size(); r++)
 					{
 						gp_Pnt pos = ctrpnts.Value(r);
 						ctr.emplace_back(pos.X(), pos.Y(), pos.Z());
 					}
 					const TColStd_Array1OfReal* weights = geom_bsplinecurve->Weights();
-					if (weights) 
+					if (weights)
 					{
 						vector<double> w(weights->Size());
 						for (int r = 1; r <= weights->Size(); r++) w.push_back(weights->Value(r));
@@ -1073,10 +1082,10 @@ namespace CADMesher
 					system("pause");
 				}
 			}
-			else 
-			{ 
+			else
+			{
 				dprint(type);
-				dprint("Cannot recognize the type of this surface!"); 
+				dprint("Cannot recognize the type of this surface!");
 				system("pause");
 			}
 		}
@@ -1097,12 +1106,12 @@ namespace CADMesher
 	{
 		auto& edge = globalmodel.edgeshape;
 		auto& face = globalmodel.faceshape;
+
 		int discrete_num = 20;
 		for (int i = 0; i < edge.size(); i++)
 		{
 			auto& aedge = edge[i];
-			//dprint(i, aedge.main_face, aedge.secondary_face);
-			if (aedge.if_C0) continue;
+			if (aedge.if_C0 || aedge.if_visited) continue;
 
 			//将边界曲线设置为C0
 			if (aedge.reversed_edge == -1)
@@ -1111,20 +1120,7 @@ namespace CADMesher
 				continue;
 			}
 
-			//if (aedge.main_face >= 6 && aedge.main_face <= 28)
-			//{
-			//	aedge.if_C0 = true;
-			//	edge[aedge.reversed_edge].if_C0 = true;
-			//	continue;  
-			//}
-			//else if (edge[aedge.reversed_edge].main_face >= 6 && edge[aedge.reversed_edge].main_face <= 28)
-			//{
-			//	aedge.if_C0 = true;
-			//	edge[aedge.reversed_edge].if_C0 = true;
-			//	continue;
-			//}
-
-			double C0 = 0.92;     //两个法向量内积的阈值
+			double C0 = 0.94;     //两个法向量内积的阈值
 			int single_flag = 0;
 			auto& face1 = face[aedge.main_face].Surface;
 			auto& face2 = face[aedge.secondary_face].Surface;
@@ -1192,7 +1188,6 @@ namespace CADMesher
 				if (!face1->NormalValue(u, v, n1)) continue;
 				if ((face[aedge.main_face].face).Orientation() == TopAbs_REVERSED) n1 = -n1;
 				u = pnts2(0, pnts1.cols() - 1 - j), v = pnts2(1, pnts1.cols() - 1 - j);
-				bool a2 = face2->NormalValue(u, v, n2);
 				if (!face2->NormalValue(u, v, n2)) continue;
 				if ((face[aedge.secondary_face].face).Orientation() == TopAbs_REVERSED) n2 = -n2;
 				if (n1.dot(n2) < C0) single_flag++;
@@ -1205,8 +1200,67 @@ namespace CADMesher
 				edge[aedge.reversed_edge].if_C0 = true;
 			}
 		}
-
+		Reset_feature();
 		dprint("C0 feature done!");
+	}
+
+	void OccReader::Reset_feature()
+	{
+		auto& edge = globalmodel.edgeshape;
+		auto& face = globalmodel.faceshape;
+
+		//计算每个面的bounding box长度
+		double bbox = 0;
+		for (int i = 0; i < face.size(); i++)
+		{
+			Bnd_Box aBound;
+			BRepBndLib::Add(face[i].face, aBound);
+			Standard_Real xmin, ymin, zmin, xmax, ymax, zmax;
+			aBound.Get(xmin, ymin, zmin, xmax, ymax, zmax);
+			double boundingbox = sqrt((xmin - xmax) * (xmin - xmax) + (ymin - ymax) * (ymin - ymax) +
+				(zmin - zmax) * (zmin - zmax));
+			face[i].bbox = boundingbox;
+			bbox += boundingbox;
+		}
+		bbox /= face.size();
+
+		//set pre edge
+		for (int i = 0; i < face.size(); i++)
+		{
+			auto &wires = face[i].wires;
+			if (wires.empty() || !face[i].if_exisited)
+			{
+				continue;
+			}
+			for (int m = 0; m < wires.size(); m++)
+			{
+				auto &edges = wires[m];
+				int pre = edges.front();
+				for (int j = 1; j < edges.size(); j++)
+				{
+					edge[edges[j]].prev_edge = pre;
+					edge[pre].next_edge = edges[j];
+					pre = edges[j];
+				}
+				edge[edges.front()].prev_edge = pre;
+				edge[pre].next_edge = edges.front();
+			}
+		}
+
+		//处理孤立C0特征边
+		for (int i = 0; i < edge.size(); i++)
+		{
+			auto& aedge = edge[i];
+			if (!aedge.if_C0 || aedge.reversed_edge < -0.5) continue;
+			if (aedge.length > 0.2 * bbox) continue;
+			if (edge[aedge.prev_edge].if_C0 || edge[aedge.next_edge].if_C0) continue;
+			if (edge[edge[edge[aedge.next_edge].reversed_edge].next_edge].if_C0) continue;
+			auto &reaedge = edge[aedge.reversed_edge];
+			if (edge[reaedge.prev_edge].if_C0 || edge[reaedge.next_edge].if_C0) continue;
+			if (edge[edge[edge[reaedge.next_edge].reversed_edge].next_edge].if_C0) continue;
+			aedge.if_C0 = false;
+			reaedge.if_C0 = false;
+		}
 	}
 
 	//找到曲率变化较大的曲线并标记（类似机翼前端曲线，后期需要加密或做各向异性、四边形）
@@ -1360,13 +1414,7 @@ namespace CADMesher
 			if (face[aedge.main_face].wires.size() > 1) continue;
 
 			//曲率特征边有一定长度才做offset
-			Bnd_Box aBound;
-			BRepBndLib::Add(face[aedge.main_face].face, aBound);
-			Standard_Real xmin, ymin, zmin, xmax, ymax, zmax;
-			aBound.Get(xmin, ymin, zmin, xmax, ymax, zmax);
-			double boundingbox = sqrt((xmin - xmax) * (xmin - xmax) + (ymin - ymax) * (ymin - ymax) +
-				(zmin - zmax) * (zmin - zmax));
-			if ((aedge.length) > 0.1 * boundingbox)
+			if ((aedge.length) > 0.1 * face[aedge.main_face].bbox)
 				face[aedge.main_face].if_quad = true;
 		}
 
@@ -1431,45 +1479,18 @@ namespace CADMesher
 		else return true;
 	}
 
-	/*void OccReader::Set_Offset_Info(vector<int>& select_curve)
-	{
-		if (select_curve.empty()) return;
-		auto& edge = globalmodel.edgeshape;
-		int t = quad_mun_info.size();
-		for (int i = 0; i < select_curve.size(); i++)
-		{
-			auto &aedge = edge[select_curve[i]];
-			if (i < t)
-			{				
-				aedge.if_curvature = true;
-				aedge.quad_num = quad_mun_info[i];
-				aedge.initial_ratio = initial_ratio_info[i];
-				aedge.increase_ratio = increase_ratio_info[i];
-				if (aedge.reversed_edge < -0.5) continue;
-				auto &re_aedge = edge[aedge.reversed_edge];
-				re_aedge.if_curvature = true;
-				re_aedge.quad_num = quad_mun_info[i];
-				re_aedge.initial_ratio = initial_ratio_info[i];
-				re_aedge.increase_ratio = increase_ratio_info[i];
-				continue;
-			}
-			aedge.if_curvature = true;
-			if (aedge.reversed_edge != -1) edge[aedge.reversed_edge].if_curvature = true;
-		}
-	}*/
-
 	void OccReader::Set_Offset_Grid()
 	{
-		//if (offset_quad_num <= 0)
-		//{
-		//	dprint("the offset quad number must be positive!");
-		//	system("pause");
-		//}
-		//if (offset_increase_ratio < 1)
-		//{
-		//	dprint("the offset increase ratio must more than 1!");
-		//	system("pause");
-		//}
+		if (offset_quad_num <= 0)
+		{
+			dprint("the offset quad number must be positive!");
+			system("pause");
+		}
+		if (offset_increase_ratio < 1)
+		{
+			dprint("the offset increase ratio must more than 1!");
+			system("pause");
+		}
 
 		vector<ShapeFace> &faceshape = globalmodel.faceshape;
 		vector<ShapeEdge> &edgeshape = globalmodel.edgeshape;
@@ -1585,7 +1606,7 @@ namespace CADMesher
 					{
 						next_id = (next_para.cols() - 1) * discrete_num - 1;
 						prev_id = 1;
-					} 
+					}
 				}
 			}
 
@@ -1894,5 +1915,4 @@ namespace CADMesher
 	}
 
 }
-
 

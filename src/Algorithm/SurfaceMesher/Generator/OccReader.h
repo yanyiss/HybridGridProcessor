@@ -45,7 +45,7 @@ namespace CADMesher
 		void Face_type();
 		void C0_Feature();
 		void Curvature_Feature();
-		//void Set_Offset_Info(vector<int>& select_curve);
+		void Reset_feature();
 		void Set_TriMesh();
 		void Offset_lines(Matrix2Xd &parameters, vector<Matrix2Xd> &offset_pnts, int begin, int pntnum, int quadnum);
 		void Set_PolyMesh();

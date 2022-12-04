@@ -206,7 +206,7 @@ namespace CADMesher
 			Mesh::VertexHandle vh = ref_mesh_->vertex_handle(i);
 			double k1 = K1[i]; k1 = std::fabs(k1) < min_cur ? min_cur : k1;
 			double k2 = K2[i]; k2 = std::fabs(k2) < min_cur ? min_cur : k2;
-			dprint(i, k1, k2);
+			//dprint(i, k1, k2);
 			double multi = fabs(k1 * k2);
 			if (multi < 1.0)
 			{
@@ -643,9 +643,9 @@ namespace CADMesher
 				if (visited[v1.idx()])
 					continue;
 				visited[v1.idx()] = true;
-				dprint("0", mesh_->data(v1).get_Hessian());
+				//dprint("0", mesh_->data(v1).get_Hessian());
 				mesh_->data(v1).set_Hessian(0.5 * (mesh_->data(vh).get_Hessian() + mesh_->data(v1).get_Hessian()));
-				dprint("1", mesh_->data(v1).get_Hessian());
+				//dprint("1", mesh_->data(v1).get_Hessian());
 				for (auto v2 : mesh_->vv_range(v1))
 				{
 					if (visited[v2.idx()] || v2.idx() == vh.idx())
