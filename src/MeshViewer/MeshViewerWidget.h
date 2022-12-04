@@ -95,7 +95,7 @@ public:
 	// mesh modes.
 	double getAngLen() { return meshAverageLength(mesh); }
 	bool if_new_mesh = true;
-	bool ifDrawFeature = true;
+	bool ifDrawFeature = false;
 	bool drawCAD = false;
 	std::vector<Eigen::Matrix3Xd> strip;
 	void Setbb(OpenMesh::Vec3d &min, OpenMesh::Vec3d &max) { bbMin = min; bbMax = max; }

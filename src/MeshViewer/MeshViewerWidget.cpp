@@ -960,14 +960,13 @@ void MeshViewerWidget::draw_AnisotropicMesh()
 #endif
 }
 
-//<<<<<<< john
+//画出特征线
 void MeshViewerWidget::draw_feature()
 {	
-#if 0
 	if (ifDrawFeature)
 	{
 		//画C0特征
-		glLineWidth(5);
+		glLineWidth(4);
 		glColor3d(1.0, 0.0, 0.0);
 		glBegin(GL_LINES);
 		for (auto& te : mesh.edges())
@@ -994,10 +993,7 @@ void MeshViewerWidget::draw_feature()
 		}
 		glEnd();
 	}
-	//ifDrawFeature = !ifDrawFeature;
-
-#endif
-	//draw triangles with low quality
+	//画出最小角
 #if 1
 	glColor3d(0.9, 0.1, 0.9);
 	glPointSize(8);

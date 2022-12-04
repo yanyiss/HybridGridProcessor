@@ -155,7 +155,7 @@ public:
 private:
 	bool ifGenerateTriMesh = false;
 	bool ifGeneratePolyMesh = false;
-	bool ifDrawFeature = true;
+	//bool ifDrawFeature = false;
 	ANNkd_tree* stripTree = nullptr;
 	std::vector<int> edgeshapeIndex;
 	std::vector<int> selectedCurve;

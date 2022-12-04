@@ -33,6 +33,7 @@ namespace CADMesher
 		bool if_quad;
 		int id;
 		int quad_num;
+		double bbox;
 		TopoDS_Face face;
 		vector<vector<int>> wires;
 		GeometryType *Surface;

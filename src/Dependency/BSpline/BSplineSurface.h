@@ -115,15 +115,12 @@ public:
 		if (u < u_knots.front() || u > u_knots.back()) return T();
 		if (v < v_knots.front() || v > v_knots.back()) return T();
 		auto ft = clock();
-		//static clock_t t1 = 0;
 		int m = u_knots.size() - u_degree - 2;
 		int n = v_knots.size() - v_degree - 2;
 		std::vector<double> du_knots(u_knots.begin() + k, u_knots.end() - k);
 		std::vector<double> dv_knots(v_knots.begin() + l, v_knots.end() - l);
 		int ru = FindSpan(m - k, u_degree - k, u, du_knots);
 		int rv = FindSpan(n - l, v_degree - l, v, dv_knots);
-		//t1 += clock() - ft;
-		//std::cout << t1 << std::endl;
 		std::vector<std::vector<T>> dev_ctrlpts(m + 1 - k, std::vector<T>(n + 1 - l));
 		for (int i = ru - u_degree + k; i <= ru; i++)
 		{

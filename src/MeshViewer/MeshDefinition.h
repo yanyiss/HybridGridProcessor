@@ -241,6 +241,7 @@ double meshAverageLength(T &mesh)
 }
 
 void tri2poly(TriMesh &tm, Mesh &m, bool update_property = false);
+void polycopy(Mesh &tm, Mesh &m, bool update_property = false);
 #pragma endregion
 
 #endif

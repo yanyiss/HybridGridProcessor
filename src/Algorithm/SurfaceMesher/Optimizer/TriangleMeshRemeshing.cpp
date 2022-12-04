@@ -88,7 +88,7 @@ namespace CADMesher
 		//消除所有小角
 		dprint("aggressively eliminating small angle");
 		itertimes = 0;
-		while (processFeatureConstraintAngle(true) && ++itertimes < 5);
+		while (processFeatureConstraintAngle(true) && ++itertimes < 10);
 
 		tmqh.update();
 		tmqh.print();
