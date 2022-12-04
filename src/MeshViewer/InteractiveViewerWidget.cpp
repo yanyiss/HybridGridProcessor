@@ -321,6 +321,18 @@ void InteractiveViewerWidget::pick_vertex(int x,int y)
 	dprint("Select Vertex:", r, "\tCurvature:", mesh.data(mesh.vertex_handle(r)).GaussCurvature,
 		"\tLength:",mesh.data(mesh.vertex_handle(r)).get_targetlength(), "\tPosition:", mesh.point(mesh.vertex_handle(r)));
 
+
+	static std::vector<double> K1, K2; 
+	static bool fei = true;
+	if (fei)
+	{
+		fei = false;
+		std::vector<OpenMesh::Vec3d> D1, D2;
+		TriMesh tm(mesh);
+		compute_principal_curvature(&tm, K1, K2, D1, D2);
+	}
+	dprint("curvature:", K1[r], K2[r]);
+
 	std::vector<int>::iterator it;
 	if( (it = std::find(selectedVertex.begin(),selectedVertex.end(), r)) == selectedVertex.end() )
 	{
@@ -737,7 +749,7 @@ void InteractiveViewerWidget::draw_vector_set()
 	glEnd();
 
 	Eigen::Matrix3d D; D.setZero();
-	D(0, 0) = (yy - pos).norm() / (xx - pos).norm() * min_cur; D(1, 1) = min_cur;
+	//D(0, 0) = (yy - pos).norm() / (xx - pos).norm() * min_cur; D(1, 1) = min_cur;
 	zz.normalize();
 	yy -= pos; yy.normalize();
 	xx = yy.cross(zz);
@@ -885,11 +897,11 @@ void InteractiveViewerWidget::showAnisotropicMesh(double tl)
 		CADMesher::AnisotropicMeshRemeshing* amr = new CADMesher::AnisotropicMeshRemeshing();
 		CADMesher::globalmodel.isotropic_trimesh = CADMesher::globalmodel.initial_trimesh;
 		amr->SetMesh(&(CADMesher::globalmodel.isotropic_trimesh));
-		amr->load_ref_mesh(&(CADMesher::globalmodel.initial_trimesh), tl);
+		amr->load_ref_mesh(&(CADMesher::globalmodel.initial_trimesh), tl, (occreader->bbmax - occreader->bbmin).norm());
 		//double tl = amr->get_ref_mesh_ave_anisotropic_edge_length();
 		dprint("anisotropic edge length:", tl);
 		amr->set_metric(metric_constraint.first, metric_constraint.second);
-		amr->do_remeshing(tl, 1.5);
+		amr->do_remeshing(amr->get_ref_mesh_ave_anisotropic_edge_length(), 1.5);
 
 		tri2poly(CADMesher::globalmodel.isotropic_trimesh, mesh, true);
 		initMeshStatusAndNormal(mesh);
@@ -970,7 +982,7 @@ void InteractiveViewerWidget::showDebugTest()
 			CADMesher::AnisotropicMeshRemeshing* amr = new CADMesher::AnisotropicMeshRemeshing();
 			CADMesher::globalmodel.isotropic_trimesh = CADMesher::globalmodel.initial_trimesh;
 			amr->SetMesh(&(CADMesher::globalmodel.isotropic_trimesh));
-			amr->load_ref_mesh(&(CADMesher::globalmodel.initial_trimesh), amr->get_ref_mesh_ave_anisotropic_edge_length());
+			amr->load_ref_mesh(&(CADMesher::globalmodel.initial_trimesh), amr->get_ref_mesh_ave_anisotropic_edge_length(), 10);
 			double tl = amr->get_ref_mesh_ave_anisotropic_edge_length();
 			amr->do_remeshing(tl, 1.5);
 			double aniso_time = (clock() - time_start) / 1000.0;
