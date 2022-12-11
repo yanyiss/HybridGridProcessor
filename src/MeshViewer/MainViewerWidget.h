@@ -251,7 +251,7 @@ public:
 protected:
 	bool LoadMeshSuccess;
 
-private:
+public:
 	InteractiveViewerWidget* MeshViewer;
 	MeshParamDialog* MeshParam;
 	

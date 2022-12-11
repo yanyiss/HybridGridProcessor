@@ -562,6 +562,10 @@ void SurfaceMeshProcessing::vectorSet()
 	setAllMouseActionChecked(false);
 	vectorSetAction->setChecked(true);
 	viewer->setMouseMode(InteractiveViewerWidget::VECTOR_SET);
+	if (viewer->MeshViewer->choose)
+		viewer->MeshViewer->choose = 0;
+	else
+		viewer->MeshViewer->choose = 1;
 }
 void SurfaceMeshProcessing::generateTriMesh()
 {
