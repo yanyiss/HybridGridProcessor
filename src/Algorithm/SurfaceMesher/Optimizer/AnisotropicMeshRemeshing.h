@@ -5,6 +5,11 @@
 #include "TriangleMeshRemeshing.h"
 namespace CADMesher
 {
+	struct metric_info {
+		OpenMesh::VertexHandle vh;
+		OpenMesh::Vec3d dir[2];
+		double cur[2];
+	};
 	struct local_frame
 	{
 		local_frame()
@@ -126,7 +131,7 @@ namespace CADMesher
 		}
 		void reset_all_State();
 
-		void set_metric(OpenMesh::VertexHandle vh, OpenMesh::Vec6d& metric);
+		void set_metric(metric_info &metric);
 		void load_ref_mesh(TriMesh* aniso_ref_mesh, double tl, double model_size);
 		void sample_mesh_anisotropic_edge_length(double ref_edge_len = 1.0, double a = 1.5, bool add_flip = true);
 		void do_remeshing(double ref_edge_len = 1.0, double a = 1.5);
@@ -181,6 +186,8 @@ namespace CADMesher
 
 		double least_angle = PI / 90.0;
 		double largest_angle = PI * 0.975;
+
+		std::deque<bool> if_has_metric;
 	};
 }
 #endif
