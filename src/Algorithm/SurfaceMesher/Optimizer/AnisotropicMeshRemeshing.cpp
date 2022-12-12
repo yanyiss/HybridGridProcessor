@@ -939,7 +939,7 @@ namespace CADMesher
 					continue;
 				for (auto tvih : mesh_->voh_range(tv))
 				{
-					if (mesh_->calc_sector_angle(tvih) < 0.001)
+					if (mesh_->calc_sector_angle(tvih) < 0.01)
 					{
 						OpenMesh::Vec3d sum(0.0, 0.0, 0.0);
 						for (auto tvv : mesh_->vv_range(tv))
