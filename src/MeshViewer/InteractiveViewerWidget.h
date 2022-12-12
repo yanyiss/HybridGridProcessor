@@ -145,6 +145,7 @@ public:
 	CADMesher::Iso_Mesh* iso_mesh = nullptr;
 	CADMesher::TriangleMeshRemeshing* tmr = nullptr;
 	CADMesher::AnisotropicMeshRemeshing* amr = nullptr;
+	int choose = 0;
 	void generateTriMesh(double ratio);
 	void generatePolyMesh(double ratio, int quad_num, double initial_ratio, double increase_ratio);
 	void showFeature();
@@ -159,7 +160,7 @@ private:
 	ANNkd_tree* stripTree = nullptr;
 	std::vector<int> edgeshapeIndex;
 	std::vector<int> selectedCurve;
-	std::pair<OpenMesh::VertexHandle, OpenMesh::Vec6d> metric_constraint;
+	CADMesher::metric_info metric_constraint;
 	void BuildCurveIndex();
 
 #pragma region Auxiliary_function

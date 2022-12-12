@@ -714,7 +714,14 @@ void InteractiveViewerWidget::draw_selected_curve()
 
 void InteractiveViewerWidget::draw_vector_set()
 {
-	Mesh::Point yy(selectedPoint[0], selectedPoint[1], selectedPoint[2]);
+	//static bool if_init = false;
+	static double xn = 0, yn = 0;
+	/*static int choose_copy = choose;
+	if (choose_copy != choose)
+	{
+		choose_copy = choose;
+		xn = 0; yn = 0;
+	}*/
 	auto vh = mesh.vertex_handle(lastestVertex);
 	auto pos = mesh.point(vh);
 
@@ -724,17 +731,37 @@ void InteractiveViewerWidget::draw_vector_set()
 		avg_len += mesh.calc_edge_length(ve);
 	}
 	avg_len /= mesh.valence(vh);
-	Mesh::Point zz(0, 0, 0);
+	OpenMesh::Vec3d zz(0, 0, 0);
 	for (auto vf : mesh.vf_range(vh))
 	{
 		zz += mesh.calc_face_normal(vf);
 	}
-	auto xx = (yy - pos).cross(zz).normalized() * avg_len + pos;
+	zz.normalize();
 
+	OpenMesh::Vec3d xx, yy;
+	OpenMesh::Vec3d now_pos(selectedPoint[0], selectedPoint[1], selectedPoint[2]);
+	if (choose == 0)
+	{
+		xx = now_pos;
+		xn = (xx - pos).norm() / avg_len;
+		if (yn < 1.0e-6)
+			yy = zz.cross(xx - pos).normalize() * avg_len + pos;
+		else
+			yy = zz.cross(xx - pos).normalize() * yn * avg_len + pos;
+	}
+	else
+	{
+		yy = now_pos;
+		yn = (yy - pos).norm() / avg_len;
+		if (xn < 1.0e-6)
+			xx = (yy - pos).cross(zz).normalize() * avg_len + pos;
+		else
+			xx = (yy - pos).cross(zz).normalize() * xn * avg_len + pos;
+	}
 
 	glPointSize(5);
 	glBegin(GL_POINTS);
-	glColor3d(0.8, 0.1, 0.0);
+	glColor3d(0.0, 0.1, 0.4);
 	glVertex3dv(pos.data());
 	glEnd();
 
@@ -742,25 +769,31 @@ void InteractiveViewerWidget::draw_vector_set()
 	glBegin(GL_LINES);
 	glColor3d(0.9, 0.1, 0.0);
 	glVertex3dv(pos.data());
-	glVertex3dv(yy.data());
+	glVertex3dv(xx.data());
 	glColor3d(0.1, 0.9, 0.0);
 	glVertex3dv(pos.data());
-	glVertex3dv(xx.data());
+	glVertex3dv(yy.data());
 	glEnd();
 
-	Eigen::Matrix3d D; D.setZero();
-	//D(0, 0) = (yy - pos).norm() / (xx - pos).norm() * min_cur; D(1, 1) = min_cur;
-	zz.normalize();
-	yy -= pos; yy.normalize();
-	xx = yy.cross(zz);
-	Eigen::Matrix3d H;
-	H << xx[0], yy[0], zz[0],
-		xx[1], yy[1], zz[1],
-		xx[2], yy[2], zz[2];
-	dprint(D(0, 0), D(1, 1));
-	auto Ht = H * D * H.transpose();
-	metric_constraint.first = vh;
-	metric_constraint.second = OpenMesh::Vec6d(Ht(0, 0), Ht(0, 1), Ht(0, 2), Ht(1, 1), Ht(1, 2), Ht(2, 2));
+	glLineWidth(2);
+	glBegin(GL_LINES);
+	glColor3d(0.1, 0.1, 0.3);
+	auto xv = (xx - pos).normalize()*avg_len; auto yv = (yy - pos).normalize()*avg_len;
+	glVertex3dv((xv + pos).data());
+	for (double i = 0.0; i < 6.28; i += 0.157)
+	{
+		auto fe = cos(i) * xv + sin(i) * yv + pos;
+		glVertex3dv(fe.data());
+		glVertex3dv(fe.data());
+	}
+	glVertex3dv((xv + pos).data());
+	glEnd();
+
+	metric_constraint.vh = vh;
+	metric_constraint.cur[0] = xn < 1.0e-6 ? 1.0 : xn;
+	metric_constraint.cur[1] = yn < 1.0e-6 ? 1.0 : yn;
+	metric_constraint.dir[0] = (xx - pos).normalize();
+	metric_constraint.dir[1] = (yy - pos).normalize();
 }
 
 void InteractiveViewerWidget::draw_scene(int drawmode)
@@ -900,7 +933,7 @@ void InteractiveViewerWidget::showAnisotropicMesh(double tl)
 		amr->load_ref_mesh(&(CADMesher::globalmodel.initial_trimesh), tl, (occreader->bbmax - occreader->bbmin).norm());
 		//double tl = amr->get_ref_mesh_ave_anisotropic_edge_length();
 		dprint("anisotropic edge length:", tl);
-		amr->set_metric(metric_constraint.first, metric_constraint.second);
+		amr->set_metric(metric_constraint);
 		amr->do_remeshing(amr->get_ref_mesh_ave_anisotropic_edge_length(), 1.5);
 
 		tri2poly(CADMesher::globalmodel.isotropic_trimesh, mesh, true);
