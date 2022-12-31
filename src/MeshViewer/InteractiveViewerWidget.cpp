@@ -714,14 +714,29 @@ void InteractiveViewerWidget::draw_selected_curve()
 
 void InteractiveViewerWidget::draw_vector_set()
 {
-	//static bool if_init = false;
 	static double xn = 0, yn = 0;
-	/*static int choose_copy = choose;
-	if (choose_copy != choose)
+	if (metric_constraints.empty() || metric_constraints.back().vh.idx() != lastestVertex)
 	{
-		choose_copy = choose;
+		/*auto mitr = metric_constraints.begin();
+		for (; mitr != metric_constraints.end(); ++mitr)
+		{
+			if (mitr->vh.idx() == lastestVertex)
+			{
+				metric_constraints.erase(mitr);
+				break;
+			}
+		}*/
 		xn = 0; yn = 0;
-	}*/
+		metric_constraints.push_back(CADMesher::metric_info());
+		metric_constraints.back().flag = true;
+		metric_constraints.back().vh = mesh.vertex_handle(lastestVertex);
+	}
+	for (auto& mc : metric_constraints)
+	{
+		if (std::find(selectedVertex.begin(), selectedVertex.end(), lastestVertex) == selectedVertex.end())
+			mc.flag = false;
+	}
+
 	auto vh = mesh.vertex_handle(lastestVertex);
 	auto pos = mesh.point(vh);
 
@@ -742,58 +757,78 @@ void InteractiveViewerWidget::draw_vector_set()
 	OpenMesh::Vec3d now_pos(selectedPoint[0], selectedPoint[1], selectedPoint[2]);
 	if (choose == 0)
 	{
-		xx = now_pos;
-		xn = (xx - pos).norm() / avg_len;
-		if (yn < 1.0e-6)
-			yy = zz.cross(xx - pos).normalize() * avg_len + pos;
-		else
-			yy = zz.cross(xx - pos).normalize() * yn * avg_len + pos;
+		xx = now_pos - pos;
+		xn = xx.norm() / avg_len;
+		xx /= xn;
+		yy = zz.cross(xx);
 	}
 	else
 	{
-		yy = now_pos;
-		yn = (yy - pos).norm() / avg_len;
-		if (xn < 1.0e-6)
-			xx = (yy - pos).cross(zz).normalize() * avg_len + pos;
-		else
-			xx = (yy - pos).cross(zz).normalize() * xn * avg_len + pos;
+		yy = now_pos - pos;
+		yn = yy.norm() / avg_len;
+		yy /= yn;
+		xx = (yy).cross(zz);
 	}
+
+
+	CADMesher::metric_info& mc = metric_constraints.back();
+	mc.avg = avg_len;
+	mc.vh = vh;
+	mc.cur[0] = xn < 1.0e-6 ? 1.0 : xn;
+	mc.cur[1] = yn < 1.0e-6 ? 1.0 : yn;
+	mc.dir[0] = xx;
+	mc.dir[1] = yy;
 
 	glPointSize(5);
 	glBegin(GL_POINTS);
 	glColor3d(0.0, 0.1, 0.4);
-	glVertex3dv(pos.data());
+	for (auto& mec : metric_constraints)
+	{
+		if (!mec.flag)
+			continue;
+		glVertex3dv(mesh.point(mec.vh).data());
+	}
 	glEnd();
 
 	glLineWidth(5);
 	glBegin(GL_LINES);
 	glColor3d(0.9, 0.1, 0.0);
-	glVertex3dv(pos.data());
-	glVertex3dv(xx.data());
+	for (auto& mec : metric_constraints)
+	{
+		if (!mec.flag)
+			continue;
+		glVertex3dv(mesh.point(mec.vh).data());
+		glVertex3dv((mec.dir[0] * mec.cur[0] * avg_len + mesh.point(mec.vh)).data());
+	}
 	glColor3d(0.1, 0.9, 0.0);
-	glVertex3dv(pos.data());
-	glVertex3dv(yy.data());
-	glEnd();
+	for (auto& mec : metric_constraints)
+	{
+		if (!mec.flag)
+			continue;
+		glVertex3dv(mesh.point(mec.vh).data());
+		glVertex3dv((mec.dir[1] * mec.cur[1] * avg_len + mesh.point(mec.vh)).data());
+	}
 
 	glLineWidth(2);
 	glBegin(GL_LINES);
 	glColor3d(0.1, 0.1, 0.3);
-	auto xv = (xx - pos).normalize()*avg_len; auto yv = (yy - pos).normalize()*avg_len;
-	glVertex3dv((xv + pos).data());
-	for (double i = 0.0; i < 6.28; i += 0.157)
+	for (auto& mec : metric_constraints)
 	{
-		auto fe = cos(i) * xv + sin(i) * yv + pos;
-		glVertex3dv(fe.data());
-		glVertex3dv(fe.data());
+		if (!mec.flag)
+			continue;
+		auto xv = mec.dir[0] * mec.avg;
+		auto yv = mec.dir[1] * mec.avg;
+		auto pp = mesh.point(mec.vh);
+		glVertex3dv((xv + pp).data());
+		for (double i = 0.0; i < 6.28; i += 0.157)
+		{
+			auto fe = cos(i) * xv + sin(i) * yv + pp;
+			glVertex3dv(fe.data());
+			glVertex3dv(fe.data());
+		}
+		glVertex3dv((xv + pp).data());
 	}
-	glVertex3dv((xv + pos).data());
 	glEnd();
-
-	metric_constraint.vh = vh;
-	metric_constraint.cur[0] = xn < 1.0e-6 ? 1.0 : xn;
-	metric_constraint.cur[1] = yn < 1.0e-6 ? 1.0 : yn;
-	metric_constraint.dir[0] = (xx - pos).normalize();
-	metric_constraint.dir[1] = (yy - pos).normalize();
 }
 
 void InteractiveViewerWidget::draw_scene(int drawmode)
@@ -933,7 +968,7 @@ void InteractiveViewerWidget::showAnisotropicMesh(double tl)
 		amr->load_ref_mesh(&(CADMesher::globalmodel.initial_trimesh), tl, (occreader->bbmax - occreader->bbmin).norm());
 		//double tl = amr->get_ref_mesh_ave_anisotropic_edge_length();
 		dprint("anisotropic edge length:", tl);
-		amr->set_metric(metric_constraint);
+		amr->set_metric(metric_constraints);
 		amr->do_remeshing(amr->get_ref_mesh_ave_anisotropic_edge_length(), 1.5);
 
 		tri2poly(CADMesher::globalmodel.isotropic_trimesh, mesh, true);
@@ -1016,6 +1051,7 @@ void InteractiveViewerWidget::showDebugTest()
 			CADMesher::globalmodel.isotropic_trimesh = CADMesher::globalmodel.initial_trimesh;
 			amr->SetMesh(&(CADMesher::globalmodel.isotropic_trimesh));
 			amr->load_ref_mesh(&(CADMesher::globalmodel.initial_trimesh), amr->get_ref_mesh_ave_anisotropic_edge_length(), 10);
+			amr->set_metric(metric_constraints);
 			double tl = amr->get_ref_mesh_ave_anisotropic_edge_length();
 			amr->do_remeshing(tl, 1.5);
 			double aniso_time = (clock() - time_start) / 1000.0;

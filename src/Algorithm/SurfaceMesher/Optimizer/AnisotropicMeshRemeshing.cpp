@@ -247,9 +247,9 @@ namespace CADMesher
 		double ave_len = meshAverageLength(*ref_mesh_);
 		double alpha = 2.0 / (ave_len*ave_len);
 
-		project_on_reference();
-		calc_tri_quality();
-		compute_src_mesh_ave_anisotropic_edge_length();
+		//project_on_reference();
+		//calc_tri_quality();
+		//compute_src_mesh_ave_anisotropic_edge_length();
 	}
 
 	void AnisotropicMeshRemeshing::compute_src_mesh_ave_anisotropic_edge_length()
@@ -614,73 +614,80 @@ namespace CADMesher
 		//emit updateGL_Manual_signal();
 	}
 
-	void AnisotropicMeshRemeshing::set_metric(metric_info& metric)
+	void AnisotropicMeshRemeshing::set_metric(std::vector<metric_info>& metric_)
 	{
-		auto vh = metric.vh;
-		if (!vh.is_valid())
-			return;
-		/*Eigen::Matrix3d fe;
-		auto x = metric.dir[0]; auto y = metric.dir[1]; auto z = x.cross(y);
-		fe << x[0], y[0], z[0],
-			x[1], y[1], z[1],
-			x[2], y[2], z[2];
-		Eigen::Matrix3d iyu; iyu.setZero();
-		iyu(0, 0) = metric.cur[0]; iyu(1, 1) = metric.cur[1];
-		ref_mesh_->data(metric.vh).set_Hessian(OpenMesh::Vec6d(fe(0, 0), fe(0, 1), fe(0, 2), fe(1, 1), fe(1, 2), fe(2, 2)));*/
-
-		if_has_metric.resize(ref_mesh_->n_vertices(), false);
-		if_has_metric[vh.idx()] = true;
-		std::vector<OpenMesh::VertexHandle> vertex_nei(1, vh);
-		int begin = 0;
-		int end = 1;
-		for (int i = 0; i < 8; ++i)
+		Eigen::Matrix3d H;
+		for (auto& metric : metric_)
 		{
-			for (int j = begin; j < end; ++j)
+			if (!metric.flag)
+				continue;
+
+			auto vh = metric.vh;
+			if (!vh.is_valid())
+				continue;
+			/*Eigen::Matrix3d fe;
+			auto x = metric.dir[0]; auto y = metric.dir[1]; auto z = x.cross(y);
+			fe << x[0], y[0], z[0],
+				x[1], y[1], z[1],
+				x[2], y[2], z[2];
+			Eigen::Matrix3d iyu; iyu.setZero();
+			iyu(0, 0) = metric.cur[0]; iyu(1, 1) = metric.cur[1];
+			ref_mesh_->data(metric.vh).set_Hessian(OpenMesh::Vec6d(fe(0, 0), fe(0, 1), fe(0, 2), fe(1, 1), fe(1, 2), fe(2, 2)));*/
+
+			if_has_metric.resize(ref_mesh_->n_vertices(), false);
+			if_has_metric[vh.idx()] = true;
+			std::vector<OpenMesh::VertexHandle> vertex_nei(1, vh);
+			int begin = 0;
+			int end = 1;
+			for (int i = 0; i < 8; ++i)
 			{
-				for (auto v_nei : ref_mesh_->vv_range(vertex_nei[j]))
+				for (int j = begin; j < end; ++j)
 				{
-					if (!if_has_metric[v_nei.idx()])
+					for (auto v_nei : ref_mesh_->vv_range(vertex_nei[j]))
 					{
-						vertex_nei.push_back(v_nei);
-						if_has_metric[v_nei.idx()] = true;
+						if (!if_has_metric[v_nei.idx()])
+						{
+							vertex_nei.push_back(v_nei);
+							if_has_metric[v_nei.idx()] = true;
+						}
 					}
 				}
+				dprint(vertex_nei.size());
+				begin = end;
+				end = vertex_nei.size();
 			}
-			dprint(vertex_nei.size());
-			begin = end;
-			end = vertex_nei.size();
+			std::deque<bool> if_reset(ref_mesh_->n_vertices(), false);
+			auto x = Eigen::Vector3d(metric.dir[0][0], metric.dir[0][1], metric.dir[0][2]);
+			auto y = Eigen::Vector3d(metric.dir[1][0], metric.dir[1][1], metric.dir[1][2]);
+			auto z = x.cross(y);
+			dprint("ehil");
+			for (auto vn : vertex_nei)
+			{
+				OpenMesh::Vec6d& h = ref_mesh_->data(vn).get_Hessian();
+				dprint(vn.idx());
+				dprint(h);
+				dprint(metric.cur[0], metric.cur[1]);
+				H(0, 0) = h[0]; H(0, 1) = h[1]; H(0, 2) = h[2];
+				H(1, 0) = h[1]; H(1, 1) = h[3]; H(1, 2) = h[4];
+				H(2, 0) = h[2]; H(2, 1) = h[4]; H(2, 2) = h[5];
+				Eigen::JacobiSVD<Eigen::Matrix3d> svd(H, Eigen::ComputeFullU | Eigen::ComputeFullV);
+				Eigen::Matrix3d U = svd.matrixU(); Eigen::Matrix3d V = svd.matrixV(); auto sv = svd.singularValues();
+				Eigen::Matrix3d dia; dia.setZero();
+				dia(0, 0) = Eigen::Vector2d(sv(0) * U.row(0).dot(x), sv(1) * U.row(1).dot(x)).norm() * metric.cur[0];
+				dia(1, 1) = Eigen::Vector2d(sv(0) * U.row(0).dot(y), sv(1) * U.row(1).dot(y)).norm() * metric.cur[1];
+				U(0, 0) = x(0); U(0, 1) = x(1); U(0, 2) = x(2);
+				U(1, 0) = y(0); U(1, 1) = y(1); U(1, 2) = y(2);
+				U(2, 0) = z(0); U(2, 1) = z(1); U(2, 2) = z(2);
+				V = U;
+				H = U * dia * V.transpose();
+				h[0] = H(0, 0); h[1] = H(0, 1); h[2] = H(0, 2);
+				h[3] = H(1, 1); h[4] = H(1, 2); h[5] = H(2, 2);
+				mesh_->data(mesh_->vertex_handle(vn.idx())).set_Hessian(h);
+				dprint(h);
+				dprint();
+			}
 		}
-		std::deque<bool> if_reset(ref_mesh_->n_vertices(), false);
-		Eigen::Matrix3d H;
-		auto x = Eigen::Vector3d(metric.dir[0][0], metric.dir[0][1], metric.dir[0][2]); 
-		auto y = Eigen::Vector3d(metric.dir[1][0], metric.dir[1][1], metric.dir[1][2]);
-		auto z = x.cross(y);
-		dprint("ehil");
-		for (auto vn : vertex_nei)
-		{
-			OpenMesh::Vec6d& h = ref_mesh_->data(vn).get_Hessian();
-			dprint(vn.idx());
-			dprint(h);
-			dprint(metric.cur[0], metric.cur[1]);
-			H(0, 0) = h[0]; H(0, 1) = h[1]; H(0, 2) = h[2];
-			H(1, 0) = h[1]; H(1, 1) = h[3]; H(1, 2) = h[4];
-			H(2, 0) = h[2]; H(2, 1) = h[4]; H(2, 2) = h[5];
-			Eigen::JacobiSVD<Eigen::Matrix3d> svd(H, Eigen::ComputeFullU | Eigen::ComputeFullV);
-			Eigen::Matrix3d U = svd.matrixU(); Eigen::Matrix3d V = svd.matrixV(); auto sv = svd.singularValues();
-			Eigen::Matrix3d dia; dia.setZero();
-			dia(0, 0) = Eigen::Vector2d(sv(0) * U.row(0).dot(x), sv(1) * U.row(1).dot(x)).norm() * metric.cur[0];
-			dia(1, 1) = Eigen::Vector2d(sv(0) * U.row(0).dot(y), sv(1) * U.row(1).dot(y)).norm() * metric.cur[1];
-			U(0, 0) = x(0); U(0, 1) = x(1); U(0, 2) = x(2);
-			U(1, 0) = y(0); U(1, 1) = y(1); U(1, 2) = y(2);
-			U(2, 0) = z(0); U(2, 1) = z(1); U(2, 2) = z(2);
-			V = U;
-			H = U * dia * V.transpose();
-			h[0] = H(0, 0); h[1] = H(0, 1); h[2] = H(0, 2);
-			h[3] = H(1, 1); h[4] = H(1, 2); h[5] = H(2, 2);
-			mesh_->data(mesh_->vertex_handle(vn.idx())).set_Hessian(h);
-			dprint(h);
-			dprint();
-		}
+
 		//return;
 		std::vector<Eigen::Matrix3d> vH(ref_mesh_->n_vertices());
 		for (int i = 0; i < ref_mesh_->n_vertices(); ++i)
@@ -717,36 +724,6 @@ namespace CADMesher
 		project_on_reference();
 		calc_tri_quality();
 		compute_src_mesh_ave_anisotropic_edge_length();
-
-
-
-		//for (int i = 0; i < 5; ++i)
-		//{
-		//	std::deque<bool> visited(mesh_->n_vertices(), false);
-		//	for (auto v1 : mesh_->vv_range(vh))
-		//	{
-		//		if (visited[v1.idx()])
-		//			continue;
-		//		visited[v1.idx()] = true;
-		//		//dprint("0", mesh_->data(v1).get_Hessian());
-		//		mesh_->data(v1).set_Hessian(0.5 * (mesh_->data(vh).get_Hessian() + mesh_->data(v1).get_Hessian()));
-		//		//dprint("1", mesh_->data(v1).get_Hessian());
-		//		for (auto v2 : mesh_->vv_range(v1))
-		//		{
-		//			if (visited[v2.idx()] || v2.idx() == vh.idx())
-		//				continue;
-		//			visited[v2.idx()] = true;
-		//			mesh_->data(v2).set_Hessian(0.5 * (mesh_->data(v1).get_Hessian() + mesh_->data(v2).get_Hessian()));
-		//			for (auto v3 : mesh_->vv_range(v2))
-		//			{
-		//				if (visited[v3.idx()] || v3.idx() == vh.idx())
-		//					continue;
-		//				visited[v3.idx()] = true;
-		//				mesh_->data(v3).set_Hessian(0.5 * (mesh_->data(v2).get_Hessian() + mesh_->data(v3).get_Hessian()));
-		//			}
-		//		}
-		//	}
-		//}
 	}
 
 	void AnisotropicMeshRemeshing::do_remeshing(double ref_edge_len /* = 1.0 */, double a /* = 1.5 */)

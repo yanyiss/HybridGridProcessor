@@ -20,6 +20,7 @@ public:
 		selectedFace.clear();
 		selectedEdge.clear();
 		selectedCurve.clear();
+		metric_constraints.clear();
 	};
 
 	virtual void clearAllMesh()
@@ -160,7 +161,7 @@ private:
 	ANNkd_tree* stripTree = nullptr;
 	std::vector<int> edgeshapeIndex;
 	std::vector<int> selectedCurve;
-	CADMesher::metric_info metric_constraint;
+	std::vector<CADMesher::metric_info> metric_constraints;
 	void BuildCurveIndex();
 
 #pragma region Auxiliary_function
