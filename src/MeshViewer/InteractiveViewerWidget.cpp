@@ -337,10 +337,42 @@ void InteractiveViewerWidget::pick_vertex(int x,int y)
 	if( (it = std::find(selectedVertex.begin(),selectedVertex.end(), r)) == selectedVertex.end() )
 	{
 		selectedVertex.push_back(r);
+		metric_constraints.insert(std::make_pair<OpenMesh::VertexHandle, CADMesher::metric_info>(mesh.vertex_handle(r), CADMesher::metric_info()));
+		double aa = 0;
+		for (auto ve : mesh.ve_range(mesh.vertex_handle(r)))
+		{
+			aa += mesh.calc_edge_length(ve);
+		}
+		aa /= mesh.valence(mesh.vertex_handle(r));
+		metric_constraints[mesh.vertex_handle(r)].avg = aa;
+		double min_cur_ = 4.0 / (occreader->bbmax - occreader->bbmin).norm();
+		double k1 = K1[r]; k1 = std::fabs(k1) < min_cur_ ? min_cur_ : k1;
+		double k2 = K2[r]; k2 = std::fabs(k2) < min_cur_ ? min_cur_ : k2;
+		metric_constraints[mesh.vertex_handle(r)].geo_cur[0] = k1;
+		metric_constraints[mesh.vertex_handle(r)].geo_cur[1] = k2;
+		metric_constraints[mesh.vertex_handle(r)].geo_dir[0] = D1[r];
+		metric_constraints[mesh.vertex_handle(r)].geo_dir[1] = D2[r];
+
+		OpenMesh::Vec3d n = D1[r].cross(D2[r]);
+		Eigen::Matrix3d U;
+		U(0, 0) = D1[r][0]; U(1, 0) = D1[r][1]; U(2, 0) = D1[r][2];
+		U(0, 1) = D2[r][0]; U(1, 1) = D2[r][1]; U(2, 1) = D2[r][2];
+		U(0, 2) = n[0]; U(1, 2) = n[1]; U(2, 2) = n[2];
+		Eigen::Matrix3d D; D.setZero();
+		D(0, 0) = std::fabs(k1); D(1, 1) = std::fabs(k2);
+		auto H = U * D*U.transpose();
+		Eigen::Vector3d d0(D1[r][0], D1[r][1], D1[r][2]);
+		Eigen::Vector3d d1(D2[r][0], D2[r][1], D2[r][2]);
+		metric_constraints[mesh.vertex_handle(r)].geo_dir[0] *= aa / sqrt(d0.transpose()*H*d0);
+		metric_constraints[mesh.vertex_handle(r)].geo_dir[1] *= aa / sqrt(d1.transpose()*H*d1);
+
+		metric_constraints[mesh.vertex_handle(r)].dir[0] = metric_constraints[mesh.vertex_handle(r)].geo_dir[0];
+		metric_constraints[mesh.vertex_handle(r)].dir[1] = metric_constraints[mesh.vertex_handle(r)].geo_dir[1];
 	}
 	else
 	{
 		selectedVertex.erase(it);
+		metric_constraints.erase(mesh.vertex_handle(r));
 	}
 
 	updateGL();
@@ -714,86 +746,84 @@ void InteractiveViewerWidget::draw_selected_curve()
 
 void InteractiveViewerWidget::draw_vector_set()
 {
-	//static bool if_init = false;
-	static double xn = 0, yn = 0;
-	/*static int choose_copy = choose;
-	if (choose_copy != choose)
-	{
-		choose_copy = choose;
-		xn = 0; yn = 0;
-	}*/
 	auto vh = mesh.vertex_handle(lastestVertex);
-	auto pos = mesh.point(vh);
+	if (metric_constraints.find(vh) != metric_constraints.end())
+	{
+		auto pos = mesh.point(vh);
+		double avg_len = metric_constraints[vh].avg;
+		OpenMesh::Vec3d zz(0, 0, 0);
+		for (auto vf : mesh.vf_range(vh))
+		{
+			zz += mesh.calc_face_normal(vf);
+		}
+		zz.normalize();
 
-	double avg_len = 0;
-	for (auto ve : mesh.ve_range(vh))
-	{
-		avg_len += mesh.calc_edge_length(ve);
-	}
-	avg_len /= mesh.valence(vh);
-	OpenMesh::Vec3d zz(0, 0, 0);
-	for (auto vf : mesh.vf_range(vh))
-	{
-		zz += mesh.calc_face_normal(vf);
-	}
-	zz.normalize();
+		OpenMesh::Vec3d xx = metric_constraints[vh].dir[0];
+		OpenMesh::Vec3d yy = metric_constraints[vh].dir[1];
+		OpenMesh::Vec3d now_pos(selectedPoint[0], selectedPoint[1], selectedPoint[2]);
+		//dprint(now_pos);
+		if (choose == 0)
+		{
+			xx = now_pos - pos;
+			xx -= xx.dot(zz)*zz;
+			yy = yy.norm()*zz.cross(xx.normalized());
+		}
+		else
+		{
+			yy = now_pos - pos;
+			yy -= yy.dot(zz)*zz;
+			xx = xx.norm()*yy.normalized().cross(zz);
+		}
 
-	OpenMesh::Vec3d xx, yy;
-	OpenMesh::Vec3d now_pos(selectedPoint[0], selectedPoint[1], selectedPoint[2]);
-	if (choose == 0)
-	{
-		xx = now_pos;
-		xn = (xx - pos).norm() / avg_len;
-		if (yn < 1.0e-6)
-			yy = zz.cross(xx - pos).normalize() * avg_len + pos;
-		else
-			yy = zz.cross(xx - pos).normalize() * yn * avg_len + pos;
-	}
-	else
-	{
-		yy = now_pos;
-		yn = (yy - pos).norm() / avg_len;
-		if (xn < 1.0e-6)
-			xx = (yy - pos).cross(zz).normalize() * avg_len + pos;
-		else
-			xx = (yy - pos).cross(zz).normalize() * xn * avg_len + pos;
+		metric_constraints[vh].dir[0] = xx;
+		metric_constraints[vh].dir[1] = yy;
 	}
 
 	glPointSize(5);
 	glBegin(GL_POINTS);
 	glColor3d(0.0, 0.1, 0.4);
-	glVertex3dv(pos.data());
+	for (const auto& mec : metric_constraints)
+	{
+		glVertex3dv(mesh.point(mec.first).data());
+	}
 	glEnd();
 
 	glLineWidth(5);
 	glBegin(GL_LINES);
 	glColor3d(0.9, 0.1, 0.0);
-	glVertex3dv(pos.data());
-	glVertex3dv(xx.data());
+	for (const auto& mec : metric_constraints)
+	{
+		glVertex3dv(mesh.point(mec.first).data());
+		//glVertex3dv((mec.second.dir[0] * mec.second.cur[0] * avg_len + mesh.point(mec.first)).data());
+		//dprint(mec.second.dir[0]);
+		glVertex3dv((mec.second.dir[0] + mesh.point(mec.first)).data());
+	}
 	glColor3d(0.1, 0.9, 0.0);
-	glVertex3dv(pos.data());
-	glVertex3dv(yy.data());
-	glEnd();
+	for (const auto& mec : metric_constraints)
+	{
+		glVertex3dv(mesh.point(mec.first).data());
+		//glVertex3dv((mec.second.dir[1] * mec.second.cur[1] * avg_len + mesh.point(mec.first)).data());
+		glVertex3dv((mec.second.dir[1] + mesh.point(mec.first)).data());
+	}
 
-	glLineWidth(2);
+	glLineWidth(1);
 	glBegin(GL_LINES);
 	glColor3d(0.1, 0.1, 0.3);
-	auto xv = (xx - pos).normalize()*avg_len; auto yv = (yy - pos).normalize()*avg_len;
-	glVertex3dv((xv + pos).data());
-	for (double i = 0.0; i < 6.28; i += 0.157)
+	for (const auto& mec : metric_constraints)
 	{
-		auto fe = cos(i) * xv + sin(i) * yv + pos;
-		glVertex3dv(fe.data());
-		glVertex3dv(fe.data());
+		auto xv = mec.second.geo_dir[0];// *mec.second.avg;
+		auto yv = mec.second.geo_dir[1];// *mec.second.avg;
+		auto pp = mesh.point(mec.first);
+		glVertex3dv((xv + pp).data());
+		for (double i = 0.0; i < 6.28; i += 0.0157)
+		{
+			auto fe = cos(i) * xv + sin(i) * yv + pp;
+			glVertex3dv(fe.data());
+			glVertex3dv(fe.data());
+		}
+		glVertex3dv((xv + pp).data());
 	}
-	glVertex3dv((xv + pos).data());
 	glEnd();
-
-	metric_constraint.vh = vh;
-	metric_constraint.cur[0] = xn < 1.0e-6 ? 1.0 : xn;
-	metric_constraint.cur[1] = yn < 1.0e-6 ? 1.0 : yn;
-	metric_constraint.dir[0] = (xx - pos).normalize();
-	metric_constraint.dir[1] = (yy - pos).normalize();
 }
 
 void InteractiveViewerWidget::draw_scene(int drawmode)
@@ -844,6 +874,7 @@ void InteractiveViewerWidget::generateTriMesh(double ratio)
 	CADMesher::globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(CADMesher::globalmodel.initial_trimesh);
 	occreader->SetTriFeature();
 	tri2poly(CADMesher::globalmodel.initial_trimesh, mesh, true);
+	setMeshMode(N_MESH_MODES);
 	initMeshStatusAndNormal(mesh);
 	drawCAD = false;
 	setDrawMode(InteractiveViewerWidget::FLAT_POINTS);
@@ -852,6 +883,7 @@ void InteractiveViewerWidget::generateTriMesh(double ratio)
 	ifGeneratePolyMesh = false;
 	dprint("Mesh Avg Length:", meshAverageLength(mesh));
 	updateGL();
+	compute_principal_curvature(&CADMesher::globalmodel.initial_trimesh, K1, K2, D1, D2);
 }
 
 void InteractiveViewerWidget::generatePolyMesh(double ratio, int quad_num, double initial_ratio, double increase_ratio)
@@ -933,7 +965,7 @@ void InteractiveViewerWidget::showAnisotropicMesh(double tl)
 		amr->load_ref_mesh(&(CADMesher::globalmodel.initial_trimesh), tl, (occreader->bbmax - occreader->bbmin).norm());
 		//double tl = amr->get_ref_mesh_ave_anisotropic_edge_length();
 		dprint("anisotropic edge length:", tl);
-		amr->set_metric(metric_constraint);
+		amr->set_metric(metric_constraints);
 		amr->do_remeshing(amr->get_ref_mesh_ave_anisotropic_edge_length(), 1.5);
 
 		tri2poly(CADMesher::globalmodel.isotropic_trimesh, mesh, true);
@@ -1016,6 +1048,7 @@ void InteractiveViewerWidget::showDebugTest()
 			CADMesher::globalmodel.isotropic_trimesh = CADMesher::globalmodel.initial_trimesh;
 			amr->SetMesh(&(CADMesher::globalmodel.isotropic_trimesh));
 			amr->load_ref_mesh(&(CADMesher::globalmodel.initial_trimesh), amr->get_ref_mesh_ave_anisotropic_edge_length(), 10);
+			amr->set_metric(metric_constraints);
 			double tl = amr->get_ref_mesh_ave_anisotropic_edge_length();
 			amr->do_remeshing(tl, 1.5);
 			double aniso_time = (clock() - time_start) / 1000.0;
