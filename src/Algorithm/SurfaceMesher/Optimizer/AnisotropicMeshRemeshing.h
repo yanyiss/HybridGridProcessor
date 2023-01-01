@@ -6,11 +6,12 @@
 namespace CADMesher
 {
 	struct metric_info {
-		bool flag = false;
 		double avg = 0;
-		OpenMesh::VertexHandle vh;
+		OpenMesh::Vec3d geo_dir[2];
+		double geo_cur[2];
 		OpenMesh::Vec3d dir[2];
 		double cur[2];
+		metric_info(){}
 	};
 	struct local_frame
 	{
@@ -133,7 +134,7 @@ namespace CADMesher
 		}
 		void reset_all_State();
 
-		void set_metric(std::vector<metric_info> &metric);
+		void set_metric(std::map<OpenMesh::VertexHandle, CADMesher::metric_info> &metric_constraints);
 		void load_ref_mesh(TriMesh* aniso_ref_mesh, double tl, double model_size);
 		void sample_mesh_anisotropic_edge_length(double ref_edge_len = 1.0, double a = 1.5, bool add_flip = true);
 		void do_remeshing(double ref_edge_len = 1.0, double a = 1.5);

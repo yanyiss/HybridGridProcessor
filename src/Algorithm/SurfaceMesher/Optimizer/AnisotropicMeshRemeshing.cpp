@@ -614,15 +614,12 @@ namespace CADMesher
 		//emit updateGL_Manual_signal();
 	}
 
-	void AnisotropicMeshRemeshing::set_metric(std::vector<metric_info>& metric_)
+	void AnisotropicMeshRemeshing::set_metric(std::map<OpenMesh::VertexHandle, CADMesher::metric_info>& metric_constraints)
 	{
 		Eigen::Matrix3d H;
-		for (auto& metric : metric_)
+		for (auto& metric : metric_constraints)
 		{
-			if (!metric.flag)
-				continue;
-
-			auto vh = metric.vh;
+			auto vh = metric.first;
 			if (!vh.is_valid())
 				continue;
 			/*Eigen::Matrix3d fe;
@@ -652,39 +649,50 @@ namespace CADMesher
 						}
 					}
 				}
-				dprint(vertex_nei.size());
+				//dprint(vertex_nei.size());
 				begin = end;
 				end = vertex_nei.size();
 			}
 			std::deque<bool> if_reset(ref_mesh_->n_vertices(), false);
-			auto x = Eigen::Vector3d(metric.dir[0][0], metric.dir[0][1], metric.dir[0][2]);
-			auto y = Eigen::Vector3d(metric.dir[1][0], metric.dir[1][1], metric.dir[1][2]);
+			auto x = Eigen::Vector3d(metric.second.dir[0][0], metric.second.dir[0][1], metric.second.dir[0][2]); x.normalize();
+			auto y = Eigen::Vector3d(metric.second.dir[1][0], metric.second.dir[1][1], metric.second.dir[1][2]); y.normalize();
 			auto z = x.cross(y);
-			dprint("ehil");
+
+			double cos_theta = fabs(metric.second.dir[0].normalized().dot(metric.second.geo_dir[0].normalized()));
+			double now_rate = (cos_theta*metric.second.geo_dir[0] + sqrt(1 - cos_theta * cos_theta)*metric.second.geo_dir[1]).norm()
+				/ metric.second.dir[0].norm(); now_rate *= now_rate;
+			metric.second.cur[0] = now_rate * (cos_theta * metric.second.geo_cur[0] + sqrt(1 - cos_theta * cos_theta)*metric.second.geo_cur[1]);
+
+			cos_theta = fabs(metric.second.dir[1].normalized().dot(metric.second.geo_dir[0].normalized()));
+			now_rate = (cos_theta*metric.second.geo_dir[0] + sqrt(1 - cos_theta * cos_theta)*metric.second.geo_dir[1]).norm()
+				/ metric.second.dir[1].norm(); now_rate *= now_rate;
+			metric.second.cur[1] = now_rate * (cos_theta * metric.second.geo_cur[0] + sqrt(1 - cos_theta * cos_theta)*metric.second.geo_cur[1]);
+
+			Eigen::Matrix3d U;
+			/*U(0, 0) = x(0); U(0, 1) = x(1); U(0, 2) = x(2);
+			U(1, 0) = y(0); U(1, 1) = y(1); U(1, 2) = y(2);
+			U(2, 0) = z(0); U(2, 1) = z(1); U(2, 2) = z(2);*/
+			U(0, 0) = x(0); U(1, 0) = x(1); U(2, 0) = x(2);
+			U(0, 1) = y(0); U(1, 1) = y(1); U(2, 1) = y(2);
+			U(0, 2) = z(0); U(1, 2) = z(1); U(2, 2) = z(2);
+			Eigen::Matrix3d dia; dia.setZero();
+			dia(0, 0) = metric.second.cur[0]; dia(1, 1) = metric.second.cur[1];
+			H = U * dia*U.transpose();
+
 			for (auto vn : vertex_nei)
 			{
 				OpenMesh::Vec6d& h = ref_mesh_->data(vn).get_Hessian();
-				dprint(vn.idx());
-				dprint(h);
-				dprint(metric.cur[0], metric.cur[1]);
-				H(0, 0) = h[0]; H(0, 1) = h[1]; H(0, 2) = h[2];
-				H(1, 0) = h[1]; H(1, 1) = h[3]; H(1, 2) = h[4];
-				H(2, 0) = h[2]; H(2, 1) = h[4]; H(2, 2) = h[5];
-				Eigen::JacobiSVD<Eigen::Matrix3d> svd(H, Eigen::ComputeFullU | Eigen::ComputeFullV);
-				Eigen::Matrix3d U = svd.matrixU(); Eigen::Matrix3d V = svd.matrixV(); auto sv = svd.singularValues();
-				Eigen::Matrix3d dia; dia.setZero();
-				dia(0, 0) = Eigen::Vector2d(sv(0) * U.row(0).dot(x), sv(1) * U.row(1).dot(x)).norm() * metric.cur[0];
-				dia(1, 1) = Eigen::Vector2d(sv(0) * U.row(0).dot(y), sv(1) * U.row(1).dot(y)).norm() * metric.cur[1];
+				/*Eigen::Matrix3d U;
 				U(0, 0) = x(0); U(0, 1) = x(1); U(0, 2) = x(2);
 				U(1, 0) = y(0); U(1, 1) = y(1); U(1, 2) = y(2);
 				U(2, 0) = z(0); U(2, 1) = z(1); U(2, 2) = z(2);
-				V = U;
-				H = U * dia * V.transpose();
+				Eigen::Matrix3d dia; dia.setZero();
+				dia(0, 0) = 1.0 / std::sqrt(metric.second.cur[0]);
+				dia(1, 1) = 1.0 / std::sqrt(metric.second.cur[1]);
+				H = U * dia*U.transpose();*/
 				h[0] = H(0, 0); h[1] = H(0, 1); h[2] = H(0, 2);
 				h[3] = H(1, 1); h[4] = H(1, 2); h[5] = H(2, 2);
 				mesh_->data(mesh_->vertex_handle(vn.idx())).set_Hessian(h);
-				dprint(h);
-				dprint();
 			}
 		}
 

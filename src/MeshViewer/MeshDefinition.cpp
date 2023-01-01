@@ -551,8 +551,10 @@ void tri2poly(TriMesh &tm, Mesh &m, bool update_property)
 		std::vector<OV> vhs;
 		for (auto tfv = tm.fv_begin(tf.handle()); tfv != tm.fv_end(tf.handle()); ++tfv)
 		{
-			vhs.push_back(tfv.handle());
+			//vhs.push_back(tfv.handle());
+			vhs.push_back(m.vertex_handle(tfv->idx()));
 		}
+		//std::swap(vhs[0], vhs[1]);
 		m.add_face(vhs);
 	}
 	if (!update_property)
