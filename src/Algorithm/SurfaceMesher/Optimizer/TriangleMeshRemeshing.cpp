@@ -32,7 +32,7 @@ namespace CADMesher
 		//提高网格平均质量
 		dprint("global remeshing");
 		int itertimes = 0;
-		for (; itertimes < 5; ++itertimes)
+		for (; itertimes < 20; ++itertimes)
 		{
 			tr.mark();
 			adjustTargetLength();
@@ -49,14 +49,14 @@ namespace CADMesher
 #endif
 		}
 		tr.mark();
-		//globalProject();//点到曲面的投影
+		globalProject();//点到曲面的投影
 		tr.pastMark("project to the origin surface time:");
 
 
 		//消除大部分小角，并且继续优化网格质量
 		dprint("remeshing while eliminating small angle");
 		itertimes = 0;
-		for (; itertimes < 5; ++itertimes)
+		for (; itertimes < 20; ++itertimes)
 		{
 			tr.mark();
 			if (processFeatureConstraintAngle() < 20)//处理最小角
@@ -682,7 +682,7 @@ namespace CADMesher
 			mesh->set_point(tv, project_pnt_to_surface(triangle_surface_index[fid], mesh->point(tv)));
 		}
 #endif
-#if 0
+#if 1
 		vector<unsigned>& triangle_surface_index = globalmodel.triangle_surface_index;
 		vector<vector<unsigned>> vertex_surface_index(globalmodel.faceshape.size());
 		for (auto tv : mesh->vertices()) {

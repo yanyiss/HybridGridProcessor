@@ -994,7 +994,7 @@ void MeshViewerWidget::draw_feature()
 		glEnd();
 	}
 	//画出最小角
-#if 1
+#if 0
 	glColor3d(0.9, 0.1, 0.9);
 	glPointSize(8);
 	glBegin(GL_POINTS);
