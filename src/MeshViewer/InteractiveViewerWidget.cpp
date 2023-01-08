@@ -1027,15 +1027,15 @@ void InteractiveViewerWidget::showDebugTest()
 			CADMesher::globalmodel.clear();
 		}
 #else   //导入各向异性数据
-		int i = 3200;
-		fileWriter.open("C:\\Users\\1\\Desktop\\test\\test2\\AnIsoRawData.csv", std::ios::app);
-		for (; i < allFileName.size();)
+		int i = 4;
+		fileWriter.open("C:\\Users\\1\\Desktop\\test\\test3\\AnIsoRawData.csv", std::ios::app);
+		for (; i < 20;)
 		{
 			auto fileName = allFileName[i];
 			dprint("\n\n\nfile index:\t", i++, "\nfileName:\t", fileName);
 			auto time_start = clock();
 			CADMesher::OccReader occreader1(QString::fromStdString(fileName));
-			occreader1.initialRate = 0.003;
+			occreader1.initialRate = 0.004;
 			occreader1.Discrete_Edge();
 			occreader1.Face_type();
 			occreader1.C0_Feature();
@@ -1044,17 +1044,18 @@ void InteractiveViewerWidget::showDebugTest()
 			occreader1.MergeModel(CADMesher::globalmodel.initial_trimesh, occreader1.Surface_TriMeshes);
 			CADMesher::globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(CADMesher::globalmodel.initial_trimesh);
 			occreader1.SetTriFeature();
+			compute_principal_curvature(&CADMesher::globalmodel.initial_trimesh, K1, K2, D1, D2);
 			CADMesher::AnisotropicMeshRemeshing* amr = new CADMesher::AnisotropicMeshRemeshing();
 			CADMesher::globalmodel.isotropic_trimesh = CADMesher::globalmodel.initial_trimesh;
 			amr->SetMesh(&(CADMesher::globalmodel.isotropic_trimesh));
-			amr->load_ref_mesh(&(CADMesher::globalmodel.initial_trimesh), amr->get_ref_mesh_ave_anisotropic_edge_length(), 10);
+			double tl = meshAverageLength(CADMesher::globalmodel.isotropic_trimesh);
+			amr->load_ref_mesh(&(CADMesher::globalmodel.initial_trimesh), tl, (occreader1.bbmax - occreader1.bbmin).norm());
 			amr->set_metric(metric_constraints);
-			double tl = amr->get_ref_mesh_ave_anisotropic_edge_length();
-			amr->do_remeshing(tl, 1.5);
+			amr->do_remeshing(amr->get_ref_mesh_ave_anisotropic_edge_length(), 1.5);
 			double aniso_time = (clock() - time_start) / 1000.0;
 			truncateFilePath(fileName);
 			truncateFileExtension(fileName);
-			if (!OpenMesh::IO::write_mesh(CADMesher::globalmodel.isotropic_trimesh, "C:\\Users\\1\\Desktop\\test\\test2\\ANISO\\" + fileName + ".obj"));
+			if (!OpenMesh::IO::write_mesh(CADMesher::globalmodel.isotropic_trimesh, "C:\\Users\\1\\Desktop\\test\\test3\\ANISO\\" + fileName + ".obj"));
 			{
 				std::cerr << "fail";
 			}
