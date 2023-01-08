@@ -38,6 +38,8 @@ void MainViewerWidget::initViewerWindow()
 
 	connect(MeshParam, SIGNAL(print_info_signal()), SLOT(print_info()));
 	//connect(MeshParam, SIGNAL(submit_info_signal()), SLOT(submit_info()));
+	connect(MeshParam, SIGNAL(load_ref_mesh_AM_signal()), this, SLOT(load_ref_mesh_AM()));
+	connect(MeshParam, SIGNAL(do_remehsing_AM_signal()), this, SLOT(do_remehsing_AM()));
 
 }
 
@@ -53,6 +55,7 @@ void MainViewerWidget::createViewerDialog()
 	glFormat.setSamples(16);
 
 	MeshViewer = new InteractiveViewerWidget(glFormat, NULL);
+	MeshViewer->MeshParam = MeshParam;
 	MeshViewer->setAcceptDrops(true);
 	connect(MeshViewer,SIGNAL(loadMeshOK(bool,QString)), this, SLOT(LoadMeshFromInner(bool,QString)) );
 }

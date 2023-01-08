@@ -562,6 +562,7 @@ void SurfaceMeshProcessing::vectorSet()
 	setAllMouseActionChecked(false);
 	vectorSetAction->setChecked(true);
 	viewer->setMouseMode(InteractiveViewerWidget::VECTOR_SET);
+	//viewer->updatePara();
 	if (viewer->MeshViewer->choose)
 		viewer->MeshViewer->choose = 0;
 	else

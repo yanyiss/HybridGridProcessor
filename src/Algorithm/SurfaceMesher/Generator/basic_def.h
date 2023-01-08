@@ -44,6 +44,7 @@ namespace CADMesher
 			id = id_;
 			quad_num = -1;
 			face = face_;
+			Surface = nullptr;
 		}
 	};
 
@@ -114,7 +115,9 @@ namespace CADMesher
 			for (int i = 0; i < faceshape.size(); i++)
 			{
 				if (!faceshape[i].if_exisited) continue;
-				delete faceshape[i].Surface;
+				if (faceshape[i].Surface) {
+					delete faceshape[i].Surface; faceshape[i].Surface = nullptr;
+				}
 				faceshape[i].Surface = nullptr;
 			}
 			faceshape.clear();

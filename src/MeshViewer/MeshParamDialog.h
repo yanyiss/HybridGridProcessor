@@ -9,13 +9,13 @@ class MeshParamDialog : public QDialog
 {
 	Q_OBJECT
 public:
-	MeshParamDialog(QWidget* parent=0);
+	MeshParamDialog(QWidget* parent = 0);
 	~MeshParamDialog();
 
 	QSize sizeHint()
 	{
 		QRect rect = QApplication::desktop()->screenGeometry();
-		return QSize( int( rect.width()*0.15), rect.height() );
+		return QSize(int(rect.width()*0.15), rect.height());
 	}
 
 private:
@@ -35,7 +35,7 @@ public:
 	}
 	void set_target_edge_length_AM(double tel)
 	{
-		target_edge_length_line_AM->setText(QString::number(tel,'g', 4));
+		target_edge_length_line_AM->setText(QString::number(tel, 'g', 4));
 	}
 	void set_sample_ratio_AM(double tel)
 	{
@@ -65,6 +65,23 @@ public:
 		return t;
 	}
 
+	double get_red_length()
+	{
+		return red_length_line->text().toDouble();
+	}
+	void set_red_length(double r)
+	{
+		red_length_line->setText(QString::number(r, 'g', 4));
+	}
+	double get_green_length()
+	{
+		return green_length_line->text().toDouble();
+	}
+	void set_green_length(double g)
+	{
+		green_length_line->setText(QString::number(g, 'g', 4));
+	}
+
 signals:
 	void load_ref_mesh_AM_signal();
 	void do_remehsing_AM_signal();
@@ -85,6 +102,8 @@ private:
 	QLabel* quad_num; QLineEdit* quad_num_line;
 	QLabel* initial_ratio; QLineEdit* initial_ratio_line;
 	QLabel* increase_ratio; QLineEdit* increase_ratio_line;
+	QLabel* red_length; QLineEdit* red_length_line;
+	QLabel* green_length; QLineEdit* green_length_line;
 
 private:
 	void create_Basic_Operation_Information_Widget();
