@@ -1002,7 +1002,7 @@ void MeshViewerWidget::draw_feature()
 	{
 		for (auto &tfh : mesh.fh_range(tf))
 		{
-			if (mesh.calc_sector_angle(tfh) < 0.01)
+			if (mesh.calc_sector_angle(tfh) < 0.06)
 			{
 				glVertex3dv(mesh.point(tfh.from()).data());
 				glVertex3dv(mesh.point(tfh.to()).data());

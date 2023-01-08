@@ -208,6 +208,12 @@ private slots:
 	void print_info();
 	void submit_info();
 
+	void do_remehsing_AM()
+	{
+		updatePara();
+	}
+	//void load_ref_mesh_AM();
+
 signals:
 	void haveLoadMesh(QString filePath);
 	void setMouseMode_signal_main(int);
@@ -247,6 +253,10 @@ public:
 	}
 	void showDebugTest() {
 		MeshViewer->showDebugTest();
+	}
+	void updatePara()
+	{
+		MeshViewer->updatePara();
 	}
 protected:
 	bool LoadMeshSuccess;

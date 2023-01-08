@@ -5,6 +5,7 @@
 #include "..\src\Dependency\ANN\ANN.h"
 #include  "../src/Algorithm/SurfaceMesher/Optimizer/TriangleMeshRemeshing.h"
 #include "../src/Algorithm/SurfaceMesher/Optimizer/AnisotropicMeshRemeshing.h"
+#include "MeshParamDialog.h"
 
 class InteractiveViewerWidget : public MeshViewerWidget
 {
@@ -154,6 +155,31 @@ public:
 	void showAnisotropicMesh(double tl);
 	void showDebugTest();
 	void offsetinfo(int quad_num, double initial_ratio, double increase_ratio);
+	MeshParamDialog* MeshParam;
+	void updatePara()
+	{
+		auto vh = mesh.vertex_handle(lastestVertex);
+		//if ((fabs(metric_constraints[vh].dir[0].norm() - MeshParam->get_red_length()) > 1.0e-10 
+			//|| fabs(metric_constraints[vh].dir[1].norm() - MeshParam->get_green_length()) > 1.0e-10))
+		{
+			metric_constraints[vh].dir[0] *= MeshParam->get_red_length() / metric_constraints[vh].dir[0].norm();
+			metric_constraints[vh].dir[1] *= MeshParam->get_green_length() / metric_constraints[vh].dir[1].norm();
+			OpenMesh::Vec3d pos;
+			if (choose == 0)
+			{
+				pos = mesh.point(mesh.vertex_handle(lastestVertex)) + metric_constraints[vh].dir[0];
+			}
+			else
+			{
+				pos = mesh.point(mesh.vertex_handle(lastestVertex)) + metric_constraints[vh].dir[1];
+			}
+			selectedPoint[0] = pos[0];
+			selectedPoint[1] = pos[1];
+			selectedPoint[2] = pos[2];
+			updateGL();
+		}
+		
+	}
 private:
 	bool ifGenerateTriMesh = false;
 	bool ifGeneratePolyMesh = false;
@@ -162,8 +188,9 @@ private:
 	std::vector<int> edgeshapeIndex;
 	std::vector<int> selectedCurve;
 	//std::vector<CADMesher::metric_info> metric_constraints;
-	std::vector<double> K1, K2; std::vector<OpenMesh::Vec3d> D1, D2;
+	//std::vector<double> K1, K2; std::vector<OpenMesh::Vec3d> D1, D2;
 	std::map<OpenMesh::VertexHandle, CADMesher::metric_info> metric_constraints;
+	void drawMetricConstraint();
 	void BuildCurveIndex();
 
 #pragma region Auxiliary_function
