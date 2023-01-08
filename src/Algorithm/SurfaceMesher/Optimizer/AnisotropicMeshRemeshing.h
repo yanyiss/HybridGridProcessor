@@ -191,6 +191,8 @@ namespace CADMesher
 		double largest_angle = PI * 0.975;
 
 		std::deque<bool> if_has_metric;
+
+		int processFeatureConstraintAngle(bool ifEnhanced);
 	};
 }
 #endif

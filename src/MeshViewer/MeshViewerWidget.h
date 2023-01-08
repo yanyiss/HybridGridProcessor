@@ -95,6 +95,7 @@ public:
 	// mesh modes.
 	double getAngLen() { return meshAverageLength(mesh); }
 	bool if_new_mesh = true;
+	bool fei = false;
 	bool ifDrawFeature = false;
 	bool drawCAD = false;
 	std::vector<Eigen::Matrix3Xd> strip;

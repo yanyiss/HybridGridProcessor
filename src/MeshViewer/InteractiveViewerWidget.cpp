@@ -322,13 +322,14 @@ void InteractiveViewerWidget::pick_vertex(int x,int y)
 		"\tLength:",mesh.data(mesh.vertex_handle(r)).get_targetlength(), "\tPosition:", mesh.point(mesh.vertex_handle(r)));
 
 
-	static std::vector<double> K1, K2; 
-	static bool fei = true;
+	static std::vector<double> K1, K2;
+	static std::vector<OpenMesh::Vec3d> D1, D2;
 	if (fei)
 	{
 		fei = false;
-		std::vector<OpenMesh::Vec3d> D1, D2;
 		TriMesh tm(mesh);
+		K1.clear(); K2.clear();
+		D1.clear(); D2.clear();
 		compute_principal_curvature(&tm, K1, K2, D1, D2);
 	}
 	dprint("curvature:", K1[r], K2[r]);
@@ -368,6 +369,9 @@ void InteractiveViewerWidget::pick_vertex(int x,int y)
 
 		metric_constraints[mesh.vertex_handle(r)].dir[0] = metric_constraints[mesh.vertex_handle(r)].geo_dir[0];
 		metric_constraints[mesh.vertex_handle(r)].dir[1] = metric_constraints[mesh.vertex_handle(r)].geo_dir[1];
+
+		MeshParam->set_red_length(metric_constraints[mesh.vertex_handle(r)].dir[0].norm());
+		MeshParam->set_green_length(metric_constraints[mesh.vertex_handle(r)].dir[1].norm());
 	}
 	else
 	{
@@ -636,6 +640,7 @@ void InteractiveViewerWidget::draw_interactive_portion(int drawmode)
 	}
 	
 	//showFeature();
+	drawMetricConstraint();
 	if (draw_new_mesh)
 	{
 		draw_scene_mesh(drawmode);
@@ -744,6 +749,52 @@ void InteractiveViewerWidget::draw_selected_curve()
 	}
 }
 
+void InteractiveViewerWidget::drawMetricConstraint()
+{
+	glPointSize(5);
+	glBegin(GL_POINTS);
+	glColor3d(0.0, 0.1, 0.4);
+	for (const auto& mec : metric_constraints)
+	{
+		glVertex3dv(mesh.point(mec.first).data());
+	}
+	glEnd();
+
+	glLineWidth(5);
+	glBegin(GL_LINES);
+	glColor3d(0.9, 0.1, 0.0);
+	for (const auto& mec : metric_constraints)
+	{
+		glVertex3dv(mesh.point(mec.first).data());
+		glVertex3dv((mec.second.dir[0] + mesh.point(mec.first)).data());
+	}
+	glColor3d(0.1, 0.9, 0.0);
+	for (const auto& mec : metric_constraints)
+	{
+		glVertex3dv(mesh.point(mec.first).data());
+		glVertex3dv((mec.second.dir[1] + mesh.point(mec.first)).data());
+	}
+
+	glLineWidth(1);
+	glBegin(GL_LINES);
+	glColor3d(0.1, 0.1, 0.3);
+	for (const auto& mec : metric_constraints)
+	{
+		auto xv = mec.second.geo_dir[0];// *mec.second.avg;
+		auto yv = mec.second.geo_dir[1];// *mec.second.avg;
+		auto pp = mesh.point(mec.first);
+		glVertex3dv((xv + pp).data());
+		for (double i = 0.0; i < 6.28; i += 0.0157)
+		{
+			auto fe = cos(i) * xv + sin(i) * yv + pp;
+			glVertex3dv(fe.data());
+			glVertex3dv(fe.data());
+		}
+		glVertex3dv((xv + pp).data());
+	}
+	glEnd();
+}
+
 void InteractiveViewerWidget::draw_vector_set()
 {
 	auto vh = mesh.vertex_handle(lastestVertex);
@@ -777,53 +828,12 @@ void InteractiveViewerWidget::draw_vector_set()
 
 		metric_constraints[vh].dir[0] = xx;
 		metric_constraints[vh].dir[1] = yy;
+		MeshParam->set_red_length(xx.norm());
+		MeshParam->set_green_length(yy.norm());
 	}
 
-	glPointSize(5);
-	glBegin(GL_POINTS);
-	glColor3d(0.0, 0.1, 0.4);
-	for (const auto& mec : metric_constraints)
-	{
-		glVertex3dv(mesh.point(mec.first).data());
-	}
-	glEnd();
-
-	glLineWidth(5);
-	glBegin(GL_LINES);
-	glColor3d(0.9, 0.1, 0.0);
-	for (const auto& mec : metric_constraints)
-	{
-		glVertex3dv(mesh.point(mec.first).data());
-		//glVertex3dv((mec.second.dir[0] * mec.second.cur[0] * avg_len + mesh.point(mec.first)).data());
-		//dprint(mec.second.dir[0]);
-		glVertex3dv((mec.second.dir[0] + mesh.point(mec.first)).data());
-	}
-	glColor3d(0.1, 0.9, 0.0);
-	for (const auto& mec : metric_constraints)
-	{
-		glVertex3dv(mesh.point(mec.first).data());
-		//glVertex3dv((mec.second.dir[1] * mec.second.cur[1] * avg_len + mesh.point(mec.first)).data());
-		glVertex3dv((mec.second.dir[1] + mesh.point(mec.first)).data());
-	}
-
-	glLineWidth(1);
-	glBegin(GL_LINES);
-	glColor3d(0.1, 0.1, 0.3);
-	for (const auto& mec : metric_constraints)
-	{
-		auto xv = mec.second.geo_dir[0];// *mec.second.avg;
-		auto yv = mec.second.geo_dir[1];// *mec.second.avg;
-		auto pp = mesh.point(mec.first);
-		glVertex3dv((xv + pp).data());
-		for (double i = 0.0; i < 6.28; i += 0.0157)
-		{
-			auto fe = cos(i) * xv + sin(i) * yv + pp;
-			glVertex3dv(fe.data());
-			glVertex3dv(fe.data());
-		}
-		glVertex3dv((xv + pp).data());
-	}
-	glEnd();
+	metric_constraints[vh].dir[0] *= MeshParam->get_red_length() / metric_constraints[vh].dir[0].norm();
+	metric_constraints[vh].dir[1] *= MeshParam->get_green_length() / metric_constraints[vh].dir[1].norm();
 }
 
 void InteractiveViewerWidget::draw_scene(int drawmode)
@@ -883,7 +893,8 @@ void InteractiveViewerWidget::generateTriMesh(double ratio)
 	ifGeneratePolyMesh = false;
 	dprint("Mesh Avg Length:", meshAverageLength(mesh));
 	updateGL();
-	compute_principal_curvature(&CADMesher::globalmodel.initial_trimesh, K1, K2, D1, D2);
+	//compute_principal_curvature(&CADMesher::globalmodel.initial_trimesh, K1, K2, D1, D2);
+	fei = true;
 }
 
 void InteractiveViewerWidget::generatePolyMesh(double ratio, int quad_num, double initial_ratio, double increase_ratio)
@@ -913,6 +924,7 @@ void InteractiveViewerWidget::generatePolyMesh(double ratio, int quad_num, doubl
 	dprint("Mesh Avg Length:", meshAverageLength(mesh));
 	setMeshMode(2);
 	updateGL();
+	fei = true;
 }
 
 void InteractiveViewerWidget::showFeature()
@@ -974,6 +986,7 @@ void InteractiveViewerWidget::showAnisotropicMesh(double tl)
 	drawCAD = false;
 	setDrawMode(InteractiveViewerWidget::FLAT_POINTS);
 	setMouseMode(InteractiveViewerWidget::TRANS);
+	metric_constraints.clear();
 	updateGL();
 }
 

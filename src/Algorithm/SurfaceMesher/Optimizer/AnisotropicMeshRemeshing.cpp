@@ -996,6 +996,8 @@ namespace CADMesher
 			}
 			++itertimes;
 		}
+		itertimes = 0;
+		while (processFeatureConstraintAngle(true) && ++itertimes < 10);
 		/*vector<unsigned> &triangle_surface_index = globalmodel.triangle_surface_index;
 		vector<vector<unsigned>> vertex_surface_index(globalmodel.faceshape.size());
 		for (auto tv : mesh_->vertices()) {
@@ -2256,5 +2258,148 @@ namespace CADMesher
 			if (flip_count == 0) { break; };
 			++iter_count;
 		}
+	}
+
+	int AnisotropicMeshRemeshing::processFeatureConstraintAngle(bool ifEnhanced)
+	{
+		//三角形中有小角的情况分为两种，即有两个小角和只有一个小角，分别进行处理
+		int processNumber = 0;
+		int findNumber = 0;
+		//处理有两个角小于阈值的情况
+		/*
+		如下图的三角形ABC，这里A,B皆为要消除的小角
+		消除小角的方法是翻转(flip)AB或者分割(split)AB
+					   C
+					   *
+					*       *
+				 *               *
+			  *                      *
+		  B *  *  *  *  *  *  *  *  *  * A
+		*/
+		//double coerciveAngleBound = 0.06;
+		double lowerAngleBound = 0.06;
+		for (auto &th : mesh_->halfedges())
+		{
+			if (th.edge().is_boundary() || !th.is_valid() || mesh_->calc_sector_angle(th) > lowerAngleBound)
+				continue;
+			++findNumber;
+			//calc_sector_angle(h)是计算三角形在顶点h.to()上的角的弧度值
+			double angle0 = mesh_->calc_sector_angle(th.next());
+			double angle1 = mesh_->calc_sector_angle(th.prev());
+			SOH CB = th;
+			bool isTwoSmallAngles = false;
+			if (angle0 < lowerAngleBound)
+				isTwoSmallAngles = true;
+			else if (angle1 < lowerAngleBound)
+			{
+				CB = th.prev();
+				isTwoSmallAngles = true;
+			}
+			if (isTwoSmallAngles && !CB.next().edge().is_boundary())
+			{
+				OE BA(CB.next().edge());
+				OE AC(CB.prev().edge());
+				if (mesh_->data(BA).flag1)
+				{
+					mesh_->data(BA).flag1 = false;
+					mesh_->data(AC).flag1 = true;
+					mesh_->data(CB.edge()).flag1 = true;
+				}
+				if (mesh_->data(BA).flag2)
+				{
+					mesh_->data(BA).flag2 = false;
+					mesh_->data(AC).flag2 = true;
+					mesh_->data(CB.edge()).flag2 = true;
+				}
+				//if (edgeFlag(CB.edge()) || edgeFlag(CB.next().edge()) || edgeFlag(CB.prev().edge()))
+				if (mesh_->data(CB.edge()).get_edgeflag() || mesh_->data(CB.next().edge()).get_edgeflag()
+					|| mesh_->data(CB.prev().edge()).get_edgeflag())
+				{
+					mesh_->data(CB.from()).set_vertflag(true);
+				}
+				if (mesh_->is_flip_ok(BA))
+					mesh_->flip(BA);
+				else
+				{
+					bool is_boundary_edge = mesh_->data(CB.next().edge()).get_edgeflag();
+
+					OpenMesh::Vec3d ppp = mesh_->calc_edge_midpoint(CB.next().edge());
+					find_nearst_point_on_reference_mesh(ppp, is_boundary_edge);
+					split_one_edge(CB.next().edge(), ppp);
+					OV newvert = mesh_->vertex_handle(mesh_->n_vertices() - 1);
+				}
+				++processNumber;
+			}
+		}
+		mesh_->garbage_collection();
+		if (!findNumber)
+		{
+			return findNumber;
+		}
+
+		//处理有一个角小于阈值的情况
+		/*
+		如下图的三角形ABC，这里B是要消除的小角
+		消除小角的基本方法是坍缩(collapse)AC
+		若AC不可坍缩，这一般意味着B的度数为3，可以做特殊处理
+		 A
+		  *
+		  *       *
+		  *              *
+		  *                     *
+		  *                            *
+		  *                                   * B
+		  *                      *
+		  *           *
+		  *
+		 C
+		*/
+		for (auto &th : mesh_->halfedges())
+		{
+			if (th.edge().is_boundary() || !th.is_valid() || mesh_->calc_sector_angle(th) > lowerAngleBound)
+				continue;
+			SOH CB = th;
+			if (!mesh_->is_collapse_ok(th.prev()))
+			{
+				if (ifEnhanced)
+				{
+					if (th.to().valence() == 3)
+						CB = th.next().opp().prev();
+					else if (th.prev().opp().prev().from().valence() == 3)
+						CB = th.prev().opp().prev().opp().prev();
+					if (mesh_->is_collapse_ok(CB.prev()) && !mesh_->is_boundary(CB.prev().edge()) && !CB.prev().from().is_boundary())
+						goto goto20220511;
+					else
+						continue;
+				}
+				else
+					continue;
+			}
+			++findNumber;
+			double angle0 = mesh_->calc_sector_angle(th.next());
+			double angle1 = mesh_->calc_sector_angle(th.prev());
+			if (angle0 > lowerAngleBound && angle1 > lowerAngleBound && !CB.prev().edge().is_boundary() && !CB.prev().from().is_boundary())
+			{
+			goto20220511:;
+				if (mesh_->data(CB.next().edge()).flag1)
+					mesh_->data(CB.edge()).flag1 = true;
+				if (mesh_->data(CB.next().edge()).flag2)
+					mesh_->data(CB.edge()).flag2 = true;
+				auto temp = CB.prev().opp().prev();
+				if (mesh_->data(temp.prev().edge()).flag1)
+					mesh_->data(temp.edge()).flag1 = true;
+				if (mesh_->data(temp.prev().edge()).flag2)
+					mesh_->data(temp.edge()).flag2 = true;
+				//if (edgeFlag(CB.edge()) || edgeFlag(CB.next().edge()) || edgeFlag(CB.prev().edge()) || edgeFlag(temp.edge()) || edgeFlag(temp.prev().edge()))
+				if (mesh_->data(CB.edge()).get_edgeflag() || mesh_->data(CB.next().edge()).get_edgeflag() ||
+					mesh_->data(CB.prev().edge()).get_edgeflag() || mesh_->data(temp.edge()).get_edgeflag() ||
+					mesh_->data(temp.prev().edge()).get_edgeflag())
+					mesh_->data(CB.from()).set_vertflag(true);
+				mesh_->collapse(CB.prev());
+				++processNumber;
+			}
+		}
+		mesh_->garbage_collection();
+		return findNumber;
 	}
 }
