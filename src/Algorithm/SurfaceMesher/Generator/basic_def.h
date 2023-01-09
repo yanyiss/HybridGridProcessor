@@ -18,8 +18,9 @@
 #include "..\src\MeshViewer\MeshDefinition.h"
 #include "..\src\Dependency\CPS\CPS_AABBTree.h"
 #include "..\src\Toolbox\dprinter\dprint.h"
-#include"src\Dependency\BSpline\BSplineSurface.h"
-#include"src\Dependency\BSpline\BSplineCurve.h"
+#include "src\Dependency\BSpline\BSplineSurface.h"
+#include "src\Dependency\BSpline\BSplineCurve.h"
+#include "src\Dependency\BSpline\TestClosestPoint.h"
 
 namespace CADMesher 
 {
@@ -144,15 +145,20 @@ namespace CADMesher
 	template<typename T>
 	void MeshProjectToSurface(T* mesh, vector<vector<unsigned>> &vertex_surface_index, GlobalGeometry* model) {
 		vector<ShapeFace> &faceshape = globalmodel.faceshape;
-		vector<vector<unsigned>>::iterator index_itr = vertex_surface_index.begin();
+		//vector<vector<unsigned>>::iterator index_itr = vertex_surface_index.begin();
 		vector<int> surface_type(10, 0);
 
 		int itertimes = 0;
 		clock_t start = clock();
 		//��Բ�ͬ���͵�������в�ͬ������ͶӰ
-		for (auto &surface : faceshape)
+		//for (auto &surface : faceshape)
 			//auto surface = faceshape[67];
+//#pragma omp parallel for
+		for(int ii = 0; ii < faceshape.size(); ++ii)
 		{
+			std::vector<std::vector<unsigned>>::iterator index_itr = vertex_surface_index.begin();
+			index_itr += ii;
+			auto &surface = faceshape[ii];
 			TopLoc_Location loca;
 			opencascade::handle<Geom_Surface> geom_surface = BRep_Tool::Surface(surface.face, loca);
 			opencascade::handle<Standard_Type> type = geom_surface->DynamicType();
@@ -257,109 +263,110 @@ namespace CADMesher
 			else if (type == STANDARD_TYPE(Geom_BezierSurface)) {
 				surface_type[5]++;
 				//dprint("Bezier Surface", itertimes++);
-	//			BezierSurface beziersurface;
-	//			opencascade::handle<Geom_BezierSurface> geom_beziersurface = opencascade::handle<Geom_BezierSurface>::DownCast(geom_surface);
+				BezierSurface beziersurface;
+				opencascade::handle<Geom_BezierSurface> geom_beziersurface = opencascade::handle<Geom_BezierSurface>::DownCast(geom_surface);
 
-	//			Standard_Real ui, ua, vi, va;
-	//			geom_beziersurface->Bounds(ui, ua, vi, va);
+				Standard_Real ui, ua, vi, va;
+				geom_beziersurface->Bounds(ui, ua, vi, va);
 
-	//			TColgp_Array2OfPnt controlpoints = geom_beziersurface->Poles();
-	//			vector<vector<Point>> cp(controlpoints.NbRows());
-	//			for (int r = 1; r <= controlpoints.NbRows(); r++)
-	//				for (int c = 1; c <= controlpoints.NbColumns(); c++) {
-	//					gp_Pnt pos = controlpoints.Value(r, c);
-	//					cp[r - 1].emplace_back(pos.X(), pos.Y(), pos.Z());
-	//				}
+				TColgp_Array2OfPnt controlpoints = geom_beziersurface->Poles();
+				vector<vector<Point>> cp(controlpoints.NbRows());
+				for (int r = 1; r <= controlpoints.NbRows(); r++)
+					for (int c = 1; c <= controlpoints.NbColumns(); c++) {
+						gp_Pnt pos = controlpoints.Value(r, c);
+						cp[r - 1].emplace_back(pos.X(), pos.Y(), pos.Z());
+					}
 
-	//			const TColStd_Array2OfReal* weights = geom_beziersurface->Weights();
-	//			if (weights) {
-	//				dprint(weights->NbRows(), weights->NbColumns());
-	//				vector<vector<double>> w(weights->NbRows());
-	//				for (int r = 1; r <= weights->NbRows(); r++)
-	//				{
-	//					w[r - 1].reserve(weights->NbColumns());
-	//					for (int c = 1; c <= weights->NbColumns(); c++)
-	//						w[r - 1].push_back(weights->Value(r, c));
-	//				}
-	//				beziersurface = { geom_beziersurface->UDegree(), geom_beziersurface->VDegree(), ui, ua, vi, va, w, cp };
-	//			}
-	//			else
-	//				beziersurface = { geom_beziersurface->UDegree(), geom_beziersurface->VDegree(), ui, ua, vi, va, cp };
+				const TColStd_Array2OfReal* weights = geom_beziersurface->Weights();
+				if (weights) {
+					dprint(weights->NbRows(), weights->NbColumns());
+					vector<vector<double>> w(weights->NbRows());
+					for (int r = 1; r <= weights->NbRows(); r++)
+					{
+						w[r - 1].reserve(weights->NbColumns());
+						for (int c = 1; c <= weights->NbColumns(); c++)
+							w[r - 1].push_back(weights->Value(r, c));
+					}
+					beziersurface = { geom_beziersurface->UDegree(), geom_beziersurface->VDegree(), ui, ua, vi, va, w, cp };
+				}
+				else
+					beziersurface = { geom_beziersurface->UDegree(), geom_beziersurface->VDegree(), ui, ua, vi, va, cp };
 
-	//			for (auto id : *index_itr) {
-	//				OV tv = mesh->vertex_handle(id);
-	//				if (mesh->data(tv).get_vertflag()) continue;
-	//				OpenMesh::Vec3d pos = mesh->point(tv);
-	//				vector<ProjectionPointToSurface> ppts;
-	//				TestClosestPoint tcp(beziersurface, Point(pos[0], pos[1], pos[2]), ppts);
-	//				/*if (ppts.empty()) continue;
+				for (auto id : *index_itr) {
+					OV tv = mesh->vertex_handle(id);
+					if (mesh->data(tv).get_vertflag()) continue;
+					OpenMesh::Vec3d pos = mesh->point(tv);
+					std::vector<ProjectionPointToSurface> ppts;
+					TestClosestPoint tcp(beziersurface, Point(pos[0], pos[1], pos[2]), ppts);
+					/*if (ppts.empty()) continue;
 
-	//				if (ppts.size() >= 2) continue;
-	//*/
-	//				if (ppts.size() != 1) continue;
-	//				ProjectionPointToSurface newpos = ppts.front();
-	//				Point p = beziersurface(newpos.u, newpos.v);
-	//				mesh->set_point(tv, OpenMesh::Vec3d(p(0), p(1), p(2)));
-	//			}
+					if (ppts.size() >= 2) continue;
+	*/
+					if (ppts.size() != 1) { continue; }
+					ProjectionPointToSurface newpos = ppts.front();
+					Point p = beziersurface(newpos.u, newpos.v);
+					mesh->set_point(tv, OpenMesh::Vec3d(p(0), p(1), p(2)));
+				}
 
 			}
 			else if (type == STANDARD_TYPE(Geom_BSplineSurface)) {
 				surface_type[6]++;
 				//dprint("BSpline Surface", itertimes++);
-	//			BSplineSurface bsplinesurface;
+				BSplineSurface bsplinesurface;
 
-	//			opencascade::handle<Geom_BSplineSurface> geom_bsplinesurface = Handle(Geom_BSplineSurface)::DownCast(geom_surface);
-	//			TColStd_Array1OfReal uknotsequence = geom_bsplinesurface->UKnotSequence();
-	//			TColStd_Array1OfReal vknotsequence = geom_bsplinesurface->VKnotSequence();
-	//			vector<double> u;
-	//			vector<double> v;
-	//			for (auto itr = uknotsequence.begin(); itr != uknotsequence.end(); itr++)
-	//				u.push_back(*itr);
-	//			for (auto itr = vknotsequence.begin(); itr != vknotsequence.end(); itr++)
-	//				v.push_back(*itr);
+				opencascade::handle<Geom_BSplineSurface> geom_bsplinesurface = Handle(Geom_BSplineSurface)::DownCast(geom_surface);
+				TColStd_Array1OfReal uknotsequence = geom_bsplinesurface->UKnotSequence();
+				TColStd_Array1OfReal vknotsequence = geom_bsplinesurface->VKnotSequence();
+				vector<double> u;
+				vector<double> v;
+				for (auto itr = uknotsequence.begin(); itr != uknotsequence.end(); itr++)
+					u.push_back(*itr);
+				for (auto itr = vknotsequence.begin(); itr != vknotsequence.end(); itr++)
+					v.push_back(*itr);
 
-	//			TColgp_Array2OfPnt controlpoints = geom_bsplinesurface->Poles();
-	//			vector<vector<Point>> cp(controlpoints.NbRows());
-	//			for (int r = 1; r <= controlpoints.NbRows(); r++)
-	//			{
-	//				cp[r - 1].reserve(controlpoints.NbColumns());
-	//				for (int c = 1; c <= controlpoints.NbColumns(); c++) {
-	//					gp_Pnt pos = controlpoints.Value(r, c);
-	//					cp[r - 1].emplace_back(pos.X(), pos.Y(), pos.Z());
-	//				}
-	//			}
+				TColgp_Array2OfPnt controlpoints = geom_bsplinesurface->Poles();
+				vector<vector<Point>> cp(controlpoints.NbRows());
+				for (int r = 1; r <= controlpoints.NbRows(); r++)
+				{
+					cp[r - 1].reserve(controlpoints.NbColumns());
+					for (int c = 1; c <= controlpoints.NbColumns(); c++) {
+						gp_Pnt pos = controlpoints.Value(r, c);
+						cp[r - 1].emplace_back(pos.X(), pos.Y(), pos.Z());
+					}
+				}
 
 
-	//			const TColStd_Array2OfReal* weights = geom_bsplinesurface->Weights();
-	//			if (weights) {
-	//				dprint(weights->NbRows(), weights->NbColumns());
-	//				vector<vector<double>> w(weights->NbRows());
-	//				for (int r = 1; r <= weights->NbRows(); r++)
-	//				{
-	//					w[r - 1].reserve(weights->NbColumns());
-	//					for (int c = 1; c <= weights->NbColumns(); c++)
-	//						w[r - 1].push_back(weights->Value(r, c));
-	//				}
-	//				bsplinesurface = { geom_bsplinesurface->UDegree(), geom_bsplinesurface->VDegree(), u, v, w, cp };
-	//			}
-	//			else
-	//				bsplinesurface = { geom_bsplinesurface->UDegree(), geom_bsplinesurface->VDegree(), u, v, cp };
+				const TColStd_Array2OfReal* weights = geom_bsplinesurface->Weights();
+				if (weights) {
+					//dprint(weights->NbRows(), weights->NbColumns());
+					vector<vector<double>> w(weights->NbRows());
+					for (int r = 1; r <= weights->NbRows(); r++)
+					{
+						w[r - 1].reserve(weights->NbColumns());
+						for (int c = 1; c <= weights->NbColumns(); c++)
+							w[r - 1].push_back(weights->Value(r, c));
+					}
+					bsplinesurface = { geom_bsplinesurface->UDegree(), geom_bsplinesurface->VDegree(), u, v, w, cp };
+				}
+				else
+					bsplinesurface = { geom_bsplinesurface->UDegree(), geom_bsplinesurface->VDegree(), u, v, cp };
 
-	//			for (auto id : *index_itr) {
-	//				OV tv = mesh->vertex_handle(id);
-	//				if (mesh->data(tv).get_vertflag()) continue;
-	//				OpenMesh::Vec3d pos = mesh->point(tv);
-	//				vector<ProjectionPointToSurface> ppts;
-	//				TestClosestPoint tcp(bsplinesurface, Point(pos[0], pos[1], pos[2]), ppts);
-	//				/*if (ppts.empty()) continue;
+				for (auto id : *index_itr) {
+					OV tv = mesh->vertex_handle(id);
+					if (mesh->data(tv).get_vertflag())
+						continue;
+					OpenMesh::Vec3d pos = mesh->point(tv);
+					vector<ProjectionPointToSurface> ppts;
+					TestClosestPoint tcp(bsplinesurface, Point(pos[0], pos[1], pos[2]), ppts);
+					/*if (ppts.empty()) continue;
 
-	//				if (ppts.size() >= 2) continue;
-	//*/
-	//				if (ppts.size() != 1) continue;
-	//				ProjectionPointToSurface newpos = ppts.front();
-	//				Point p = bsplinesurface.DeBoor(newpos.u, newpos.v);
-	//				mesh->set_point(tv, OpenMesh::Vec3d(p(0), p(1), p(2)));
-	//			}
+					if (ppts.size() >= 2) continue;
+	*/
+					if (ppts.size() != 1) continue;
+					ProjectionPointToSurface newpos = ppts.front();
+					Point p = bsplinesurface.DeBoor(newpos.u, newpos.v);
+					mesh->set_point(tv, OpenMesh::Vec3d(p(0), p(1), p(2)));
+				}
 			}
 			else if (type == STANDARD_TYPE(Geom_SurfaceOfRevolution)) {
 				surface_type[7]++;
@@ -380,7 +387,7 @@ namespace CADMesher
 				dprint("new face", itertimes++);
 				assert(false);
 			}
-			++index_itr;
+			//++index_itr;
 		}
 		dprint("project time:", clock() - start, "ms");
 		dprint("num of different surfaces in the model:\nPlane:", surface_type[0],

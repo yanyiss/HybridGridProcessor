@@ -16,6 +16,8 @@ namespace CADMesher
 
 	void TriangleMeshRemeshing::run()
 	{
+		if (mesh->n_vertices() < 1)
+			return;
 		//tmqh用来监控网格的质量
 		TriMeshQualityHelper tmqh(mesh);
 		tmqh.print();
@@ -51,7 +53,7 @@ namespace CADMesher
 		tr.mark();
 		//globalProject();//点到曲面的投影
 		tr.pastMark("project to the origin surface time:");
-
+		//return;
 
 		//消除大部分小角，并且继续优化网格质量
 		dprint("remeshing while eliminating small angle");
@@ -682,16 +684,13 @@ namespace CADMesher
 			mesh->set_point(tv, project_pnt_to_surface(triangle_surface_index[fid], mesh->point(tv)));
 		}
 #endif
-#if 0
+#if 1
 		vector<unsigned>& triangle_surface_index = globalmodel.triangle_surface_index;
 		vector<vector<unsigned>> vertex_surface_index(globalmodel.faceshape.size());
 		for (auto tv : mesh->vertices()) {
 			OpenMesh::Vec3d &p = mesh->point(tv);
 			vertex_surface_index[triangle_surface_index[aabbtree->closest_point_and_face_handle(p).second.idx()]].push_back(tv.idx());
-			/*CGAL_AABB_Tree::Point_and_primitive_id point_primitive = AABB_tree->closest_point_and_primitive(CGAL_double_3_Point(p[0], p[1], p[2]));
-			CGAL_Triangle_Iterator it = point_primitive.second;
-			unsigned face_id = std::distance(triangle_vectors.begin(), it);
-			vertex_surface_index[triangle_surface_index[face_id]].push_back(tv.idx());*/
+			//mesh->set_point(tv, aabbtree->closest_point_and_face_handle(p).first);
 		}
 		MeshProjectToSurface(mesh, vertex_surface_index, &globalmodel);
 #endif

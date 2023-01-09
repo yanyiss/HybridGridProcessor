@@ -184,7 +184,8 @@ namespace CADMesher
 	{
 		if (ref_mesh_) delete ref_mesh_;
 		ref_mesh_ = new TriMesh(*aniso_ref_mesh);
-		aabbtree = new ClosestPointSearch::AABBTree(*ref_mesh_);
+		//aabbtree = new ClosestPointSearch::AABBTree(*ref_Smesh_);
+		aabbtree = globalmodel.init_trimesh_tree;
 		segtree = new SegmentTree(ref_mesh_);
 
 		/*ref_mesh_->request_vertex_status();
