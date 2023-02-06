@@ -16,6 +16,8 @@ namespace CADMesher
 
 	void TriangleMeshRemeshing::run()
 	{
+		globalProject();//点到曲面的投影
+		return;
 		if (mesh->n_vertices() < 1)
 			return;
 		//tmqh用来监控网格的质量
@@ -51,9 +53,9 @@ namespace CADMesher
 #endif
 		}
 		tr.mark();
-		//globalProject();//点到曲面的投影
+		globalProject();//点到曲面的投影
 		tr.pastMark("project to the origin surface time:");
-		//return;
+		return;
 
 		//消除大部分小角，并且继续优化网格质量
 		dprint("remeshing while eliminating small angle");
@@ -692,6 +694,15 @@ namespace CADMesher
 			vertex_surface_index[triangle_surface_index[aabbtree->closest_point_and_face_handle(p).second.idx()]].push_back(tv.idx());
 			//mesh->set_point(tv, aabbtree->closest_point_and_face_handle(p).first);
 		}
+		/*globalmodel.vsi = vertex_surface_index;
+		globalmodel.rgb.resize(3, globalmodel.vsi.size());
+		srand((unsigned)time(NULL));
+		for (int i = 0; i < globalmodel.vsi.size(); ++i)
+		{
+			globalmodel.rgb(0, i) = rand() * 1.0 / RAND_MAX;
+			globalmodel.rgb(1, i) = rand() * 1.0 / RAND_MAX;
+			globalmodel.rgb(2, i) = rand() * 1.0 / RAND_MAX;
+		}*/
 		MeshProjectToSurface(mesh, vertex_surface_index, &globalmodel);
 #endif
 	}

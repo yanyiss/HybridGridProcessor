@@ -108,6 +108,8 @@ namespace CADMesher
 		ClosestPointSearch::AABBTree* init_trimesh_tree = nullptr;
 		ClosestPointSearch::AABBTree** init_surfacemesh_tree = nullptr;
 
+		/*Eigen::Matrix3Xd rgb;
+		vector<vector<unsigned>> vsi;*/
 		PolyMesh initial_polymesh;
 		PolyMesh isotropic_polymesh;
 		GlobalGeometry() {}
@@ -156,8 +158,9 @@ namespace CADMesher
 //#pragma omp parallel for
 		for(int ii = 0; ii < faceshape.size(); ++ii)
 		{
-			std::vector<std::vector<unsigned>>::iterator index_itr = vertex_surface_index.begin();
-			index_itr += ii;
+			dprint(ii);
+			//std::vector<std::vector<unsigned>>::iterator index_itr = vertex_surface_index.begin();
+			//index_itr += ii;
 			auto &surface = faceshape[ii];
 			TopLoc_Location loca;
 			opencascade::handle<Geom_Surface> geom_surface = BRep_Tool::Surface(surface.face, loca);
@@ -175,7 +178,7 @@ namespace CADMesher
 				OpenMesh::Vec3d n = OpenMesh::Vec3d(a, b, c).normalize();
 
 				//print("pointnum:", index_itr->size());
-				for (auto id : *index_itr) {
+				for (auto id : vertex_surface_index[ii]) {
 					OV tv = mesh->vertex_handle(id);
 					if (mesh->data(tv).get_vertflag()) continue;
 					OpenMesh::Vec3d pos = mesh->point(tv);
@@ -197,7 +200,7 @@ namespace CADMesher
 				gp_Dir z_axis = geom_cylindricalsurface->Axis().Direction();
 				OpenMesh::Vec3d n = OpenMesh::Vec3d(z_axis.X(), z_axis.Y(), z_axis.Z()).normalized();
 				double radius = static_cast<double>(geom_cylindricalsurface->Radius());
-				for (auto id : *index_itr) {
+				for (auto id : vertex_surface_index[ii]) {
 					OV tv = mesh->vertex_handle(id);
 					if (mesh->data(tv).get_vertflag()) continue;
 					OpenMesh::Vec3d pos = mesh->point(tv);
@@ -233,7 +236,7 @@ namespace CADMesher
 				gp_Pnt loc = geom_sphericalsurface->Location();
 				OpenMesh::Vec3d p(loc.X(), loc.Y(), loc.Z());
 				double radius = static_cast<double>(geom_sphericalsurface->Radius());
-				for (auto id : *index_itr) {
+				for (auto id : vertex_surface_index[ii]) {
 					OV tv = mesh->vertex_handle(id);
 					if (mesh->data(tv).get_vertflag()) continue;
 					OpenMesh::Vec3d pos = mesh->point(tv);
@@ -251,7 +254,7 @@ namespace CADMesher
 				OpenMesh::Vec3d p(loc.X(), loc.Y(), loc.Z());
 				gp_Dir z_axis = geom_toroidalsurface->Position().Axis().Direction();
 				OpenMesh::Vec3d n = OpenMesh::Vec3d(z_axis.X(), z_axis.Y(), z_axis.Z()).normalized();
-				for (auto id : *index_itr) {
+				for (auto id : vertex_surface_index[ii]) {
 					OV tv = mesh->vertex_handle(id);
 					if (mesh->data(tv).get_vertflag()) continue;
 					OpenMesh::Vec3d pos = mesh->point(tv);
@@ -292,7 +295,7 @@ namespace CADMesher
 				else
 					beziersurface = { geom_beziersurface->UDegree(), geom_beziersurface->VDegree(), ui, ua, vi, va, cp };
 
-				for (auto id : *index_itr) {
+				for (auto id : vertex_surface_index[ii]) {
 					OV tv = mesh->vertex_handle(id);
 					if (mesh->data(tv).get_vertflag()) continue;
 					OpenMesh::Vec3d pos = mesh->point(tv);
@@ -351,7 +354,7 @@ namespace CADMesher
 				else
 					bsplinesurface = { geom_bsplinesurface->UDegree(), geom_bsplinesurface->VDegree(), u, v, cp };
 
-				for (auto id : *index_itr) {
+				for (auto id : vertex_surface_index[ii]) {
 					OV tv = mesh->vertex_handle(id);
 					if (mesh->data(tv).get_vertflag())
 						continue;
