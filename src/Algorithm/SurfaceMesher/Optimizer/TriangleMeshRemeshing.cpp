@@ -16,8 +16,6 @@ namespace CADMesher
 
 	void TriangleMeshRemeshing::run()
 	{
-		globalProject();//点到曲面的投影
-		return;
 		if (mesh->n_vertices() < 1)
 			return;
 		//tmqh用来监控网格的质量
@@ -53,9 +51,9 @@ namespace CADMesher
 #endif
 		}
 		tr.mark();
-		globalProject();//点到曲面的投影
+		//globalProject();//点到曲面的投影
 		tr.pastMark("project to the origin surface time:");
-		return;
+		//return;
 
 		//消除大部分小角，并且继续优化网格质量
 		dprint("remeshing while eliminating small angle");
@@ -397,21 +395,47 @@ namespace CADMesher
 	{
 		//对目标边长做光滑处理
 		std::vector<double> tl; tl.reserve(mesh->n_vertices());
-		for (auto& tv : mesh->vertices())
+		if (polymeshInput)
 		{
-			double l = 0;
-			if (mesh->is_boundary(tv))
-			//if (mesh->data(tv).get_vertflag())
+			for (auto& tv : mesh->vertices())
 			{
-				tl.push_back(mesh->data(tv).get_targetlength());
-			}
-			else
-			{
-				for (auto& tvv : mesh->vv_range(tv))
+				double l = 0;
+				if (mesh->is_boundary(tv))
 				{
-					l += mesh->data(tvv).get_targetlength();
+					for (auto te : mesh->ve_range(tv))
+					{
+						l += mesh->calc_edge_length(te);
+					}
+					tl.push_back(l/mesh->valence(tv));
 				}
-				tl.push_back(0.5 * (l / mesh->valence(tv) + mesh->data(tv).get_targetlength()));
+				else
+				{
+					for (auto& tvv : mesh->vv_range(tv))
+					{
+						l += mesh->data(tvv).get_targetlength();
+					}
+					tl.push_back(0.5 * (l / mesh->valence(tv) + mesh->data(tv).get_targetlength()));
+				}
+			}
+		}
+		else
+		{
+			for (auto& tv : mesh->vertices())
+			{
+				double l = 0;
+				if (mesh->is_boundary(tv))
+					//if (mesh->data(tv).get_vertflag())
+				{
+					tl.push_back(mesh->data(tv).get_targetlength());
+				}
+				else
+				{
+					for (auto& tvv : mesh->vv_range(tv))
+					{
+						l += mesh->data(tvv).get_targetlength();
+					}
+					tl.push_back(0.5 * (l / mesh->valence(tv) + mesh->data(tv).get_targetlength()));
+				}
 			}
 		}
 		for (auto &tv : mesh->vertices())
@@ -539,7 +563,11 @@ namespace CADMesher
 		*/
 		for (auto &th : mesh->halfedges())
 		{
-			if (th.edge().is_boundary() || !th.is_valid() || mesh->calc_sector_angle(th) > lowerAngleBound)
+			//if (th.edge().is_boundary() || !th.is_valid() || mesh->calc_sector_angle(th) > lowerAngleBound)
+				//continue;
+			if (!th.is_valid() || mesh->calc_sector_angle(th) > lowerAngleBound)
+				continue;
+			if (!polymeshInput && th.edge().is_boundary())
 				continue;
 			SOH CB = th;
 			if (!mesh->is_collapse_ok(th.prev()))
@@ -565,7 +593,7 @@ namespace CADMesher
 			{
 			goto20220511:;
 #ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
-				if (polymeshInput && CB.from().idx() < boundaryNum && CB.prev().from().idx() < boundaryNum)
+				if (polymeshInput /*&& CB.from().idx() < boundaryNum*/ && CB.prev().from().idx() < boundaryNum)
 				{
 					continue;
 				}

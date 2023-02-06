@@ -2307,6 +2307,7 @@ namespace CADMesher
 		}
 
 		//globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(model_mesh);
+		globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(TriMesh(model_mesh));
 #if 1
 		for (int i = 0; i < edgeshape.size(); i++)
 		{
