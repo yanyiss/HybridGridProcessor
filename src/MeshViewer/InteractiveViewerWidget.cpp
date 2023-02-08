@@ -881,7 +881,7 @@ void InteractiveViewerWidget::generateTriMesh(double ratio)
 	occreader->Curvature_Feature();
 	occreader->Set_TriMesh();
 	occreader->MergeModel(CADMesher::globalmodel.initial_trimesh, occreader->Surface_TriMeshes);
-	CADMesher::globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(CADMesher::globalmodel.initial_trimesh);
+	//CADMesher::globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(CADMesher::globalmodel.initial_trimesh);
 	occreader->SetTriFeature();
 	tri2poly(CADMesher::globalmodel.initial_trimesh, mesh, true);
 	setMeshMode(N_MESH_MODES);
@@ -912,7 +912,7 @@ void InteractiveViewerWidget::generatePolyMesh(double ratio, int quad_num, doubl
 	occreader->Set_PolyMesh();
 	occreader->MergeModel(CADMesher::globalmodel.initial_polymesh, occreader->Surface_PolyMeshes);
 	TriMesh tm(CADMesher::globalmodel.initial_polymesh);
-	CADMesher::globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(tm);
+	//CADMesher::globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(tm);
 	occreader->SetPolyFeature();
 	polycopy(CADMesher::globalmodel.initial_polymesh, mesh, true);
 	initMeshStatusAndNormal(mesh);

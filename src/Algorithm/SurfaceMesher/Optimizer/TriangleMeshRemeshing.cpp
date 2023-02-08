@@ -16,6 +16,8 @@ namespace CADMesher
 
 	void TriangleMeshRemeshing::run()
 	{
+		if (mesh->n_vertices() < 1)
+			return;
 		//tmqh用来监控网格的质量
 		TriMeshQualityHelper tmqh(mesh);
 		tmqh.print();
@@ -51,7 +53,7 @@ namespace CADMesher
 		tr.mark();
 		globalProject();//点到曲面的投影
 		tr.pastMark("project to the origin surface time:");
-
+		//return;
 
 		//消除大部分小角，并且继续优化网格质量
 		dprint("remeshing while eliminating small angle");
@@ -393,21 +395,47 @@ namespace CADMesher
 	{
 		//对目标边长做光滑处理
 		std::vector<double> tl; tl.reserve(mesh->n_vertices());
-		for (auto& tv : mesh->vertices())
+		if (polymeshInput)
 		{
-			double l = 0;
-			if (mesh->is_boundary(tv))
-			//if (mesh->data(tv).get_vertflag())
+			for (auto& tv : mesh->vertices())
 			{
-				tl.push_back(mesh->data(tv).get_targetlength());
-			}
-			else
-			{
-				for (auto& tvv : mesh->vv_range(tv))
+				double l = 0;
+				if (mesh->is_boundary(tv))
 				{
-					l += mesh->data(tvv).get_targetlength();
+					for (auto te : mesh->ve_range(tv))
+					{
+						l += mesh->calc_edge_length(te);
+					}
+					tl.push_back(l/mesh->valence(tv));
 				}
-				tl.push_back(0.5 * (l / mesh->valence(tv) + mesh->data(tv).get_targetlength()));
+				else
+				{
+					for (auto& tvv : mesh->vv_range(tv))
+					{
+						l += mesh->data(tvv).get_targetlength();
+					}
+					tl.push_back(0.5 * (l / mesh->valence(tv) + mesh->data(tv).get_targetlength()));
+				}
+			}
+		}
+		else
+		{
+			for (auto& tv : mesh->vertices())
+			{
+				double l = 0;
+				if (mesh->is_boundary(tv))
+					//if (mesh->data(tv).get_vertflag())
+				{
+					tl.push_back(mesh->data(tv).get_targetlength());
+				}
+				else
+				{
+					for (auto& tvv : mesh->vv_range(tv))
+					{
+						l += mesh->data(tvv).get_targetlength();
+					}
+					tl.push_back(0.5 * (l / mesh->valence(tv) + mesh->data(tv).get_targetlength()));
+				}
 			}
 		}
 		for (auto &tv : mesh->vertices())
@@ -535,7 +563,11 @@ namespace CADMesher
 		*/
 		for (auto &th : mesh->halfedges())
 		{
-			if (th.edge().is_boundary() || !th.is_valid() || mesh->calc_sector_angle(th) > lowerAngleBound)
+			//if (th.edge().is_boundary() || !th.is_valid() || mesh->calc_sector_angle(th) > lowerAngleBound)
+				//continue;
+			if (!th.is_valid() || mesh->calc_sector_angle(th) > lowerAngleBound)
+				continue;
+			if (!polymeshInput && th.edge().is_boundary())
 				continue;
 			SOH CB = th;
 			if (!mesh->is_collapse_ok(th.prev()))
@@ -561,7 +593,7 @@ namespace CADMesher
 			{
 			goto20220511:;
 #ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
-				if (polymeshInput && CB.from().idx() < boundaryNum && CB.prev().from().idx() < boundaryNum)
+				if (polymeshInput /*&& CB.from().idx() < boundaryNum*/ && CB.prev().from().idx() < boundaryNum)
 				{
 					continue;
 				}
@@ -688,11 +720,17 @@ namespace CADMesher
 		for (auto tv : mesh->vertices()) {
 			OpenMesh::Vec3d &p = mesh->point(tv);
 			vertex_surface_index[triangle_surface_index[aabbtree->closest_point_and_face_handle(p).second.idx()]].push_back(tv.idx());
-			/*CGAL_AABB_Tree::Point_and_primitive_id point_primitive = AABB_tree->closest_point_and_primitive(CGAL_double_3_Point(p[0], p[1], p[2]));
-			CGAL_Triangle_Iterator it = point_primitive.second;
-			unsigned face_id = std::distance(triangle_vectors.begin(), it);
-			vertex_surface_index[triangle_surface_index[face_id]].push_back(tv.idx());*/
+			//mesh->set_point(tv, aabbtree->closest_point_and_face_handle(p).first);
 		}
+		/*globalmodel.vsi = vertex_surface_index;
+		globalmodel.rgb.resize(3, globalmodel.vsi.size());
+		srand((unsigned)time(NULL));
+		for (int i = 0; i < globalmodel.vsi.size(); ++i)
+		{
+			globalmodel.rgb(0, i) = rand() * 1.0 / RAND_MAX;
+			globalmodel.rgb(1, i) = rand() * 1.0 / RAND_MAX;
+			globalmodel.rgb(2, i) = rand() * 1.0 / RAND_MAX;
+		}*/
 		MeshProjectToSurface(mesh, vertex_surface_index, &globalmodel);
 #endif
 	}

@@ -1016,38 +1016,23 @@ void MeshViewerWidget::draw_feature()
 	glEnd();
   
 #endif
-	////draw curvature distribution
-	//glColor3d(0, 0, 1);
-	//for (auto &tv : mesh.vertices())
-	//{
-	//	double gc = mesh.data(tv).GaussCurvature;
-	//	if (gc < 1.0e-4)
-	//		gc = 0;
-	//	else if (gc > 100)
-	//		gc = 1;
-	//	else
-	//		gc = (4 + log10(gc)) / 6.0;
-
-	//	glPointSize(gc*10+1);
-	//	glBegin(GL_POINTS);
-	//	glVertex3dv(mesh.point(tv).data());
-	//	glEnd();
-	//}
-
-	/*int pN = 0;
-	glColor3d(0.1, 0.1, 0.1);
-	glPointSize(20);
+#if 0
+	auto &rgb = CADMesher::globalmodel.rgb;
+	glPointSize(8);
 	glBegin(GL_POINTS);
-	for (auto &tv : mesh.vertices())
+	//for (auto tvs : CADMesher::globalmodel.vsi)
+	srand((unsigned)time(NULL));
+	for (int i=0;i<CADMesher::globalmodel.vsi.size();++i)
 	{
-		if (tv.valence() <= 2 || tv.is_boundary())
+		glColor3d(rgb(0,i), rgb(1,i), rgb(2,i));
+		//dprint(i, r, g, b);
+		for (auto tv : CADMesher::globalmodel.vsi[i])
 		{
-			++pN;
-			glVertex3dv(mesh.point(tv).data());
+			glVertex3dv(mesh.point(mesh.vertex_handle(tv)).data());
 		}
 	}
 	glEnd();
-	dprint("problem number:", pN);*/
+#endif
 }
 //=======
 #include "../src/Algorithm/CheckBoard/CheckBoardGenerator.h"
