@@ -999,7 +999,8 @@ void InteractiveViewerWidget::showDebugTest()
 #pragma region step files test
 	{
 		std::vector<std::string> allFileName;
-		std::string path = "..\\model\\CAD";
+		//std::string path = "..\\model\\CAD";
+		std::string path = "C:\\Users\\1\\Desktop\\step files lib";
 		getFiles(path, allFileName);
 		std::ofstream fileWriter;
 
@@ -1040,9 +1041,10 @@ void InteractiveViewerWidget::showDebugTest()
 			CADMesher::globalmodel.clear();
 		}
 #else   //导入各向异性数据
-		int i = 4;
+		int i = 0;
 		fileWriter.open("C:\\Users\\1\\Desktop\\test\\test3\\AnIsoRawData.csv", std::ios::app);
-		for (; i < 20;)
+#pragma omp parallel for
+		for (; i < allFileName.size();)
 		{
 			auto fileName = allFileName[i];
 			dprint("\n\n\nfile index:\t", i++, "\nfileName:\t", fileName);
@@ -1057,7 +1059,6 @@ void InteractiveViewerWidget::showDebugTest()
 			occreader1.MergeModel(CADMesher::globalmodel.initial_trimesh, occreader1.Surface_TriMeshes);
 			CADMesher::globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(CADMesher::globalmodel.initial_trimesh);
 			occreader1.SetTriFeature();
-			compute_principal_curvature(&CADMesher::globalmodel.initial_trimesh, K1, K2, D1, D2);
 			CADMesher::AnisotropicMeshRemeshing* amr = new CADMesher::AnisotropicMeshRemeshing();
 			CADMesher::globalmodel.isotropic_trimesh = CADMesher::globalmodel.initial_trimesh;
 			amr->SetMesh(&(CADMesher::globalmodel.isotropic_trimesh));
