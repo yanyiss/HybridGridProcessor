@@ -824,7 +824,7 @@ namespace CADMesher
 							double alpha = acos(v0.dot(v1))*(v0(0)*v1(1) < v0(1)*v1(0) ? 1 : -1);
 							alpha = alpha > 0 ? alpha : alpha + 2 * PI;
 							Matrix2d M; M << cos(alpha), -sin(alpha), cos(alpha), sin(alpha);
-							Vector2d v = -(M * v1).normalized()*v1.norm()*0.1*(faceshape[fid].face.Orientation() ? -1 : 1) + e1.col(0);
+							Vector2d v = (M * v1).normalized()*v1.norm()*0.1*(faceshape[fid].face.Orientation() ? -1 : 1) + e1.col(0);
 							e0.col(e0.cols() - 1) = v;
 							e1.col(0) = v;
 							flag = true;
@@ -2240,6 +2240,8 @@ namespace CADMesher
 		triangle_surface_index.reserve(pointsnum);
 		pointsnum = 0;
 		int id = 0;
+
+		TriMesh aabbmesh;
 		for (int i = 0; i < surface_meshes.size(); i++)
 		{
 			auto& frac_mesh = surface_meshes[i];
@@ -2250,6 +2252,7 @@ namespace CADMesher
 			{
 				auto v = frac_mesh.point(tv);
 				vh = model_mesh.add_vertex(Mesh::Point(v[0], v[1], v[2]));
+				aabbmesh.add_vertex(Mesh::Point(v[0], v[1], v[2]));
 				model_mesh.data(vh).GaussCurvature = frac_mesh.data(tv).GaussCurvature;
 				vhandle.push_back(vh);
 			}
@@ -2263,7 +2266,11 @@ namespace CADMesher
 				for (auto tfv : frac_mesh.fv_range(tf))
 					pos.push_back(vhandle[tfv.idx()]);
 				model_mesh.add_face(pos);
-				triangle_surface_index.push_back(i);
+				if (pos.size() == 3)
+				{
+					aabbmesh.add_face(pos);
+					triangle_surface_index.push_back(i);
+				}
 			}
 			for (auto& e : frac_mesh.edges())
 			{
@@ -2305,7 +2312,7 @@ namespace CADMesher
 		}
 
 		//globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(model_mesh);
-		globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(TriMesh(model_mesh));
+		globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(aabbmesh);
 #if 1
 		for (int i = 0; i < edgeshape.size(); i++)
 		{

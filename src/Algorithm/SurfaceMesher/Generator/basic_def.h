@@ -143,7 +143,7 @@ namespace CADMesher
 	};
 
 	extern GlobalGeometry globalmodel;
-
+	//void MeshProjectToSurface(TriMesh* mesh, vector<vector<unsigned>> &vertex_surface_index);
 #if 1
 	template<typename T>
 	void MeshProjectToSurface(T* mesh, vector<vector<unsigned>> &vertex_surface_index) {
@@ -232,11 +232,13 @@ namespace CADMesher
 		bool* proj_count = new bool[mesh->n_vertices()];
 		for (int ii = 0; ii < mesh->n_vertices(); ++ii)
 			proj_count[ii] = false;
+
+		//timeRecorder tr;
 #if 1
 //#pragma omp parallel for
 		for(int ii = 0; ii < faceshape.size(); ++ii)
 		{
-			//dprint(ii);
+			//tr.out(ii);
 			//std::vector<std::vector<unsigned>>::iterator index_itr = vertex_surface_index.begin();
 			//index_itr += ii;
 			auto &surface = faceshape[ii];

@@ -55,14 +55,16 @@ public:
 		else
 			timeKnots.push_back(clock());
 	}
-	inline double out(const std::string &info = "time:")
+	template <typename infoType>
+	inline double out(infoType &info = "time:")
 	{
 		clock_t presentTime = clock();
 		dprint(info, presentTime - timeKnots.back(), "ms");
 		timeKnots.push_back(presentTime);
 		return presentTime - timeKnots[timeKnots.size() - 2];
 	}
-	inline void sum(const std::string &info = "sum time:")
+	template <typename infoType>
+	inline void sum(infoType &info = "sum time:")
 	{
 		clock_t presentTime = clock();
 		dprint(info, presentTime - timeKnots.front(), "ms");
@@ -72,7 +74,8 @@ public:
 	{
 		marking = timeKnots.size() - 1;
 	}
-	inline void pastMark(const std::string &info = "mark past time:")
+	template <typename infoType>
+	inline void pastMark(infoType &info = "mark past time:")
 	{
 		dprint(info, clock() - timeKnots[marking], "ms");
 	}
