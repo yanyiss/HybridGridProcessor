@@ -24,8 +24,8 @@ BSplineCurve::BSplineCurve(int deg, std::vector<double> knots, std::vector<Point
 {
 	SetDegree(deg);
 	SetRational(false);
-	bool re = isRational;
 	SetKnots(knots);
+	SetWeights(weights);
 	SetControlPoints(ctrlpoints);
 }
 
