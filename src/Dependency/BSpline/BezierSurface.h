@@ -65,6 +65,7 @@ public:
 		k2 = std::min(std::abs(value(0, 0)), std::abs(value(1, 1)));
 		return true;
 	}
+
 	bool NormalCurvature(const double u, const double v, const double x, const double y, double &k) const
 	{
 		Eigen::Matrix2d Weingarten, value, eigenvector;

@@ -16,6 +16,8 @@ namespace CADMesher
 
 	void TriangleMeshRemeshing::run()
 	{
+		globalProject();
+		return;
 		if (mesh->n_vertices() < 1)
 			return;
 		//tmqh用来监控网格的质量
@@ -34,7 +36,7 @@ namespace CADMesher
 		//提高网格平均质量
 		dprint("global remeshing");
 		int itertimes = 0;
-		for (; itertimes < 20; ++itertimes)
+		for (; itertimes < 5; ++itertimes)
 		{
 			tr.mark();
 			adjustTargetLength();
@@ -51,14 +53,15 @@ namespace CADMesher
 #endif
 		}
 		tr.mark();
-		globalProject();//点到曲面的投影
+
+		//globalProject();//点到曲面的投影
 		tr.pastMark("project to the origin surface time:");
 		//return;
 
 		//消除大部分小角，并且继续优化网格质量
 		dprint("remeshing while eliminating small angle");
 		itertimes = 0;
-		for (; itertimes < 20; ++itertimes)
+		for (; itertimes < 5; ++itertimes)
 		{
 			tr.mark();
 			if (processFeatureConstraintAngle() < 20)//处理最小角
