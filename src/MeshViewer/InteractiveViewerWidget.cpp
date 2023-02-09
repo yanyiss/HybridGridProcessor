@@ -1082,7 +1082,7 @@ void InteractiveViewerWidget::showDebugTest()
 #else   //导入各向异性数据
 		int i = 0;
 		fileWriter.open("C:\\Users\\1\\Desktop\\test\\test3\\AnIsoRawData.csv", std::ios::app);
-#pragma omp parallel for
+//#pragma omp parallel for
 		for (; i < allFileName.size();)
 		{
 			auto fileName = allFileName[i];

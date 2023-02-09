@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "basic_def.h"
 
 #include "..\src\Dependency\BSpline\TestClosestPoint.h"
@@ -9,5 +9,3 @@ namespace CADMesher
 {
 	GlobalGeometry globalmodel = GlobalGeometry();
 }
-
-

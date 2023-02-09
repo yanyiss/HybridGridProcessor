@@ -50,8 +50,6 @@ namespace CADMesher
 		Surface_TriMeshes.resize(faceshape.size());
 		for (int i = 0; i < faceshape.size(); i++)
 		{
-			//if (i != 8)
-				//continue;
 			TriMesh &aMesh = Surface_TriMeshes[i];
 			auto &wires = faceshape[i].wires;
 			if (wires.empty() || !faceshape[i].if_exisited)
@@ -826,7 +824,7 @@ namespace CADMesher
 							double alpha = acos(v0.dot(v1))*(v0(0)*v1(1) < v0(1)*v1(0) ? 1 : -1);
 							alpha = alpha > 0 ? alpha : alpha + 2 * PI;
 							Matrix2d M; M << cos(alpha), -sin(alpha), cos(alpha), sin(alpha);
-							Vector2d v = (M * v1).normalized()*v1.norm()*0.1*(faceshape[fid].face.Orientation() ? -1 : 1) + e1.col(0);
+							Vector2d v = -(M * v1).normalized()*v1.norm()*0.1*(faceshape[fid].face.Orientation() ? -1 : 1) + e1.col(0);
 							e0.col(e0.cols() - 1) = v;
 							e1.col(0) = v;
 							flag = true;

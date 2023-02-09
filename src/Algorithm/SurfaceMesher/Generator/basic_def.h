@@ -144,8 +144,9 @@ namespace CADMesher
 
 	extern GlobalGeometry globalmodel;
 
+#if 1
 	template<typename T>
-	void MeshProjectToSurface(T* mesh, vector<vector<unsigned>> &vertex_surface_index, GlobalGeometry* model) {
+	void MeshProjectToSurface(T* mesh, vector<vector<unsigned>> &vertex_surface_index) {
 		vector<ShapeFace> &faceshape = globalmodel.faceshape;
 		//vector<vector<unsigned>>::iterator index_itr = vertex_surface_index.begin();
 		vector<int> surface_type(10, 0);
@@ -156,9 +157,86 @@ namespace CADMesher
 		//for (auto &surface : faceshape)
 			//auto surface = faceshape[67];
 //#pragma omp parallel for
+#if 0
+		std::vector< BSplineSurface> bsSet(faceshape.size());
+#pragma omp parallel for
+		for (int ii = 0; ii < faceshape.size(); ++ii)
+		{
+			auto &surface = faceshape[ii];
+			TopLoc_Location loca;
+			opencascade::handle<Geom_Surface> geom_surface = BRep_Tool::Surface(surface.face, loca);
+			opencascade::handle<Standard_Type> type = geom_surface->DynamicType();
+			opencascade::handle<Geom_BSplineSurface> geom_bsplinesurface = Handle(Geom_BSplineSurface)::DownCast(geom_surface);
+			TColStd_Array1OfReal uknotsequence = geom_bsplinesurface->UKnotSequence();
+			TColStd_Array1OfReal vknotsequence = geom_bsplinesurface->VKnotSequence();
+			vector<double> u;
+			vector<double> v;
+			for (auto itr = uknotsequence.begin(); itr != uknotsequence.end(); itr++)
+				u.push_back(*itr);
+			for (auto itr = vknotsequence.begin(); itr != vknotsequence.end(); itr++)
+				v.push_back(*itr);
+
+			TColgp_Array2OfPnt controlpoints = geom_bsplinesurface->Poles();
+			vector<vector<Point>> cp(controlpoints.NbRows());
+			for (int r = 1; r <= controlpoints.NbRows(); r++)
+			{
+				cp[r - 1].reserve(controlpoints.NbColumns());
+				for (int c = 1; c <= controlpoints.NbColumns(); c++) {
+					gp_Pnt pos = controlpoints.Value(r, c);
+					cp[r - 1].emplace_back(pos.X(), pos.Y(), pos.Z());
+				}
+			}
+
+
+			const TColStd_Array2OfReal* weights = geom_bsplinesurface->Weights();
+			if (weights) {
+				//dprint(weights->NbRows(), weights->NbColumns());
+				vector<vector<double>> w(weights->NbRows());
+				for (int r = 1; r <= weights->NbRows(); r++)
+				{
+					w[r - 1].reserve(weights->NbColumns());
+					for (int c = 1; c <= weights->NbColumns(); c++)
+						w[r - 1].push_back(weights->Value(r, c));
+				}
+				bsSet[ii] = { geom_bsplinesurface->UDegree(), geom_bsplinesurface->VDegree(), u, v, w, cp };
+			}
+			else
+				bsSet[ii] = { geom_bsplinesurface->UDegree(), geom_bsplinesurface->VDegree(), u, v, cp };
+		}
+#pragma omp parallel for
+		for (int ii=0;ii<mesh->n_vertices();++ii)
+		{
+			OpenMesh::Vec3d pos = mesh->point(mesh->vertex_handle(ii));
+			double dis = 1.0e12;
+			for (auto &bs : bsSet)
+			{
+				vector<ProjectionPointToSurface> ppts;
+				TestClosestPoint tcp(bs, Point(pos[0], pos[1], pos[2]), ppts);
+				/*if (ppts.empty()) continue;
+
+				if (ppts.size() >= 2) continue;
+	*/
+				if (ppts.size() != 1) continue;
+				ProjectionPointToSurface newpos = ppts.front();
+				if (newpos.dist > 0 && newpos.dist < dis)
+				{
+					dis = newpos.dist;
+					Point p = bs.DeBoor(newpos.u, newpos.v);
+					mesh->set_point(mesh->vertex_handle(ii), OpenMesh::Vec3d(p(0), p(1), p(2)));
+				}
+			}
+		}
+#endif
+		if (mesh->n_vertices() == 0)
+			return;
+		bool* proj_count = new bool[mesh->n_vertices()];
+		for (int ii = 0; ii < mesh->n_vertices(); ++ii)
+			proj_count[ii] = false;
+#if 1
+//#pragma omp parallel for
 		for(int ii = 0; ii < faceshape.size(); ++ii)
 		{
-			dprint(ii);
+			//dprint(ii);
 			//std::vector<std::vector<unsigned>>::iterator index_itr = vertex_surface_index.begin();
 			//index_itr += ii;
 			auto &surface = faceshape[ii];
@@ -187,6 +265,7 @@ namespace CADMesher
 						print("dist: ", id, d);
 					else*/
 					mesh->set_point(tv, d*n + pos);
+					proj_count[id] = true;
 				}
 			}
 			else if (type == STANDARD_TYPE(Geom_CylindricalSurface)) {
@@ -207,6 +286,7 @@ namespace CADMesher
 					OpenMesh::Vec3d d = (pos - p).dot(n)*n + p;
 					double lamda = radius / (d - pos).norm();
 					mesh->set_point(tv, (1 - lamda)*d + lamda * pos);
+					proj_count[id] = true;
 				}
 			}
 			else if (type == STANDARD_TYPE(Geom_ConicalSurface)) {
@@ -242,6 +322,7 @@ namespace CADMesher
 					OpenMesh::Vec3d pos = mesh->point(tv);
 					double lamda = radius / (p - pos).norm();
 					mesh->set_point(tv, (1 - lamda)*p + lamda * pos);
+					proj_count[id] = true;
 				}
 			}
 			else if (type == STANDARD_TYPE(Geom_ToroidalSurface)) {
@@ -261,6 +342,7 @@ namespace CADMesher
 					OpenMesh::Vec3d s = p + (pos - (pos - p).dot(n)*n - p).normalize()*R;
 					double lamda = r / (s - pos).norm();
 					mesh->set_point(tv, (1 - lamda)*s + lamda * pos);
+					proj_count[id] = true;
 				}
 			}
 			else if (type == STANDARD_TYPE(Geom_BezierSurface)) {
@@ -295,7 +377,11 @@ namespace CADMesher
 				else
 					beziersurface = { geom_beziersurface->UDegree(), geom_beziersurface->VDegree(), ui, ua, vi, va, cp };
 
-				for (auto id : vertex_surface_index[ii]) {
+#pragma omp parallel for
+				//for (auto id : vertex_surface_index[ii]) {
+				for (int jj = 0; jj < vertex_surface_index[ii].size(); ++jj)
+				{
+					int id = vertex_surface_index[ii][jj];
 					OV tv = mesh->vertex_handle(id);
 					if (mesh->data(tv).get_vertflag()) continue;
 					OpenMesh::Vec3d pos = mesh->point(tv);
@@ -308,7 +394,14 @@ namespace CADMesher
 					if (ppts.size() != 1) { continue; }
 					ProjectionPointToSurface newpos = ppts.front();
 					Point p = beziersurface(newpos.u, newpos.v);
-					mesh->set_point(tv, OpenMesh::Vec3d(p(0), p(1), p(2)));
+					OpenMesh::Vec3d openp(p(0), p(1), p(2));
+					double avgl = 0;
+					for (auto ve : mesh->ve_range(tv))
+						avgl += mesh->calc_edge_length(ve);
+					if ((openp - pos).sqrnorm() * 9 * mesh->valence(tv)*mesh->valence(tv) > avgl*avgl)
+						continue;
+					mesh->set_point(tv, openp);
+					proj_count[id] = true;
 				}
 
 			}
@@ -354,7 +447,11 @@ namespace CADMesher
 				else
 					bsplinesurface = { geom_bsplinesurface->UDegree(), geom_bsplinesurface->VDegree(), u, v, cp };
 
-				for (auto id : vertex_surface_index[ii]) {
+#pragma omp parallel for
+				//for (auto id : vertex_surface_index[ii]) {
+				for (int jj = 0; jj < vertex_surface_index[ii].size(); ++jj)
+				{
+					int id = vertex_surface_index[ii][jj];
 					OV tv = mesh->vertex_handle(id);
 					if (mesh->data(tv).get_vertflag())
 						continue;
@@ -368,7 +465,16 @@ namespace CADMesher
 					if (ppts.size() != 1) continue;
 					ProjectionPointToSurface newpos = ppts.front();
 					Point p = bsplinesurface.DeBoor(newpos.u, newpos.v);
-					mesh->set_point(tv, OpenMesh::Vec3d(p(0), p(1), p(2)));
+
+					OpenMesh::Vec3d openp(p(0), p(1), p(2));
+
+					double avgl = 0;
+					for (auto ve : mesh->ve_range(tv))
+						avgl += mesh->calc_edge_length(ve);
+					if ((openp - pos).sqrnorm() * 9 * mesh->valence(tv)*mesh->valence(tv) > avgl*avgl)
+						continue;
+					mesh->set_point(tv, openp);
+					proj_count[id] = true;
 				}
 			}
 			else if (type == STANDARD_TYPE(Geom_SurfaceOfRevolution)) {
@@ -384,15 +490,23 @@ namespace CADMesher
 			else if (type == STANDARD_TYPE(Geom_OffsetSurface)) {
 				surface_type[9]++;
 				dprint("Offset Surface", itertimes++);
-				system("pause");
+				//system("pause");
 			}
 			else {
 				dprint("new face", itertimes++);
-				assert(false);
+				//assert(false);
 			}
 			//++index_itr;
 		}
+#endif
+		int count = 0;
+		for (int ii = 0; ii < mesh->n_vertices(); ++ii)
+			if (proj_count[ii])
+				++count;
+		delete proj_count;
+		proj_count = nullptr;
 		dprint("project time:", clock() - start, "ms");
+		dprint("project num:", count);
 		dprint("num of different surfaces in the model:\nPlane:", surface_type[0],
 			"\nCylinder:", surface_type[1],
 			"\nCone:", surface_type[2],
@@ -405,6 +519,7 @@ namespace CADMesher
 			"\nOffset Surface:", surface_type[9],
 			"\n");
 	}
+#endif
 
 }
 

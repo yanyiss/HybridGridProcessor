@@ -70,7 +70,7 @@ public:
 	}
 	inline void mark()
 	{
-		marking = timeKnots.size();
+		marking = timeKnots.size() - 1;
 	}
 	inline void pastMark(const std::string &info = "mark past time:")
 	{

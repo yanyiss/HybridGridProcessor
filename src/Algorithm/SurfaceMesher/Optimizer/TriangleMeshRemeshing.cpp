@@ -14,8 +14,6 @@ namespace CADMesher
 
 	void TriangleMeshRemeshing::run()
 	{
-		globalProject();
-		return;
 		if (mesh->n_vertices() < 1)
 			return;
 		//tmqh用来监控网格的质量
@@ -50,10 +48,10 @@ namespace CADMesher
 			dprint();
 #endif
 		}
-		tr.mark();
 
+		//tr.mark();
 		//globalProject();//点到曲面的投影
-		tr.pastMark("project to the origin surface time:");
+		//tr.pastMark("project to the origin surface time:");
 		//return;
 
 		//消除大部分小角，并且继续优化网格质量
@@ -83,9 +81,9 @@ namespace CADMesher
 #endif
 		}
 
-		tr.mark();
-		//globalProject();
-		tr.pastMark("project to the origin surface time:");
+		//tr.mark();
+		globalProject();
+		//tr.pastMark("project to the origin surface time:");
 
 		//return;
 		//消除所有小角
@@ -721,25 +719,9 @@ namespace CADMesher
 		for (auto tv : mesh->vertices()) {
 			OpenMesh::Vec3d &p = mesh->point(tv);
 			//vertex_surface_index[triangle_surface_index[mesh->vf_begin(tv).handle().idx()]].push_back(tv.idx());
-			
-			vertex_surface_index[triangle_surface_index[aabbtree->closest_point_and_face_handle(p).second.idx()]].push_back(tv.idx()); if (tv.idx() == 8638)
-				dprint(8638, triangle_surface_index[aabbtree->closest_point_and_face_handle(p).second.idx()]);
-			if (tv.idx() == 8081)
-				dprint(8081, triangle_surface_index[aabbtree->closest_point_and_face_handle(p).second.idx()]);
-			if (tv.idx() == 8337)
-				dprint(8337, triangle_surface_index[aabbtree->closest_point_and_face_handle(p).second.idx()]);
-			//mesh->set_point(tv, aabbtree->closest_point_and_face_handle(p).first);
+			vertex_surface_index[triangle_surface_index[aabbtree->closest_point_and_face_handle(p).second.idx()]].push_back(tv.idx());
 		}
-		/*globalmodel.vsi = vertex_surface_index;
-		globalmodel.rgb.resize(3, globalmodel.vsi.size());
-		srand((unsigned)time(NULL));
-		for (int i = 0; i < globalmodel.vsi.size(); ++i)
-		{
-			globalmodel.rgb(0, i) = rand() * 1.0 / RAND_MAX;
-			globalmodel.rgb(1, i) = rand() * 1.0 / RAND_MAX;
-			globalmodel.rgb(2, i) = rand() * 1.0 / RAND_MAX;
-		}*/
-		MeshProjectToSurface(mesh, vertex_surface_index, &globalmodel);
+		MeshProjectToSurface(mesh, vertex_surface_index);
 #endif
 	}
 
