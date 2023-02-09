@@ -280,6 +280,10 @@ namespace CADMesher
 			P1(0) = p1[0]; P1(1) = p1[1]; P1(2) = p1[2];
 			Eigen::JacobiSVD<Eigen::Matrix3d> svd(H, Eigen::ComputeFullU | Eigen::ComputeFullV);
 			U = svd.matrixU(); V = svd.matrixV(); sv = svd.singularValues();
+			if (sv(0) < 0 || sv(1)<0 || sv(2) < 0)
+			{
+				dprint("fesw", i);
+			}
 			diag_a(0, 0) = std::sqrt(sv(0)); diag_a(1, 1) = std::sqrt(sv(1)); diag_a(2, 2) = std::sqrt(sv(2));
 			Q = U * diag_a*V.transpose();
 			P0 = Q * P0; P1 = Q * P1;

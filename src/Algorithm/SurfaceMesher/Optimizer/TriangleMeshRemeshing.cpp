@@ -1,11 +1,9 @@
 #include "TriangleMeshRemeshing.h"
-
 namespace CADMesher
 {
 	TriangleMeshRemeshing::TriangleMeshRemeshing(TriMesh* mesh_, double target_length)
 		:mesh(mesh_), expected_length(target_length)
 	{
-
 		if (expected_length <= 0)
 		{
 			expected_length = meshAverageLength(*mesh);
@@ -16,6 +14,9 @@ namespace CADMesher
 
 	void TriangleMeshRemeshing::run()
 	{
+		globalProject();
+		return;
+
 		if (mesh->n_vertices() < 1)
 			return;
 		//tmqh用来监控网格的质量
@@ -719,7 +720,14 @@ namespace CADMesher
 		vector<vector<unsigned>> vertex_surface_index(globalmodel.faceshape.size());
 		for (auto tv : mesh->vertices()) {
 			OpenMesh::Vec3d &p = mesh->point(tv);
-			vertex_surface_index[triangle_surface_index[aabbtree->closest_point_and_face_handle(p).second.idx()]].push_back(tv.idx());
+			//vertex_surface_index[triangle_surface_index[mesh->vf_begin(tv).handle().idx()]].push_back(tv.idx());
+			
+			vertex_surface_index[triangle_surface_index[aabbtree->closest_point_and_face_handle(p).second.idx()]].push_back(tv.idx()); if (tv.idx() == 8638)
+				dprint(8638, triangle_surface_index[aabbtree->closest_point_and_face_handle(p).second.idx()]);
+			if (tv.idx() == 8081)
+				dprint(8081, triangle_surface_index[aabbtree->closest_point_and_face_handle(p).second.idx()]);
+			if (tv.idx() == 8337)
+				dprint(8337, triangle_surface_index[aabbtree->closest_point_and_face_handle(p).second.idx()]);
 			//mesh->set_point(tv, aabbtree->closest_point_and_face_handle(p).first);
 		}
 		/*globalmodel.vsi = vertex_surface_index;
