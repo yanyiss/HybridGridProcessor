@@ -317,9 +317,9 @@ void InteractiveViewerWidget::pick_vertex(int x,int y)
 {
 	int r = find_vertex_using_selected_point();
 	lastestVertex = r;
-	//printf("Select Vertex : %d\n", r);
-	dprint("Select Vertex:", r, "\tCurvature:", mesh.data(mesh.vertex_handle(r)).GaussCurvature,
-		"\tLength:",mesh.data(mesh.vertex_handle(r)).get_targetlength(), "\tPosition:", mesh.point(mesh.vertex_handle(r)));
+	printf("Select Vertex : %d\n", r);
+	//dprint("Select Vertex:", r, "\tCurvature:", mesh.data(mesh.vertex_handle(r)).GaussCurvature,
+		//"\tLength:",mesh.data(mesh.vertex_handle(r)).get_targetlength(), "\tPosition:", mesh.point(mesh.vertex_handle(r)));
 
 
 	static std::vector<double> K1, K2;
@@ -332,10 +332,10 @@ void InteractiveViewerWidget::pick_vertex(int x,int y)
 		D1.clear(); D2.clear();
 		compute_principal_curvature(&tm, K1, K2, D1, D2);
 	}
-	dprint("curvature:", K1[r], K2[r]);
+	//dprint("curvature:", K1[r], K2[r]);
 
 	std::vector<int>::iterator it;
-	if( (it = std::find(selectedVertex.begin(),selectedVertex.end(), r)) == selectedVertex.end() )
+	if( (it = std::find(selectedVertex.begin(),selectedVertex.end(), r)) == selectedVertex.end() && occreader )
 	{
 		selectedVertex.push_back(r);
 		metric_constraints.insert(std::make_pair<OpenMesh::VertexHandle, CADMesher::metric_info>(mesh.vertex_handle(r), CADMesher::metric_info()));
@@ -387,6 +387,12 @@ void InteractiveViewerWidget::pick_face(int x,int y)
 	if(desiredFace < 0) return;
 	lastestFace = desiredFace;
 	printf("Select Face : %d\n", desiredFace);
+	int vid[3];
+	auto fvitr = mesh.fv_begin(mesh.face_handle(desiredFace));
+	vid[0] = fvitr.handle().idx(); ++fvitr;
+	vid[1] = fvitr.handle().idx(); ++fvitr;
+	vid[2] = fvitr.handle().idx();
+	dprint("vid", vid[0], vid[1], vid[2]);
 	std::vector<int>::iterator it;
 	if( (it = std::find(selectedFace.begin(),selectedFace.end(),desiredFace)) == selectedFace.end() )
 	{
@@ -953,6 +959,21 @@ void InteractiveViewerWidget::showIsotropicMesh(double tl)
 		mesh = CADMesher::globalmodel.isotropic_polymesh;
 		initMeshStatusAndNormal(mesh);
 	}
+#if 0
+	bool read_OK = OpenMesh::IO::read_mesh(CADMesher::globalmodel.initial_trimesh,
+		"C:\\Git Rep\\HybridGridProcessor\\model\\mesh\\bunny.obj"/*"C:\\Users\\123\\Documents\\WeChat Files\\wxid_rhqwdne5h6dl22\\FileStorage\\File\\2023-02\\deformed_result.obj"*/);
+	tmr = new CADMesher::TriangleMeshRemeshing(&(CADMesher::globalmodel.initial_trimesh), tl);
+	CADMesher::globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(CADMesher::globalmodel.initial_trimesh);
+	dprint("aabbtree");
+
+	std::vector<double> K1, K2;
+	std::vector<OpenMesh::Vec3d> D1, D2;
+	compute_principal_curvature(&tm, K1, K2, D1, D2);
+
+	tmr->run();
+	OpenMesh::IO::write_mesh(CADMesher::globalmodel.initial_trimesh,
+		"C:\\Git Rep\\HybridGridProcessor\\model\\mesh\\bunny.obj"/*"C:\\Users\\123\\Documents\\WeChat Files\\wxid_rhqwdne5h6dl22\\FileStorage\\File\\2023-02\\deformed_result_iso.obj"*/);
+#endif
 	drawCAD = false;
 	setDrawMode(InteractiveViewerWidget::FLAT_POINTS);
 	setMouseMode(InteractiveViewerWidget::TRANS);
@@ -983,11 +1004,29 @@ void InteractiveViewerWidget::showAnisotropicMesh(double tl)
 		tri2poly(CADMesher::globalmodel.isotropic_trimesh, mesh, true);
 		initMeshStatusAndNormal(mesh);
 	}
+#if 0
+	bool read_OK = OpenMesh::IO::read_mesh(CADMesher::globalmodel.initial_trimesh,
+		"C:\\Users\\123\\Documents\\WeChat Files\\wxid_rhqwdne5h6dl22\\FileStorage\\File\\2023-02\\deformed_result.obj");
+	CADMesher::AnisotropicMeshRemeshing* amr = new CADMesher::AnisotropicMeshRemeshing();
+	CADMesher::globalmodel.isotropic_trimesh = CADMesher::globalmodel.initial_trimesh;
+	initMeshStatusAndNormal(CADMesher::globalmodel.isotropic_trimesh);
+	CADMesher::globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(CADMesher::globalmodel.isotropic_trimesh);
+	amr->SetMesh(&(CADMesher::globalmodel.isotropic_trimesh));
+	amr->load_ref_mesh(&CADMesher::globalmodel.initial_trimesh, tl, 4000);
+	//double tl = amr->get_ref_mesh_ave_anisotropic_edge_length();
+	dprint("anisotropic edge length:", tl);
+	std::map<OpenMesh::VertexHandle, CADMesher::metric_info> mi;
+	amr->set_metric(mi);
+	amr->do_remeshing(amr->get_ref_mesh_ave_anisotropic_edge_length(), 1.5);
+	OpenMesh::IO::write_mesh(CADMesher::globalmodel.isotropic_trimesh,
+		"C:\\Users\\123\\Documents\\WeChat Files\\wxid_rhqwdne5h6dl22\\FileStorage\\File\\2023-02\\deformed_result_aniso.obj");
+#endif
 	drawCAD = false;
 	setDrawMode(InteractiveViewerWidget::FLAT_POINTS);
 	setMouseMode(InteractiveViewerWidget::TRANS);
 	metric_constraints.clear();
 	updateGL();
+
 }
 
 #include "..\src\Toolbox\filesOperator.h"
