@@ -8,7 +8,7 @@ include_directories("${PROJECT_SOURCE_DIR}/src/Dependency/BSpline")
 add_library(BSpline STATIC ${BSpline_src})
 
 
-SET(EIGEN_PATH "D:/eigen-3.4.0")
+SET(EIGEN_PATH "D:/eigen3")
 include_directories(${EIGEN_PATH})
 SET(OPENMESH_PATH "D:/OpenMesh 8.1/include")
 include_directories(${OPENMESH_PATH})
