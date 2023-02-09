@@ -174,7 +174,7 @@ namespace CADMesher
 			}
 
 			ClearBoundary(aMesh);
-			if (1)
+			if (0)
 			{
 				Set_Curvature(Surface, aMesh);
 				//dprint("GaussCurvature compute done!");

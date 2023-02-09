@@ -16,6 +16,8 @@ namespace CADMesher
 
 	void TriangleMeshRemeshing::run()
 	{
+		globalProject();
+		return;
 		if (mesh->n_vertices() < 1)
 			return;
 		//tmqh用来监控网格的质量
@@ -51,6 +53,7 @@ namespace CADMesher
 #endif
 		}
 		tr.mark();
+
 		//globalProject();//点到曲面的投影
 		tr.pastMark("project to the origin surface time:");
 		//return;
