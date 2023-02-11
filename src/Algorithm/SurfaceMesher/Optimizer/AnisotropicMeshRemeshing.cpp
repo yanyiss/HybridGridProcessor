@@ -205,7 +205,7 @@ namespace CADMesher
 		std::vector<Eigen::Matrix3d> vH(nv); OpenMesh::Vec6d h;
 		min_cur = 4.0 / model_size;
 		//min_cur = 0.01;
-		dprint("model size:", model_size);
+		//dprint("model size:", model_size);
 		for (unsigned int i = 0; i < nv; ++i)
 		{
 			Mesh::VertexHandle vh = ref_mesh_->vertex_handle(i);
@@ -750,10 +750,11 @@ namespace CADMesher
 		Eigen::Matrix3d Q; std::vector<double> h(9);
 		int iter_num = 0; int split_count = 0; int collapse_count = 0;
 
-		std::cout << "Samplint tp " << std::endl;
+		//std::cout << "Samplint tp " << std::endl;
 
 		for (unsigned ii = 0; ii < 5; ++ii)
 		{
+			std::cout << ii << " ";
 			clock_t iter_start = clock();
 			int no_split_collapse = 0;
 			flip_based_energy();
@@ -825,7 +826,7 @@ namespace CADMesher
 				}
 			}
 			mesh_->garbage_collection();
-			std::cout << split_count << ", split count\n";
+			//std::cout << split_count << ", split count\n";
 			if (split_count == 0)
 				no_split_collapse += 1;
 
@@ -962,14 +963,14 @@ namespace CADMesher
 			}
 
 			mesh_->garbage_collection();
-			std::cout << collapse_count << ", collapse cout\n";
+			//std::cout << collapse_count << ", collapse cout\n";
 			if (collapse_count == 0)
 				no_split_collapse += 1;
 			//if (ii == 0) break;
 			if (no_split_collapse == 2)
 				break;
 
-			std::cout << ii << " iter is OK " << std::endl;
+			//std::cout << ii << " iter is OK " << std::endl;
 		}
 
 		LCOT_Optimize(10, 1.0);
@@ -1001,6 +1002,18 @@ namespace CADMesher
 			}
 			++itertimes;
 		}
+		dprint("remesh done");
+#if 1
+		vector<unsigned>& triangle_surface_index = globalmodel.triangle_surface_index;
+		vector<vector<unsigned>> vertex_surface_index(globalmodel.faceshape.size());
+		for (auto tv : mesh_->vertices()) {
+			OpenMesh::Vec3d &p = mesh_->point(tv);
+			//vertex_surface_index[triangle_surface_index[mesh->vf_begin(tv).handle().idx()]].push_back(tv.idx());
+			vertex_surface_index[triangle_surface_index[aabbtree->closest_point_and_face_handle(p).second.idx()]].push_back(tv.idx());
+		}
+		MeshProjectToSurface(mesh_, vertex_surface_index);
+#endif
+
 		itertimes = 0;
 		while (processFeatureConstraintAngle(true) && ++itertimes < 10);
 		/*vector<unsigned> &triangle_surface_index = globalmodel.triangle_surface_index;
@@ -1016,7 +1029,7 @@ namespace CADMesher
 		for (int i = 0; i < vertex_surface_index[67].size(); i++)
 			std::cout << vertex_surface_index[67][i] << ",";*/
 		//MeshProjectToSurface(mesh_, vertex_surface_index, &globalmodel);
-		calc_tri_quality();
+		//calc_tri_quality();
 	}
 
 	void AnisotropicMeshRemeshing::calc_tri_quality()
@@ -1726,7 +1739,7 @@ namespace CADMesher
 		int iter_count = 0;
 		//project_on_reference();
 
-		std::cout << "LCOT Optimize " << std::endl;
+		//std::cout << "LCOT Optimize " << std::endl;
 
 		while (iter_count < iter_num)
 		{
@@ -1737,7 +1750,7 @@ namespace CADMesher
 			//reposition_particle(step_length);
 			//emit updateGL_Manual_signal();
 			++iter_count;
-			printf("%d ", iter_count);
+			//printf("%d ", iter_count);
 		}
 		calc_tri_quality();
 		//emit updateGL_Manual_signal();
