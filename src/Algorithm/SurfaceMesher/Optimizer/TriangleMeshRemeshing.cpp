@@ -1,8 +1,8 @@
 #include "TriangleMeshRemeshing.h"
 namespace CADMesher
 {
-	TriangleMeshRemeshing::TriangleMeshRemeshing(TriMesh* mesh_, double target_length)
-		:mesh(mesh_), expected_length(target_length)
+	TriangleMeshRemeshing::TriangleMeshRemeshing(TriMesh* mesh_, double target_length, bool proj)
+		:mesh(mesh_), expected_length(target_length), if_proj(proj)
 	{
 		if (expected_length <= 0)
 		{
@@ -82,7 +82,8 @@ namespace CADMesher
 		}
 
 		//tr.mark();
-		globalProject();
+		if (if_proj)
+			globalProject();
 		//tr.pastMark("project to the origin surface time:");
 
 		//return;
@@ -797,8 +798,8 @@ namespace CADMesher
 	}
 
 #ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
-	TriangleMeshRemeshing::TriangleMeshRemeshing(PolyMesh *mesh_, double target_length)
-		:expected_length(target_length), polymeshInput(true)
+	TriangleMeshRemeshing::TriangleMeshRemeshing(PolyMesh *mesh_, double target_length, bool proj)
+		:expected_length(target_length), polymeshInput(true), if_proj(proj)
 	{
 		//若输入的是三角形与四边形的混合网格，则现将四边形全部删除，优化完成后再重新加入四边形
 		initMeshStatusAndNormal(*mesh_);

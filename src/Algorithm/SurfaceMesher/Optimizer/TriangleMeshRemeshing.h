@@ -14,7 +14,7 @@ namespace CADMesher
 	class TriangleMeshRemeshing
 	{
 	public:
-		explicit TriangleMeshRemeshing(TriMesh *mesh_, double target_length = -1);
+		explicit TriangleMeshRemeshing(TriMesh *mesh_, double target_length = -1, bool proj = false);
 		TriangleMeshRemeshing(const TriangleMeshRemeshing &tmr) = delete;
 		~TriangleMeshRemeshing() { 
 			//if (aabbtree) { delete aabbtree; aabbtree = nullptr; } 
@@ -42,6 +42,7 @@ namespace CADMesher
 
 	private:
 		double expected_length;
+		bool if_proj = false;
 
 		timeRecorder tr;
 
@@ -54,7 +55,7 @@ namespace CADMesher
 
 #ifdef OPENMESH_POLY_MESH_ARRAY_KERNEL_HH
 	public:
-		explicit TriangleMeshRemeshing(PolyMesh *mesh_, double target_length = -1);//, polymeshInput(true)
+		explicit TriangleMeshRemeshing(PolyMesh *mesh_, double target_length = -1, bool proj = false);//, polymeshInput(true)
 	private:
 		bool polymeshInput = false;
 		int boundaryNum;

@@ -38,7 +38,7 @@ private slots:
 	void flatPointsShow();
 	void solidSmoothShow();
 	void pointSetShow();
-	void checkboardShow();
+	void projShow();
 	void diagonalmeshShow();
 	void DrawBBox();
 	void DrawMeshBoundary();
@@ -96,7 +96,7 @@ private:
 	QAction* flatPointsAction;
 	QAction* solidSmoothAction;
 	QAction* pointSetAction;
-	QAction* checkboardAction;
+	QAction* projAction;
 	QAction* diagonalmeshAction;
 
 	// other View Actions.

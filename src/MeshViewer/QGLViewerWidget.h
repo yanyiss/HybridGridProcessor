@@ -52,7 +52,7 @@ public:
 	float fovy() const { return 45.0f; }
 public:
 	// draw modes.
-	enum { WIRE_FRAME=0, HIDDEN_LINES, SOLID_FLAT, FLAT_POINTS, SOLID_SMOOTH, POINT_SET, CHECKBOARD ,DIAGONAL_MESH, N_DRAW_MODES };
+	enum { WIRE_FRAME=0, HIDDEN_LINES, SOLID_FLAT, FLAT_POINTS, SOLID_SMOOTH, POINT_SET, PROJECTION ,DIAGONAL_MESH, N_DRAW_MODES };
 	void setDrawMode(int dm)
 	{ 
 		draw_mode_ = dm;

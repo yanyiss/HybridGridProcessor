@@ -101,12 +101,12 @@ void SurfaceMeshProcessing::createActions()
 	pointSetAction->setChecked(false);
 	connect(pointSetAction, SIGNAL(triggered()), this, SLOT(pointSetShow()));
 
-	checkboardAction = new QAction("Check Board",this);
-	checkboardAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/curvature.png"));
-	checkboardAction->setStatusTip(tr("Using Check Board showing method"));
-	checkboardAction->setCheckable(true);
-	checkboardAction->setChecked(false);
-	connect(checkboardAction, SIGNAL(triggered()), this, SLOT(checkboardShow()));
+	projAction = new QAction("Projection",this);
+	projAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/curvature.png"));
+	projAction->setStatusTip(tr("Using projection method"));
+	projAction->setCheckable(true);
+	projAction->setChecked(false);
+	connect(projAction, SIGNAL(triggered()), this, SLOT(projShow()));
 
 	diagonalmeshAction = new QAction("Diagonal Mesh",this);
 	diagonalmeshAction->setIcon(QIcon(":/SurfaceMeshProcessing/Images/curvature.png"));
@@ -335,7 +335,7 @@ void SurfaceMeshProcessing::createMenus()
 	viewMenu->addAction(flatPointsAction);
 	viewMenu->addAction(solidSmoothAction);
 	viewMenu->addAction(pointSetAction);
-	viewMenu->addAction(checkboardAction);
+	viewMenu->addAction(projAction);
 	viewMenu->addAction(diagonalmeshAction);
 	viewMenu->addSeparator();
 	viewMenu->addAction(drawBoundingBox);
@@ -390,7 +390,7 @@ void SurfaceMeshProcessing::createToolBars()
 	viewToolBar->addAction(flatPointsAction);
 	viewToolBar->addAction(solidSmoothAction);
 	viewToolBar->addAction(pointSetAction);
-	viewToolBar->addAction(checkboardAction);
+	viewToolBar->addAction(projAction);
 	//viewToolBar->addAction(diagonalmeshAction);
 
 	otherViewBar = addToolBar("OtherView");
@@ -478,9 +478,9 @@ void SurfaceMeshProcessing::pointSetShow()
 	viewer->setMouseMode(InteractiveViewerWidget::TRANS);
 }
 
-void SurfaceMeshProcessing::checkboardShow()
+void SurfaceMeshProcessing::projShow()
 {
-	viewer->setDrawMode(InteractiveViewerWidget::CHECKBOARD);
+	viewer->setDrawMode(InteractiveViewerWidget::PROJECTION);
 	viewer->setMouseMode(InteractiveViewerWidget::TRANS);
 }
 
@@ -508,7 +508,7 @@ void SurfaceMeshProcessing::setAllViewActionChecked(bool b)
 	flatPointsAction->setChecked(b);
 	solidSmoothAction->setChecked(b);
 	pointSetAction->setChecked(b);
-	checkboardAction->setChecked(b);
+	//projAction->setChecked(b);
 	diagonalmeshAction->setChecked(b);
 
 }
@@ -688,8 +688,8 @@ void SurfaceMeshProcessing::setMouseMode_slot(int mm)
 		case InteractiveViewerWidget::POINT_SET:
 			pointSetAction->setChecked(true);
 			break;
-		case InteractiveViewerWidget::CHECKBOARD:
-			checkboardAction->setChecked(true);
+		case InteractiveViewerWidget::PROJECTION:
+			projAction->setChecked(true);
 			break;
 		case InteractiveViewerWidget::DIAGONAL_MESH:
 			diagonalmeshAction->setChecked(true);

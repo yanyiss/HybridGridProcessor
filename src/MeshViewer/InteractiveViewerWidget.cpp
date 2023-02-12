@@ -946,7 +946,7 @@ void InteractiveViewerWidget::showIsotropicMesh(double tl)
 	{
 		dprint("jiu", tl);
 		CADMesher::globalmodel.isotropic_trimesh = CADMesher::globalmodel.initial_trimesh;
-		tmr = new CADMesher::TriangleMeshRemeshing(&(CADMesher::globalmodel.isotropic_trimesh), tl);
+		tmr = new CADMesher::TriangleMeshRemeshing(&(CADMesher::globalmodel.isotropic_trimesh), tl, if_projection);
 		tmr->run();
 		delete tmr;
 		tri2poly(CADMesher::globalmodel.isotropic_trimesh, mesh, true);
@@ -955,27 +955,12 @@ void InteractiveViewerWidget::showIsotropicMesh(double tl)
 	else if (ifGeneratePolyMesh)
 	{
 		CADMesher::globalmodel.isotropic_polymesh = CADMesher::globalmodel.initial_polymesh;
-		tmr = new CADMesher::TriangleMeshRemeshing(&(CADMesher::globalmodel.isotropic_polymesh));
+		tmr = new CADMesher::TriangleMeshRemeshing(&(CADMesher::globalmodel.isotropic_polymesh), tl, if_projection);
 		tmr->run();
 		delete tmr;
 		mesh = CADMesher::globalmodel.isotropic_polymesh;
 		initMeshStatusAndNormal(mesh);
 	}
-#if 0
-	bool read_OK = OpenMesh::IO::read_mesh(CADMesher::globalmodel.initial_trimesh,
-		"C:\\Git Rep\\HybridGridProcessor\\model\\mesh\\bunny.obj"/*"C:\\Users\\123\\Documents\\WeChat Files\\wxid_rhqwdne5h6dl22\\FileStorage\\File\\2023-02\\deformed_result.obj"*/);
-	tmr = new CADMesher::TriangleMeshRemeshing(&(CADMesher::globalmodel.initial_trimesh), tl);
-	CADMesher::globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(CADMesher::globalmodel.initial_trimesh);
-	dprint("aabbtree");
-
-	std::vector<double> K1, K2;
-	std::vector<OpenMesh::Vec3d> D1, D2;
-	compute_principal_curvature(&tm, K1, K2, D1, D2);
-
-	tmr->run();
-	OpenMesh::IO::write_mesh(CADMesher::globalmodel.initial_trimesh,
-		"C:\\Git Rep\\HybridGridProcessor\\model\\mesh\\bunny.obj"/*"C:\\Users\\123\\Documents\\WeChat Files\\wxid_rhqwdne5h6dl22\\FileStorage\\File\\2023-02\\deformed_result_iso.obj"*/);
-#endif
 	drawCAD = false;
 	setDrawMode(InteractiveViewerWidget::FLAT_POINTS);
 	setMouseMode(InteractiveViewerWidget::TRANS);
@@ -994,7 +979,7 @@ void InteractiveViewerWidget::showAnisotropicMesh(double tl)
 {
 	if (ifGenerateTriMesh)
 	{
-		CADMesher::AnisotropicMeshRemeshing* amr = new CADMesher::AnisotropicMeshRemeshing();
+		CADMesher::AnisotropicMeshRemeshing* amr = new CADMesher::AnisotropicMeshRemeshing(if_projection);
 		CADMesher::globalmodel.isotropic_trimesh = CADMesher::globalmodel.initial_trimesh;
 		amr->SetMesh(&(CADMesher::globalmodel.isotropic_trimesh));
 		amr->load_ref_mesh(&(CADMesher::globalmodel.initial_trimesh), tl, (occreader->bbmax - occreader->bbmin).norm());
