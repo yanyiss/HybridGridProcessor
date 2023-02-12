@@ -944,7 +944,7 @@ void InteractiveViewerWidget::showIsotropicMesh(double tl)
 {
 	if (ifGenerateTriMesh)
 	{
-		dprint(tl);
+		dprint("jiu", tl);
 		CADMesher::globalmodel.isotropic_trimesh = CADMesher::globalmodel.initial_trimesh;
 		tmr = new CADMesher::TriangleMeshRemeshing(&(CADMesher::globalmodel.isotropic_trimesh), tl);
 		tmr->run();
@@ -1038,14 +1038,13 @@ void InteractiveViewerWidget::showDebugTest()
 #pragma region step files test
 	{
 		std::vector<std::string> allFileName;
-		//std::string path = "..\\model\\CAD";
-		std::string path = "C:\\Users\\1\\Desktop\\step files lib";
+		std::string path = "C:\\Users\\1\\Desktop\\SCU\\mesh\\testISO";
 		getFiles(path, allFileName);
 		std::ofstream fileWriter;
 
-#if 0   //导入各向同性数据
+#if 1   //导入各向同性数据
 		int i = 0;
-		fileWriter.open("C:\\Users\\1\\Desktop\\test\\test2\\New.csv", std::ios::app);
+		fileWriter.open("C:\\Users\\1\\Desktop\\SCU\\test\\test4\\IsoRawData.csv", std::ios::app);
 		for (; i < allFileName.size();)
 		{
 			auto fileName = allFileName[i];
@@ -1059,18 +1058,18 @@ void InteractiveViewerWidget::showDebugTest()
 			occreader1.Curvature_Feature();
 			occreader1.Set_TriMesh();
 			occreader1.MergeModel(CADMesher::globalmodel.initial_trimesh, occreader1.Surface_TriMeshes);
-			CADMesher::globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(CADMesher::globalmodel.initial_trimesh);
 			occreader1.SetTriFeature();
 			CADMesher::globalmodel.isotropic_trimesh = CADMesher::globalmodel.initial_trimesh;
-			CADMesher::TriangleMeshRemeshing trm1(&(CADMesher::globalmodel.isotropic_trimesh));
+			double tl = meshAverageLength(CADMesher::globalmodel.isotropic_trimesh);
+			CADMesher::TriangleMeshRemeshing trm1(&(CADMesher::globalmodel.isotropic_trimesh), tl);
 			trm1.run();
 			double iso_time = (clock() - time_start) / 1000.0;
 			truncateFilePath(fileName);
 			truncateFileExtension(fileName);
-			//if (!OpenMesh::IO::write_mesh(CADMesher::globalmodel.isotropic_trimesh, "C:\\Users\\1\\Desktop\\test\\test2\\ISO\\" + fileName + ".obj"));
-			//{
-			//	std::cerr << "fail";
-			//}
+			if (!OpenMesh::IO::write_mesh(CADMesher::globalmodel.isotropic_trimesh, "C:\\Users\\1\\Desktop\\SCU\\test\\test4\\ISO\\" + fileName + ".obj"));
+			{
+				std::cerr << "fail";
+			}
 			TriMeshQualityHelper tmqh(&CADMesher::globalmodel.isotropic_trimesh);
 			fileWriter << fileName << ",";
 			fileWriter << CADMesher::globalmodel.isotropic_trimesh.n_vertices() << ",";
@@ -1081,12 +1080,13 @@ void InteractiveViewerWidget::showDebugTest()
 		}
 #else   //导入各向异性数据
 		int i = 0;
-		fileWriter.open("C:\\Users\\1\\Desktop\\test\\test3\\AnIsoRawData.csv", std::ios::app);
+		fileWriter.open("C:\\Users\\1\\Desktop\\SCU\\test\\test4\\AnIsoRawData.csv", std::ios::app);
 //#pragma omp parallel for
-		for (; i < allFileName.size();)
+		for (; i < allFileName.size(); )
 		{
 			auto fileName = allFileName[i];
 			dprint("\n\n\nfile index:\t", i++, "\nfileName:\t", fileName);
+			if(i==400 || i==411) continue;
 			auto time_start = clock();
 			CADMesher::OccReader occreader1(QString::fromStdString(fileName));
 			occreader1.initialRate = 0.004;
@@ -1096,7 +1096,7 @@ void InteractiveViewerWidget::showDebugTest()
 			occreader1.Curvature_Feature();
 			occreader1.Set_TriMesh();
 			occreader1.MergeModel(CADMesher::globalmodel.initial_trimesh, occreader1.Surface_TriMeshes);
-			CADMesher::globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(CADMesher::globalmodel.initial_trimesh);
+			//CADMesher::globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(CADMesher::globalmodel.initial_trimesh);
 			occreader1.SetTriFeature();
 			CADMesher::AnisotropicMeshRemeshing* amr = new CADMesher::AnisotropicMeshRemeshing();
 			CADMesher::globalmodel.isotropic_trimesh = CADMesher::globalmodel.initial_trimesh;
@@ -1108,7 +1108,7 @@ void InteractiveViewerWidget::showDebugTest()
 			double aniso_time = (clock() - time_start) / 1000.0;
 			truncateFilePath(fileName);
 			truncateFileExtension(fileName);
-			if (!OpenMesh::IO::write_mesh(CADMesher::globalmodel.isotropic_trimesh, "C:\\Users\\1\\Desktop\\test\\test3\\ANISO\\" + fileName + ".obj"));
+			if (!OpenMesh::IO::write_mesh(CADMesher::globalmodel.isotropic_trimesh, "C:\\Users\\1\\Desktop\\SCU\\test\\test4\\AnISO\\" + fileName + ".obj"));
 			{
 				std::cerr << "fail";
 			}
@@ -1120,7 +1120,9 @@ void InteractiveViewerWidget::showDebugTest()
 			fileWriter << amr->MinArea << "," << amr->MaxArea << ",";
 			fileWriter << amr->MinRER << "," << amr->MaxRER << "," << aniso_time;
 			fileWriter << std::endl;
+			delete amr;
 			CADMesher::globalmodel.clear();
+			dprint("time:", aniso_time);
 		}
 
 #endif
