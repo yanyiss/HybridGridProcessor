@@ -101,8 +101,10 @@ NewtonRaphson::NewtonRaphson(Point P, BezierSurface &surface, double &u, double 
 		S_u = surface.PartialDerivativeU(u_n, v_n);
 		S_v = surface.PartialDerivativeV(u_n, v_n);
 		S_uu = surface.PartialDerivativeUU(u_n, v_n);
-		S_uv = surface.PartialDerivativeUV(u_n, v_n);;
+		S_uv = surface.PartialDerivativeUV(u_n, v_n);
 		S_vv = surface.PartialDerivativeVV(u_n, v_n);
+
+
 		Vec_PQ = Suv - P;
 		distance = Vec_PQ.norm();
 		Su_norm = S_u.norm();

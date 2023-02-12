@@ -22,7 +22,7 @@
 #include "src\Dependency\BSpline\BSplineCurve.h"
 #include "src\Dependency\BSpline\TestClosestPoint.h"
 
-namespace CADMesher 
+namespace CADMesher
 {
 #define PI 3.1415926535897932
 #define epsilonerror 1.1e-15
@@ -113,7 +113,7 @@ namespace CADMesher
 		PolyMesh initial_polymesh;
 		PolyMesh isotropic_polymesh;
 		GlobalGeometry() {}
-		void clear() 
+		void clear()
 		{
 			for (int i = 0; i < faceshape.size(); i++)
 			{

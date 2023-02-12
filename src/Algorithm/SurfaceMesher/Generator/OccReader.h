@@ -42,7 +42,7 @@ namespace CADMesher
 		void Discrete_Edge();
 		bool ProcessTangentialBoundary(int fid, int bid);
 		void ClearBoundary(TriMesh &tm);
-		void Face_type();
+		bool Face_type();
 		void C0_Feature();
 		void Curvature_Feature();
 		void Reset_feature();

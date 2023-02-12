@@ -18,10 +18,10 @@ public:
 	void SetRational(const bool rational) { isRational = rational; }
 	void SetKnotsU(const std::vector<double> &uknots) { u_knots.clear(); u_knots = uknots; }
 	void SetKnotsV(const std::vector<double> &vknots) { v_knots.clear(); v_knots = vknots; }
-	void SetWeights(const std::vector<std::vector<double>> &w) 
-	{ 
-		weights.clear(); 
-		weights = w; 
+	void SetWeights(const std::vector<std::vector<double>> &w)
+	{
+		weights.clear();
+		weights = w;
 		isRational = true;
 	}
 	void SetControlPoints(const std::vector<std::vector<Point>> &points)
@@ -29,7 +29,7 @@ public:
 		ctrlpoints.clear(); ctrlpoints = points;
 	}
 	void SetDataPoints(const std::vector<Point> &points) { datapoints.clear(); datapoints = points; }
-	
+
 	const int GetDegreeU(void) const { return u_degree; }
 	const int GetDegreeV(void) const { return v_degree; }
 	const bool GetRational(void) const { return isRational; }
@@ -38,30 +38,32 @@ public:
 	const int GetNumOfCtrlptsU(void) const { return ctrlpoints.size(); }
 	const int GetNumOfCtrlptsV(void) const { return ctrlpoints[0].size(); }
 	const std::vector<double> GetKnotsU(void) const { return u_knots; }
-	const std::vector<double> GetKnotsV(void) const { return v_knots; }	
+	const std::vector<double> GetKnotsV(void) const { return v_knots; }
 	const std::vector<std::vector<double>> GetWeights(void) const { return weights; }
 	const std::vector<std::vector<Point>> GetControlPoints(void) const { return ctrlpoints; }
 	const std::vector<Point> & DataPoints(void) const { return datapoints; }
-	const int FindSpan(int n, int p, double u, std::vector<double> K) const;
+	const int FindSpan(int n, int p, double u, const std::vector<double> &K) const;
 
 	bool NormalValue(const double u, const double v, Point &n) const;
-	bool PrincipalCurvature(const double u, const double v, double &k1, double &k2) const;  
-	bool NormalCurvature(const double u, const double v, const double x, const double y, double &k) const;  
+	bool PrincipalCurvature(const double u, const double v, double &k1, double &k2) const;  //计算主曲率
+	bool NormalCurvature(const double u, const double v, const double x, const double y, double &k) const;  //计算法曲率
+
+
+	void setZero(double &t) const { t = 0; }
+	void setZero(Point &t)  const { t.setZero(); }
+	void setZero(Point4 &t) const { t.setZero(); }
 
 	template<typename T>
-	T DeBoor(std::vector<std::vector<T>> controlpoints, const double u, const double v) const
+	T DeBoor(const std::vector<std::vector<T>> &controlpoints, const double u, const double v) const
 	{
 		if (controlpoints.empty()) return T();
 		if (u < u_knots.front() || u > u_knots.back()) return T();
 		if (v < v_knots.front() || v > v_knots.back()) return T();
-		//assert(u > u_knots.front() && u < u_knots.back());
-		//assert(v > v_knots.front() && v < v_knots.back());
 
 		int m = controlpoints.size() - 1;
 		int n = controlpoints[0].size() - 1;
 		int ru = FindSpan(m, u_degree, u, u_knots);
 		int rv = FindSpan(n, v_degree, v, v_knots);
-
 		std::vector<std::vector<T>> d(u_degree + 1, std::vector<T>(v_degree + 1));
 		for (int i = 0; i <= u_degree; i++)	// P_(i,j)^0
 		{
@@ -70,15 +72,19 @@ public:
 				d[i][j] = controlpoints[i + ru - u_degree][j + rv - v_degree];
 			}
 		}
-
 		for (int j = 0; j <= v_degree; j++)	// DeBoor in u direction
 		{
 			for (int k = 1; k <= u_degree; k++)
 			{
 				for (int i = u_degree; i >= k; i--)
 				{
-					double alpha = (u - u_knots[i + ru - u_degree]) / (u_knots[i + 1 + ru - k] - u_knots[i + ru - u_degree]);
-					d[i][j] = (1 - alpha) * d[i - 1][j] + alpha * d[i][j];
+					double diffu = u_knots[i + 1 + ru - k] - u_knots[i + ru - u_degree];
+					if (diffu < DBL_EPSILON) setZero(d[i][j]);
+					else
+					{
+						double alpha = (u - u_knots[i + ru - u_degree]) / diffu;
+						d[i][j] = (1 - alpha) * d[i - 1][j] + alpha * d[i][j];
+					}
 				}
 			}
 		}
@@ -87,64 +93,46 @@ public:
 		{
 			for (int j = v_degree; j >= l; j--)
 			{
-				double alpha = (v - v_knots[j + rv - v_degree]) / (v_knots[j + 1 + rv - l] - v_knots[j + rv - v_degree]);
-				d[u_degree][j] = (1 - alpha) * d[u_degree][j - 1] + alpha * d[u_degree][j];
+				double diffv = v_knots[j + 1 + rv - l] - v_knots[j + rv - v_degree];
+				if (diffv < DBL_EPSILON) setZero(d[u_degree][j]);
+				else
+				{
+					double alpha = (v - v_knots[j + rv - v_degree]) / diffv;
+					d[u_degree][j] = (1 - alpha) * d[u_degree][j - 1] + alpha * d[u_degree][j];
+				}
 			}
 		}
 		return d[u_degree][v_degree];
 	}
 
 	template<typename T>
-	T Derivative(std::vector<std::vector<T>> controlpoints, const double u, const double v, const int k, const int l) const
+	T Derivative(const std::vector<std::vector<T>>& PartialCtrpnts, const double u, const double v, const int k, const int l) const
 	{
-		if (controlpoints.empty()) return T();
+		//if (controlpoints.empty()) return T();
 		if (u_degree < k || v_degree < l)
 			return T();
 
 		if (u < u_knots.front() || u > u_knots.back()) return T();
 		if (v < v_knots.front() || v > v_knots.back()) return T();
-		int m = controlpoints.size() - 1;
-		int n = controlpoints[0].size() - 1;
-
-		std::vector<std::vector<T>> d(controlpoints);
-		for (int a = 1; a <= k; a++)
-		{
-			for (int i = 0; i <= m - a; i++)
-			{
-				for (int j = 0; j <= n; j++)
-				{
-					d[i][j] = (d[i + 1][j] - d[i][j]) * (u_degree - a + 1) / (u_knots[i + u_degree + 1] - u_knots[i + a]);
-				}
-			}
-		}
-
-		for (int b = 1; b <= l; b++)
-		{
-			for (int i = 0; i <= m - k; i++)
-			{
-				for (int j = 0; j <= n - b; j++)
-				{
-					d[i][j] = (d[i][j + 1] - d[i][j]) * (v_degree - b + 1) / (v_knots[j + v_degree + 1] - v_knots[j + b]);
-				}
-			}
-		}
-
-		std::vector<std::vector<T>> dev_ctrlpts(m + 1 - k, std::vector<T>(n + 1 - l));
-		for (int i = 0; i <= m - k; i++)
-		{
-			for (int j = 0; j <= n - l; j++)
-			{
-				dev_ctrlpts[i][j] = d[i][j];
-			}
-		}
+		auto ft = clock();
+		int m = u_knots.size() - u_degree - 2;
+		int n = v_knots.size() - v_degree - 2;
 		std::vector<double> du_knots(u_knots.begin() + k, u_knots.end() - k);
 		std::vector<double> dv_knots(v_knots.begin() + l, v_knots.end() - l);
-
+		int ru = FindSpan(m - k, u_degree - k, u, du_knots);
+		int rv = FindSpan(n - l, v_degree - l, v, dv_knots);
+		std::vector<std::vector<T>> dev_ctrlpts(m + 1 - k, std::vector<T>(n + 1 - l));
+		for (int i = ru - u_degree + k; i <= ru; i++)
+		{
+			for (int j = rv - v_degree + l; j <= rv; j++)
+			{
+				dev_ctrlpts[i][j] = PartialCtrpnts[i][j];
+			}
+		}
 		BSplineSurface dev_surface;
 		dev_surface.SetDegree(u_degree - k, v_degree - l);
 		dev_surface.SetKnotsU(du_knots);
 		dev_surface.SetKnotsV(dv_knots);
-
 		return dev_surface.DeBoor(dev_ctrlpts, u, v);
 	}
 
@@ -433,6 +421,19 @@ private:
 	std::vector<double> v_knots;
 	std::vector<std::vector<double>> weights;
 	std::vector<std::vector<Point>> ctrlpoints;
+	std::vector<std::vector<Point4>> Pw_ctrlpts;  //有理情形下的4维齐次控制点坐标
+
+	std::vector<std::vector<Point4>> PartialUCtrpts;
+	std::vector<std::vector<Point4>> PartialVCtrpts;
+	std::vector<std::vector<Point4>> PartialUUCtrpts;
+	std::vector<std::vector<Point4>> PartialUVCtrpts;
+	std::vector<std::vector<Point4>> PartialVVCtrpts;
+
+	std::vector<std::vector<Point>> PartialUCtrpts_;
+	std::vector<std::vector<Point>> PartialVCtrpts_;
+	std::vector<std::vector<Point>> PartialUUCtrpts_;
+	std::vector<std::vector<Point>> PartialUVCtrpts_;
+	std::vector<std::vector<Point>> PartialVVCtrpts_;
 
 	std::vector<Point> datapoints;
 	std::vector<std::vector<double>> control; // 用于计算 基函数在特定点uv的值
@@ -443,7 +444,7 @@ public:
 	void PreprocessData(void);
 	void Regression(void);
 	void Parameterization(std::vector<double> &t);
-	
+
 
 	std::vector<std::vector<int>> Face_Control_index;
 	std::vector<OpenMesh::Vec3d> control_list;
