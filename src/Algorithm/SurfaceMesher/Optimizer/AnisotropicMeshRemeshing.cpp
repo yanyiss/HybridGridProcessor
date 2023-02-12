@@ -3,7 +3,7 @@
 
 namespace CADMesher
 {
-	AnisotropicMeshRemeshing::AnisotropicMeshRemeshing()
+	AnisotropicMeshRemeshing::AnisotropicMeshRemeshing(bool proj):if_proj(proj)
 	{
 		ref_mesh_ = NULL;
 		mesh_ = NULL;
@@ -1002,16 +1002,19 @@ namespace CADMesher
 			}
 			++itertimes;
 		}
-		dprint("remesh done");
+		//dprint("remesh done");
 #if 1
-		vector<unsigned>& triangle_surface_index = globalmodel.triangle_surface_index;
-		vector<vector<unsigned>> vertex_surface_index(globalmodel.faceshape.size());
-		for (auto tv : mesh_->vertices()) {
-			OpenMesh::Vec3d &p = mesh_->point(tv);
-			//vertex_surface_index[triangle_surface_index[mesh->vf_begin(tv).handle().idx()]].push_back(tv.idx());
-			vertex_surface_index[triangle_surface_index[aabbtree->closest_point_and_face_handle(p).second.idx()]].push_back(tv.idx());
+		if (if_proj)
+		{
+			vector<unsigned>& triangle_surface_index = globalmodel.triangle_surface_index;
+			vector<vector<unsigned>> vertex_surface_index(globalmodel.faceshape.size());
+			for (auto tv : mesh_->vertices()) {
+				OpenMesh::Vec3d &p = mesh_->point(tv);
+				//vertex_surface_index[triangle_surface_index[mesh->vf_begin(tv).handle().idx()]].push_back(tv.idx());
+				vertex_surface_index[triangle_surface_index[aabbtree->closest_point_and_face_handle(p).second.idx()]].push_back(tv.idx());
+			}
+			MeshProjectToSurface(mesh_, vertex_surface_index);
 		}
-		MeshProjectToSurface(mesh_, vertex_surface_index);
 #endif
 
 		itertimes = 0;
