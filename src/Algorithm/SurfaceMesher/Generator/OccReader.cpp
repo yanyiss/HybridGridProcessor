@@ -849,7 +849,7 @@ namespace CADMesher
 		tm.garbage_collection();
 	}
 
-	void OccReader::Face_type()
+	bool OccReader::Face_type()
 	{
 		vector<ShapeFace> &faceshape = globalmodel.faceshape;
 		vector<ShapeEdge> &edgeshape = globalmodel.edgeshape;
@@ -1078,6 +1078,7 @@ namespace CADMesher
 					dprint(typecurve);
 					dprint("Cannot recognize the type of the curve of this revolution surface!");
 					system("pause");
+					return false;
 				}
 			}
 			else
@@ -1085,6 +1086,7 @@ namespace CADMesher
 				dprint(type);
 				dprint("Cannot recognize the type of this surface!");
 				system("pause");
+				return false;
 			}
 		}
 		for (int i = 0; i < edgeshape.size(); i++)
@@ -1098,6 +1100,7 @@ namespace CADMesher
 			GeneralMathMethod::DataSet(UV, 10e-8, pnts);
 		}
 		dprint("face type done!");
+		return true;
 	}
 
 	void OccReader::C0_Feature()//通过计算相交线的两个面的法向内积来判断是否光滑

@@ -355,7 +355,7 @@ void SurfaceMeshProcessing::createMenus()
 	mouseMenu->addAction(showFeatureAction);
 	mouseMenu->addAction(showIsotropicMeshAction);
 	mouseMenu->addAction(showAnisotropicMeshAction);
-	mouseMenu->addAction(showDebugTestAction);
+	//mouseMenu->addAction(showDebugTestAction);
 
 	Auxiliary_Menu = menuBar()->addMenu("Auxiliary");
 	Auxiliary_Menu->addAction(inverse_mesh_connectivity);
@@ -411,7 +411,7 @@ void SurfaceMeshProcessing::createToolBars()
 	mouseToolBar->addAction(showFeatureAction);
 	mouseToolBar->addAction(showIsotropicMeshAction);
 	mouseToolBar->addAction(showAnisotropicMeshAction);
-	mouseToolBar->addAction(showDebugTestAction);
+	//mouseToolBar->addAction(showDebugTestAction);
 
 	localOperationBar = addToolBar(tr("Local Operation"));
 	localOperationBar->addAction(EditUndoAction);

@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include <Eigen\Eigen>
+#include <Eigen\Dense>
 #include <OpenMesh/Core/Geometry/VectorT.hh>
 #include "BezierCurve.h"
 #include "BSplineCurve.h"

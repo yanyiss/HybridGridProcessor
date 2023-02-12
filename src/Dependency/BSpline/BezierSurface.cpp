@@ -18,7 +18,6 @@ BezierSurface::BezierSurface(int u_deg, int v_deg, double umin, double umax, dou
 	SetRational(true);
 	SetWeights(w);
 	SetControlPoints(controlpoints);
-	UV = Point4(umin, umax, vmin, vmax);  //2022.03.21
 }
 
 BezierSurface::BezierSurface(int u_deg, int v_deg, double umin, double umax, double vmin, double vmax, std::vector<std::vector<Point>> controlpoints)
@@ -27,7 +26,6 @@ BezierSurface::BezierSurface(int u_deg, int v_deg, double umin, double umax, dou
 	SetParameterSpan(umin, umax, vmin, vmax);
 	SetRational(false);
 	SetControlPoints(controlpoints);
-	UV = Point4(umin, umax, vmin, vmax);  //2022.03.21
 }
 
 BezierSurface::~BezierSurface()
@@ -85,7 +83,7 @@ Point BezierSurface::PartialDerivativeU(const double u, const double v) const
 	}
 
 	else
-	{		
+	{
 		return Derivative(ctrlpoints, u, v, 1, 0);
 	}
 }
@@ -199,7 +197,7 @@ Point BezierSurface::PartialDerivativeUV(const double u, const double v)const
 	}
 }
 
-Point BezierSurface::PartialDerivativeVV(const double u, const double v) const 
+Point BezierSurface::PartialDerivativeVV(const double u, const double v) const
 {
 	if (v_degree < 2)
 		return Point(0.0, 0.0, 0.0);
@@ -270,7 +268,7 @@ void BezierSurface::Split(double uv, DIRECTION direction, BezierSurface &left_s,
 				right_weights[u_degree][j] = weights[u_degree][j];
 
 				left_pts[0][j] = ctrlpoints[0][j];
-				right_pts[u_degree][j] = ctrlpoints[u_degree][j];				
+				right_pts[u_degree][j] = ctrlpoints[u_degree][j];
 			}
 
 			for (int row = 0; row <= v_degree; row++)
@@ -342,7 +340,7 @@ void BezierSurface::Split(double uv, DIRECTION direction, BezierSurface &left_s,
 				right_pts[i][v_degree] = ctrlpoints[i][v_degree];
 				right_weights[i][v_degree] = weights[i][v_degree];
 			}
-			
+
 			for (int col = 0; col <= u_degree; col++)
 			{
 				for (int l = 1; l <= v_degree; l++)
@@ -382,7 +380,7 @@ void BezierSurface::Split(double uv, DIRECTION direction, BezierSurface &left_s,
 					right_pts[col][v_degree - l] = Rw[col][v_degree];
 				}
 			}
-		}	
+		}
 	}
 
 	left_s.SetControlPoints(left_pts);
@@ -428,7 +426,7 @@ bool BezierSurface::LoadControlPoints(const std::string & filename)
 		for (size_t j = 0; j <= m; j++)
 		{
 			ifs >> ctrlpoints[i][j][0] >> ctrlpoints[i][j][1] >> ctrlpoints[i][j][2];
-		}		
+		}
 	}
 	ifs.close();
 	return true;
