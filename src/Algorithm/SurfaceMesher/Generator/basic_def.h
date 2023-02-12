@@ -161,7 +161,7 @@ namespace CADMesher
 
 		//timeRecorder tr;
 #if 1
-		for (int ii = 0; ii < faceshape.size(); ++ii)
+		for(int ii = 0; ii < faceshape.size(); ++ii)
 		{
 			auto &surface = faceshape[ii];
 			TopLoc_Location loca;
@@ -400,12 +400,12 @@ namespace CADMesher
 			else if (type == STANDARD_TYPE(Geom_SurfaceOfRevolution)) {
 				surface_type[7]++;
 				dprint("Surface of Revolution", itertimes++);
-				system("pause");
+				//system("pause");
 			}
 			else if (type == STANDARD_TYPE(Geom_SurfaceOfLinearExtrusion)) {
 				surface_type[8]++;
 				dprint("Surface of Extrusion", itertimes++);
-				system("pause");
+				//system("pause");
 			}
 			else if (type == STANDARD_TYPE(Geom_OffsetSurface)) {
 				surface_type[9]++;
