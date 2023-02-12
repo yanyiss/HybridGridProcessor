@@ -71,7 +71,7 @@ private:
 	void draw_mesh_solidsmooth() const;
 	void draw_mesh_pointset() const;
 
-	void draw_IsotropicMesh();
+	void Projection();
 	void draw_AnisotropicMesh();//see definition of diagonal mesh in paper: Checkerboard Patterns with Black Rectangles
 
 	void draw_feature();
@@ -107,6 +107,7 @@ public:
 	int meshMode() const { return mesh_mode_; }
 	void checkMeshMode();
 	bool ifUpdateMesh = true;
+	bool if_projection = false;
 private:
 	int mesh_mode_;
 	//std::vector<unsigned int> Indices;

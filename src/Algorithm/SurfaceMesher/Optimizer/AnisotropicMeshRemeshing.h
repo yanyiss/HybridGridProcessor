@@ -114,7 +114,7 @@ namespace CADMesher
 	{
 		//Q_OBJECT
 	public:
-		AnisotropicMeshRemeshing();
+		AnisotropicMeshRemeshing(bool proj = false);
 		~AnisotropicMeshRemeshing();
 		double MQE;
 		double AQE;
@@ -160,6 +160,7 @@ namespace CADMesher
 
 
 	private:
+		bool if_proj = false;
 		bool draw_small_tri_ok;
 		void project_on_reference_mesh_with_metric(Mesh::VertexHandle vh, OpenMesh::Vec3d& p);
 		void project_on_reference_edge_with_metric(Mesh::VertexHandle vh, OpenMesh::Vec3d& p);

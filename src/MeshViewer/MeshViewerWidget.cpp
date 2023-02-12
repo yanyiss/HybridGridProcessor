@@ -553,22 +553,8 @@ void MeshViewerWidget::draw_scene_mesh(int drawmode)
 		glDisable(GL_LIGHTING);
 		draw_mesh_pointset();
 		break;
-	case CHECKBOARD:
-		draw_IsotropicMesh();
-
-		//glEnable(GL_POLYGON_OFFSET_FILL);
-		//glPolygonOffset(1.5f, 2.0f);
-		//glEnable(GL_LIGHTING);
-		//glShadeModel(GL_FLAT);
-		//draw_mesh_solidflat();
-		//glDisable(GL_POLYGON_OFFSET_FILL);
-		////draw_meshpointset();
-		//glDisable(GL_LIGHTING);
-
-		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		//draw_mesh_wireframe();
-		//draw_feature();
-		//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	case PROJECTION:
+		Projection();
 		break;
 	case DIAGONAL_MESH:
 		glEnable(GL_POLYGON_OFFSET_FILL);
@@ -849,89 +835,9 @@ void MeshViewerWidget::draw_mesh_pointset() const
 }
 
 #include "../src/Algorithm/SurfaceMesher/Optimizer/TriangleMeshRemeshing.h"
-void MeshViewerWidget::draw_IsotropicMesh()
+void MeshViewerWidget::Projection()
 {
-	//绘制展示用图
-	OH h;
-	for (auto &th : mesh.halfedges())
-	{
-		if (th.is_boundary())
-		{
-			h = th;
-			break;
-		}
-	}
-	OH hiter = mesh.next_halfedge_handle(h);
-	glColor3d(0.1, 0.1, 0.1);
-	glLineWidth(2);
-	glBegin(GL_LINES);
-	while (h != hiter)
-	{
-		glVertex3dv(mesh.point(mesh.from_vertex_handle(hiter)).data());
-		glVertex3dv(mesh.point(mesh.to_vertex_handle(hiter)).data());
-		hiter = mesh.next_halfedge_handle(hiter);
-	}
-	glVertex3dv(mesh.point(mesh.from_vertex_handle(hiter)).data());
-	glVertex3dv(mesh.point(mesh.to_vertex_handle(hiter)).data());
-	glEnd();
-
-	hiter = mesh.next_halfedge_handle(h);
-	glColor3d(0.9, 0.4, 0.1);
-	glPointSize(10);
-	glBegin(GL_POINTS);
-	while (h != hiter)
-	{
-		glVertex3dv(mesh.point(mesh.from_vertex_handle(hiter)).data());
-		hiter = mesh.next_halfedge_handle(hiter);
-	}
-	glVertex3dv(mesh.point(mesh.from_vertex_handle(hiter)).data());
-	glEnd();
-
-//	if (ifUpdateMesh)
-//	{
-////#if 0
-//		timeRecorder tr;
-//		CADMesher::TriangleMeshRemeshing *tmr = new CADMesher::TriangleMeshRemeshing(&(CADMesher::globalmodel.initial_trimesh));
-//		tmr->run();
-//		tr.out("Isotropic Remesing Time:");
-////#else
-////		initMeshStatusAndNormal(CADMesher::globalmodel.initial_trimesh);
-////		CADMesher::TriangleMeshRemeshing *tmr = new CADMesher::TriangleMeshRemeshing(&CADMesher::globalmodel.initial_trimesh);
-////		tmr->run();
-////		mesh = Mesh(CADMesher::globalmodel.initial_trimesh);
-////#endif
-//		delete tmr;
-//		ifUpdateMesh = false; 
-//		
-//		std::string cfn = CADFileName.toLatin1().data();
-//		bool if_saveOK = OpenMesh::IO::write_mesh(mesh, "../model/CAD/Isotropic Mesh/" + cfn + "_iso.obj");
-//		if (if_saveOK)
-//			dprint("The isotropic mesh has been saved in \"Isotropic Mesh\" folder");
-//		else
-//			dprint("Save isotropic mesh failed");
-//
-//	}
-
-#if 0
-	//用于remesh普通三角网格
-	static bool once = true;
-	if (once) {
-		for (auto te : mesh.edges())
-		{
-			auto n0 = mesh.calc_face_normal(te.h0().face());
-			auto n1 = mesh.calc_face_normal(te.h1().face());
-			if (n0.dot(n1) < 0.8) {
-				mesh.data(te).flag1 = true;
-				mesh.data(te.v0()).set_vertflag(true);
-				mesh.data(te.v1()).set_vertflag(true);
-			}
-		}
-		CADMesher::TriangleMeshRemeshing *tmr = new CADMesher::TriangleMeshRemeshing(&mesh);
-		tmr->run();
-		OpenMesh::IO::write_mesh(mesh, "C:/Git Rep/VolumeMeshFramework/VolumeMeshProcessing_Base/surface.obj");
-		once = false;
-	}
-#endif
+	if_projection = !if_projection;
 }
 
 //#include "../src/Algorithm/SurfaceMesher/Optimizer/AnisotropicMeshRemeshing.h"
