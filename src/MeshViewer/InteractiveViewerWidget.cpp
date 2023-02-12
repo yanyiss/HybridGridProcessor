@@ -948,6 +948,7 @@ void InteractiveViewerWidget::showIsotropicMesh(double tl)
 		CADMesher::globalmodel.isotropic_trimesh = CADMesher::globalmodel.initial_trimesh;
 		tmr = new CADMesher::TriangleMeshRemeshing(&(CADMesher::globalmodel.isotropic_trimesh), tl);
 		tmr->run();
+		delete tmr;
 		tri2poly(CADMesher::globalmodel.isotropic_trimesh, mesh, true);
 		initMeshStatusAndNormal(mesh);
 	}
@@ -956,6 +957,7 @@ void InteractiveViewerWidget::showIsotropicMesh(double tl)
 		CADMesher::globalmodel.isotropic_polymesh = CADMesher::globalmodel.initial_polymesh;
 		tmr = new CADMesher::TriangleMeshRemeshing(&(CADMesher::globalmodel.isotropic_polymesh));
 		tmr->run();
+		delete tmr;
 		mesh = CADMesher::globalmodel.isotropic_polymesh;
 		initMeshStatusAndNormal(mesh);
 	}
@@ -1000,6 +1002,7 @@ void InteractiveViewerWidget::showAnisotropicMesh(double tl)
 		dprint("anisotropic edge length:", tl);
 		amr->set_metric(metric_constraints);
 		amr->do_remeshing(amr->get_ref_mesh_ave_anisotropic_edge_length(), 1.5);
+		delete amr;
 
 		tri2poly(CADMesher::globalmodel.isotropic_trimesh, mesh, true);
 		initMeshStatusAndNormal(mesh);
@@ -1039,7 +1042,7 @@ void InteractiveViewerWidget::showDebugTest()
 	{
 		std::vector<std::string> allFileName;
 		//std::string path = "..\\model\\CAD";
-		std::string path = "C:\\Users\\1\\Desktop\\step files lib";
+		std::string path = "C:\\Git Rep\\HybridGridProcessor\\model\\testISO";
 		getFiles(path, allFileName);
 		std::ofstream fileWriter;
 
@@ -1059,7 +1062,6 @@ void InteractiveViewerWidget::showDebugTest()
 			occreader1.Curvature_Feature();
 			occreader1.Set_TriMesh();
 			occreader1.MergeModel(CADMesher::globalmodel.initial_trimesh, occreader1.Surface_TriMeshes);
-			CADMesher::globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(CADMesher::globalmodel.initial_trimesh);
 			occreader1.SetTriFeature();
 			CADMesher::globalmodel.isotropic_trimesh = CADMesher::globalmodel.initial_trimesh;
 			CADMesher::TriangleMeshRemeshing trm1(&(CADMesher::globalmodel.isotropic_trimesh));
@@ -1080,8 +1082,8 @@ void InteractiveViewerWidget::showDebugTest()
 			CADMesher::globalmodel.clear();
 		}
 #else   //导入各向异性数据
-		int i = 0;
-		fileWriter.open("C:\\Users\\1\\Desktop\\test\\test3\\AnIsoRawData.csv", std::ios::app);
+		int i = 52;
+		fileWriter.open("C:\\Git Rep\\HybridGridProcessor\\model\\AnIsoRawData.csv", std::ios::app);
 //#pragma omp parallel for
 		for (; i < allFileName.size();)
 		{
@@ -1096,7 +1098,7 @@ void InteractiveViewerWidget::showDebugTest()
 			occreader1.Curvature_Feature();
 			occreader1.Set_TriMesh();
 			occreader1.MergeModel(CADMesher::globalmodel.initial_trimesh, occreader1.Surface_TriMeshes);
-			CADMesher::globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(CADMesher::globalmodel.initial_trimesh);
+			//CADMesher::globalmodel.init_trimesh_tree = new ClosestPointSearch::AABBTree(CADMesher::globalmodel.initial_trimesh);
 			occreader1.SetTriFeature();
 			CADMesher::AnisotropicMeshRemeshing* amr = new CADMesher::AnisotropicMeshRemeshing();
 			CADMesher::globalmodel.isotropic_trimesh = CADMesher::globalmodel.initial_trimesh;
@@ -1106,9 +1108,14 @@ void InteractiveViewerWidget::showDebugTest()
 			amr->set_metric(metric_constraints);
 			amr->do_remeshing(amr->get_ref_mesh_ave_anisotropic_edge_length(), 1.5);
 			double aniso_time = (clock() - time_start) / 1000.0;
+			/*if (CADMesher::globalmodel.init_trimesh_tree)
+			{
+				delete CADMesher::globalmodel.init_trimesh_tree;
+				CADMesher::globalmodel.init_trimesh_tree = nullptr;
+			}*/
 			truncateFilePath(fileName);
 			truncateFileExtension(fileName);
-			if (!OpenMesh::IO::write_mesh(CADMesher::globalmodel.isotropic_trimesh, "C:\\Users\\1\\Desktop\\test\\test3\\ANISO\\" + fileName + ".obj"));
+			if (!OpenMesh::IO::write_mesh(CADMesher::globalmodel.isotropic_trimesh, "C:\\Git Rep\\HybridGridProcessor\\model\\aniso mesh\\" + fileName + ".obj"));
 			{
 				std::cerr << "fail";
 			}
@@ -1120,6 +1127,7 @@ void InteractiveViewerWidget::showDebugTest()
 			fileWriter << amr->MinArea << "," << amr->MaxArea << ",";
 			fileWriter << amr->MinRER << "," << amr->MaxRER << "," << aniso_time;
 			fileWriter << std::endl;
+			delete amr;
 			CADMesher::globalmodel.clear();
 		}
 
